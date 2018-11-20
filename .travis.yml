@@ -1,0 +1,35 @@
+language: cpp
+dist: trusty
+sudo: true
+script: ./run-build.sh
+
+matrix:
+  include:
+    - os: linux
+      compiler: gcc5
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-5
+            - lcov
+      env: CC='gcc-5' CXX='g++-5'
+
+    - os: linux
+      compiler: clang5
+      addons:
+        apt:
+          sources: [ 'ubuntu-toolchain-r-test', 'llvm-toolchain-trusty-5.0' ]
+          packages:
+            - clang-5.0
+      env: CC='clang-5.0' CXX='clang++-5.0'
+
+after_success:
+  - ./create-lcov-report.sh
+  # Uploading report to CodeCov
+  - bash <(curl -s https://codecov.io/bash) || echo "Codecov did not collect coverage reports"
+
+env:
+  global:
+    - LANG="en_US.UTF-8"
