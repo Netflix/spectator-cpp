@@ -171,7 +171,7 @@ class Publisher {
 
   rapidjson::Document measurements_to_json(
       std::vector<Measurement>::const_iterator first,
-      std::vector<Measurement>::const_iterator last, int64_t* added) {
+      std::vector<Measurement>::const_iterator last) {
     using rapidjson::Document;
     using rapidjson::kArrayType;
     Document payload{kArrayType};
@@ -180,8 +180,6 @@ class Publisher {
     for (auto it = first; it != last; ++it) {
       append_measurement(&payload, strings, *it);
     }
-    auto num_added = std::distance(first, last);
-    *added = static_cast<int64_t>(num_added);
     return payload;
   }
 
@@ -206,7 +204,6 @@ class Publisher {
         static_cast<std::vector<Measurement>::difference_type>(cfg.batch_size);
     auto measurements = registry_->Measurements();
     std::vector<rapidjson::Document> batches;
-    std::vector<int64_t> batch_sizes;
 
     auto from = measurements.begin();
     auto end = measurements.end();
@@ -215,26 +212,17 @@ class Publisher {
       auto to_advance = std::min(batch_size, to_end);
       auto to = from;
       std::advance(to, to_advance);
-
-      int64_t added;
-      batches.emplace_back(measurements_to_json(from, to, &added));
-      batch_sizes.emplace_back(added);
-      from = to;
-    }
-
-    auto http_codes = client.PostBatches(cfg.uri, batches);
-    for (auto i = 0u; i < http_codes.size(); ++i) {
-      auto http_code = http_codes[i];
-      auto num_measurements = batch_sizes[i];
+      auto http_code = client.Post(cfg.uri, measurements_to_json(from, to));
       if (http_code != 200) {
         Logger()->error(
             "Unable to send batch of {} measurements to publish: {}",
-            num_measurements, http_code);
+            to_advance, http_code);
 
-        update_http_err(http_code, num_measurements);
+        update_http_err(http_code, to_advance);
       } else {
-        update_sent(num_measurements);
+        update_sent(to_advance);
       }
+      from = to;
     }
   }
 };
