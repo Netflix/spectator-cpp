@@ -41,7 +41,7 @@ fi
 showinfo "Running tests ..."
 
 if [ "$CC" = gcc-5 ]; then
-  make -j4 libatlasclient_coverage
+  make -j4 spectator_cpp_coverage
 fi
 
 ./runtests
