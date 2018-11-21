@@ -5,6 +5,8 @@
 
 namespace spectator {
 
+static constexpr const char* const kMainLogger = "spectator";
+
 LogManager& log_manager() noexcept {
   static auto* the_log_manager = new LogManager();
   return *the_log_manager;
@@ -12,18 +14,16 @@ LogManager& log_manager() noexcept {
 
 LogManager::LogManager() noexcept {
   try {
-    // use a queue with a max of 8k entries and one thread
-    spdlog::init_thread_pool(8192, 1);
-    current_logger_ =
-        spdlog::create_async_nb<spdlog::sinks::ansicolor_stdout_sink_mt>(name_);
-    current_logger_->set_level(spdlog::level::debug);
+    logger_ = spdlog::create_async_nb<spdlog::sinks::ansicolor_stdout_sink_mt>(
+        kMainLogger);
+    logger_->set_level(spdlog::level::debug);
   } catch (const spdlog::spdlog_ex& ex) {
     std::cerr << "Log initialization failed: " << ex.what() << "\n";
   }
 }
 
 std::shared_ptr<spdlog::logger> LogManager::Logger() noexcept {
-  return current_logger_;
+  return logger_;
 }
 
 }  // namespace spectator

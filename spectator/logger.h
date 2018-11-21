@@ -10,8 +10,7 @@ class LogManager {
   std::shared_ptr<spdlog::logger> Logger() noexcept;
 
  private:
-  std::string name_;
-  std::shared_ptr<spdlog::logger> current_logger_;
+  std::shared_ptr<spdlog::logger> logger_;
 };
 
 LogManager& log_manager() noexcept;
