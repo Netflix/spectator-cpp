@@ -4,6 +4,7 @@
 namespace spectator {
 
 static constexpr auto kMinValue = std::numeric_limits<double>::lowest();
+static constexpr auto kNaN = std::numeric_limits<double>::quiet_NaN();
 
 MaxGauge::MaxGauge(IdPtr id) noexcept : id_{std::move(id)}, value_{kMinValue} {}
 
@@ -18,7 +19,12 @@ std::vector<Measurement> MaxGauge::Measure() const noexcept {
 }
 
 double MaxGauge::Get() const noexcept {
-  return value_.load(std::memory_order_relaxed);
+  auto v = value_.load(std::memory_order_relaxed);
+  if (v != kMinValue) {
+    return v;
+  }
+  return kNaN;
+
 }
 
 void MaxGauge::Update(double value) noexcept { update_max(&value_, value); }

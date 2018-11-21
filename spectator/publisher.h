@@ -9,8 +9,6 @@
 
 namespace spectator {
 
-static constexpr int kSendEveryMillis = 5000;
-
 template <typename R>
 class Publisher {
  public:
@@ -57,6 +55,8 @@ class Publisher {
   void sender() noexcept {
     using std::chrono::duration_cast;
     using std::chrono::milliseconds;
+    auto freq_millis = registry_->GetConfig().frequency * 1000;
+
     while (!should_stop_) {
       auto start = R::clock::now();
       try {
@@ -69,11 +69,11 @@ class Publisher {
       auto millis = duration_cast<milliseconds>(elapsed).count();
       Logger()->debug("Sent metrics in {} ms", millis);
 
-      if (millis < kSendEveryMillis) {
+      if (millis < freq_millis) {
         std::unique_lock<std::mutex> lock{cv_mutex_};
-        auto sleep = milliseconds(kSendEveryMillis) - elapsed;
+        auto sleep = milliseconds(freq_millis) - elapsed;
         Logger()->debug("Sleeping {}ms until the next interval",
-                        kSendEveryMillis - millis);
+                        freq_millis - millis);
         cv_.wait_for(lock, sleep);
       }
     }
