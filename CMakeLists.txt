@@ -65,6 +65,7 @@ add_test(runtests runtests)
 
 install(TARGETS spectator_cpp DESTINATION lib)
 install(DIRECTORY spectator DESTINATION include FILES_MATCHING PATTERN "*.h")
+install(DIRECTORY 3rd-party/spdlog DESTINATION include FILES_MATCHING PATTERN "*.h")
 install(DIRECTORY 3rd-party/ska DESTINATION include FILES_MATCHING PATTERN "*.hpp")
 install(DIRECTORY 3rd-party/rapidjson DESTINATION include FILES_MATCHING PATTERN "*.h")
 

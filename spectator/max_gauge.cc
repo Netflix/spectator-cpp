@@ -24,7 +24,6 @@ double MaxGauge::Get() const noexcept {
     return v;
   }
   return kNaN;
-
 }
 
 void MaxGauge::Update(double value) noexcept { update_max(&value_, value); }
