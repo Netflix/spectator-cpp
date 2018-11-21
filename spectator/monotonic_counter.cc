@@ -5,7 +5,7 @@ namespace spectator {
 static constexpr auto kNaN = std::numeric_limits<double>::quiet_NaN();
 
 MonotonicCounter::MonotonicCounter(IdPtr id) noexcept
-    : id_{id}, value_(kNaN), prev_value_(kNaN) {}
+    : id_{std::move(id)}, value_(kNaN), prev_value_(kNaN) {}
 
 IdPtr MonotonicCounter::MeterId() const noexcept { return id_; }
 
