@@ -7,10 +7,10 @@ namespace spectator {
 
 struct Config {
   std::map<std::string, std::string> common_tags;
-  int read_timeout;
-  int connect_timeout;
+  int read_timeout; // in seconds
+  int connect_timeout; // in seconds
   int batch_size;
-  int frequency;
+  int frequency; // in seconds
   std::string uri;
 };
 
