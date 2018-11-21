@@ -23,10 +23,10 @@ class TestPublisher : public Publisher<TestRegistry> {
   explicit TestPublisher(TestRegistry* test_registry)
       : Publisher(test_registry) {}
 
-  rapidjson::Document ms_to_json(std::vector<Measurement>::const_iterator first,
-                                 std::vector<Measurement>::const_iterator last,
-                                 int64_t* added) {
-    return measurements_to_json(first, last, added);
+  rapidjson::Document ms_to_json(
+      std::vector<Measurement>::const_iterator first,
+      std::vector<Measurement>::const_iterator last) {
+    return measurements_to_json(first, last);
   }
 };
 
@@ -100,10 +100,7 @@ TEST(Publisher, measurements_to_json) {
   gauge->Set(42.0);
 
   auto measurements = test_registry.Measurements();
-  int64_t added;
-  auto payload =
-      publisher.ms_to_json(measurements.begin(), measurements.end(), &added);
-  EXPECT_EQ(added, 2);
+  auto payload = publisher.ms_to_json(measurements.begin(), measurements.end());
 
   auto entries = payload_to_entries(payload);
 

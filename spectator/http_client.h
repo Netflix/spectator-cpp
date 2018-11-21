@@ -22,9 +22,6 @@ class HttpClient {
 
   int Post(const std::string& url, const rapidjson::Document& payload) const;
 
-  std::vector<int> PostBatches(
-      const std::string& url,
-      const std::vector<rapidjson::Document>& batches) const;
   static void GlobalInit() noexcept;
   static void GlobalShutdown() noexcept;
 

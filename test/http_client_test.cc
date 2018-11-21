@@ -92,65 +92,6 @@ TEST(HttpTest, Post) {
   EXPECT_EQ(post_data, body_str);
 }
 
-rapidjson::Document get_json_doc() {
-  rapidjson::Document doc;
-  doc.SetArray();
-  auto& alloc = doc.GetAllocator();
-  doc.PushBack(1, alloc);
-  doc.PushBack("foo", alloc);
-  return doc;
-}
-
-TEST(HttpTest, PostBatches) {
-  using spectator::HttpClient;
-
-  http_server server;
-  server.start();
-
-  auto port = server.get_port();
-  ASSERT_TRUE(port > 0) << "Port = " << port;
-  auto logger = Logger();
-  logger->info("Server started on port {}", port);
-
-  TestRegistry registry{Config{}};
-  HttpClient client{&registry, 100, 100};
-
-  auto url = fmt::format("http://localhost:{}/foo", port);
-  const std::string post_data = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-
-  constexpr size_t kBatches = 16;
-  std::vector<rapidjson::Document> batches(kBatches);
-  for (auto& batch : batches) {
-    batch = get_json_doc();
-  }
-
-  auto res = client.PostBatches(url, batches);
-  server.stop();
-  auto timer_for_req = find_meter(&registry, "http.req.complete", "200");
-  ASSERT_TRUE(timer_for_req);
-
-  auto expected_tags = Tags{{"client", "spectator-cpp"},
-                            {"statusCode", "200"},
-                            {"status", "2xx"},
-                            {"mode", "http-client"},
-                            {"method", "POST"}};
-  EXPECT_EQ(expected_tags, timer_for_req->MeterId()->GetTags());
-
-  const auto& requests = server.get_requests();
-  EXPECT_EQ(requests.size(), kBatches);
-  EXPECT_EQ(res.size(), kBatches);
-  for (auto i = 0u; i < kBatches; ++i) {
-    EXPECT_EQ(res[i], 200);
-  }
-
-  for (const auto& r : requests) {
-    EXPECT_EQ(r.method(), "POST");
-    EXPECT_EQ(r.path(), "/foo");
-    EXPECT_EQ(r.get_header("Content-Encoding"), "gzip");
-    EXPECT_EQ(r.get_header("Content-Type"), "application/json");
-  }
-}
-
 TEST(HttpTest, Timeout) {
   using spectator::HttpClient;
   http_server server;
