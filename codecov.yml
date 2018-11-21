@@ -7,3 +7,4 @@ comment:
   branches: null
 ignore:
   - "3rd-party/**/*"
+  - "test/*"

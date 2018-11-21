@@ -1,5 +1,3 @@
-#include <utility>
-
 #include "logger.h"
 #include "registry.h"
 #include <fmt/ostream.h>
@@ -46,7 +44,7 @@ std::shared_ptr<MaxGauge> Registry::GetMaxGauge(IdPtr id) noexcept {
 }
 
 std::shared_ptr<MaxGauge> Registry::GetMaxGauge(std::string name) noexcept {
-  return GetMaxGauge(CreateId(name, Tags{}));
+  return GetMaxGauge(CreateId(std::move(name), Tags{}));
 }
 
 std::shared_ptr<MonotonicCounter> Registry::GetMonotonicCounter(
