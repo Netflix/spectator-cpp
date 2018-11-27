@@ -59,15 +59,17 @@ class Publisher {
 
     while (!should_stop_) {
       auto start = R::clock::now();
+      size_t sent = 0u, err = 0u;
       try {
-        send_metrics();
+        std::tie(sent, err) = send_metrics();
       } catch (std::exception& e) {
         Logger()->error("Ignoring exception while sending metrics: {}",
                         e.what());
       }
       auto elapsed = R::clock::now() - start;
       auto millis = duration_cast<milliseconds>(elapsed).count();
-      Logger()->debug("Sent metrics in {} ms", millis);
+      Logger()->debug("Sent {} metrics in {} ms ({} errors)", millis, sent,
+                      err);
 
       if (millis < freq_millis) {
         std::unique_lock<std::mutex> lock{cv_mutex_};
@@ -195,7 +197,7 @@ class Publisher {
         ->Add(num_not_sent);
   }
 
-  void send_metrics() {
+  std::pair<size_t, size_t> send_metrics() {
     const auto& cfg = registry_->GetConfig();
     auto read_timeout = cfg.read_timeout || 2;
     auto connect_timeout = cfg.connect_timeout || 1;
@@ -207,6 +209,8 @@ class Publisher {
 
     auto from = measurements.begin();
     auto end = measurements.end();
+    auto num_err = 0u;
+    auto num_sent = 0u;
     while (from != end) {
       auto to_end = std::distance(from, end);
       auto to_advance = std::min(batch_size, to_end);
@@ -219,11 +223,14 @@ class Publisher {
             to_advance, http_code);
 
         update_http_err(http_code, to_advance);
+        num_err += to_advance;
       } else {
         update_sent(to_advance);
+        num_sent += to_advance;
       }
       from = to;
     }
+    return std::make_pair(num_sent, num_err);
   }
 };
 
