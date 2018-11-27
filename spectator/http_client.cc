@@ -127,7 +127,7 @@ int HttpClient::do_post(const std::string& url,
   curl.set_read_timeout(read_timeout_);
 
   const auto& logger = Logger();
-  logger->info("POSTing to url: {}", url);
+  logger->debug("POSTing to url: {}", url);
   curl.set_url(url);
   curl.set_headers(std::move(headers));
   curl.post_payload(std::move(payload), size);
