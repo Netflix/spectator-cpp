@@ -4,10 +4,14 @@
 
 namespace spectator {
 
-Registry::Registry(Config config) noexcept
-    : config_{std::move(config)}, publisher_(this) {}
+Registry::Registry(Config config, Registry::logger_ptr logger) noexcept
+    : config_{std::move(config)},
+      logger_{std::move(logger)},
+      publisher_(this) {}
 
 const Config& Registry::GetConfig() const noexcept { return config_; }
+
+Registry::logger_ptr Registry::GetLogger() const noexcept { return logger_; }
 
 IdPtr Registry::CreateId(std::string name, Tags tags) noexcept {
   return std::make_shared<Id>(name, tags);
@@ -76,7 +80,7 @@ std::shared_ptr<Meter> Registry::insert_if_needed(
 
 void Registry::log_type_error(const Id& id, MeterType prev_type,
                               MeterType attempted_type) const noexcept {
-  Logger()->error(
+  logger_->error(
       "Attempted to register meter {} as type {} but previously registered as "
       "{}",
       id, attempted_type, prev_type);

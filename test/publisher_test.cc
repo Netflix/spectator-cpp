@@ -5,6 +5,7 @@
 #include <rapidjson/writer.h>
 
 using spectator::Config;
+using spectator::DefaultLogger;
 using spectator::Measurement;
 using spectator::Publisher;
 using spectator::Registry;
@@ -15,7 +16,7 @@ class TestClock {};
 class TestRegistry : public Registry {
  public:
   using clock = TestClock;
-  TestRegistry(Config config) : Registry(std::move(config)) {}
+  TestRegistry(Config config) : Registry(std::move(config), DefaultLogger()) {}
 };
 
 class TestPublisher : public Publisher<TestRegistry> {

@@ -16,9 +16,9 @@
 #include <thread>
 
 using spectator::Config;
+using spectator::DefaultLogger;
 using spectator::gzip_uncompress;
 using spectator::HttpClient;
-using spectator::Logger;
 using spectator::Registry;
 using spectator::Tags;
 
@@ -43,7 +43,7 @@ class TestClock {};
 class TestRegistry : public Registry {
  public:
   using clock = TestClock;
-  TestRegistry(Config config) : Registry(std::move(config)) {}
+  TestRegistry(Config config) : Registry(std::move(config), DefaultLogger()) {}
 };
 
 TEST(HttpTest, Post) {
@@ -52,7 +52,7 @@ TEST(HttpTest, Post) {
 
   auto port = server.get_port();
   ASSERT_TRUE(port > 0) << "Port = " << port;
-  auto logger = Logger();
+  auto logger = DefaultLogger();
   logger->info("Server started on port {}", port);
 
   TestRegistry registry{Config{}};
@@ -100,10 +100,10 @@ TEST(HttpTest, Timeout) {
 
   auto port = server.get_port();
   ASSERT_TRUE(port > 0) << "Port = " << port;
-  auto logger = Logger();
+  TestRegistry registry{Config{}};
+  auto logger = registry.GetLogger();
   logger->info("Server started on port {}", port);
 
-  TestRegistry registry{Config{}};
   HttpClient client{&registry, 1, 1};
   auto url = fmt::format("http://localhost:{}/foo", port);
   const std::string post_data = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";

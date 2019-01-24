@@ -15,9 +15,11 @@ namespace spectator {
 class Registry {
  public:
   using clock = std::chrono::steady_clock;
+  using logger_ptr = std::shared_ptr<spdlog::logger>;
 
-  explicit Registry(Config config) noexcept;
+  Registry(Config config, logger_ptr logger) noexcept;
   const Config& GetConfig() const noexcept;
+  logger_ptr GetLogger() const noexcept;
 
   IdPtr CreateId(std::string name, Tags tags) noexcept;
 
@@ -50,6 +52,7 @@ class Registry {
 
  private:
   Config config_;
+  logger_ptr logger_;
   mutable std::mutex meters_mutex{};
   ska::flat_hash_map<IdPtr, std::shared_ptr<Meter>> meters_;
 

@@ -126,7 +126,7 @@ int HttpClient::do_post(const std::string& url,
   curl.set_connect_timeout(connect_timeout_);
   curl.set_read_timeout(read_timeout_);
 
-  const auto& logger = Logger();
+  auto logger = registry_->GetLogger();
   logger->debug("POSTing to url: {}", url);
   curl.set_url(url);
   curl.set_headers(std::move(headers));
@@ -174,7 +174,7 @@ int HttpClient::Post(const std::string& url, const char* content_type,
   auto compress_res =
       gzip_compress(compressed_payload.get(), &compressed_size, payload, size);
   if (compress_res != Z_OK) {
-    Logger()->error(
+    registry_->GetLogger()->error(
         "Failed to compress payload: {}, while posting to {} - uncompressed "
         "size: {}",
         compress_res, url, size);

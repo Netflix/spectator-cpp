@@ -8,8 +8,8 @@
 #include <sys/socket.h>
 #include <thread>
 
+using spectator::DefaultLogger;
 using spectator::gzip_compress;
-using spectator::Logger;
 
 http_server::http_server() noexcept {
   path_response_["/foo"] =
@@ -157,7 +157,7 @@ void http_server::accept_request(int client) {
     p += bytes_read;
   }
   *p = '\0';
-  Logger()->debug("Adding request {} {}", method, path);
+  DefaultLogger()->debug("Adding request {} {}", method, path);
   {
     std::lock_guard<std::mutex> guard(requests_mutex_);
     requests_.emplace_back(method, path, headers, content_len, std::move(body));
