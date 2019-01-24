@@ -15,7 +15,7 @@ class LogManager {
 
 LogManager& log_manager() noexcept;
 
-inline std::shared_ptr<spdlog::logger> Logger() noexcept {
+inline std::shared_ptr<spdlog::logger> DefaultLogger() noexcept {
   return log_manager().Logger();
 }
 

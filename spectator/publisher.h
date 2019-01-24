@@ -21,12 +21,13 @@ class Publisher {
       HttpClient::GlobalInit();
     }
     const auto& cfg = registry_->GetConfig();
+    auto logger = registry_->GetLogger();
     if (cfg.uri.empty()) {
-      Logger()->warn("Registry config has no uri. Ignoring start request");
+      logger->warn("Registry config has no uri. Ignoring start request");
       return;
     }
     if (started_.exchange(true)) {
-      Logger()->warn("Registry already started. Ignoring start request");
+      logger->warn("Registry already started. Ignoring start request");
       return;
     }
 
@@ -56,6 +57,7 @@ class Publisher {
     using std::chrono::duration_cast;
     using std::chrono::milliseconds;
     auto freq_millis = registry_->GetConfig().frequency * 1000;
+    auto logger = registry_->GetLogger();
 
     while (!should_stop_) {
       auto start = R::clock::now();
@@ -63,23 +65,21 @@ class Publisher {
       try {
         std::tie(sent, err) = send_metrics();
       } catch (std::exception& e) {
-        Logger()->error("Ignoring exception while sending metrics: {}",
-                        e.what());
+        logger->error("Ignoring exception while sending metrics: {}", e.what());
       }
       auto elapsed = R::clock::now() - start;
       auto millis = duration_cast<milliseconds>(elapsed).count();
-      Logger()->debug("Sent {} metrics in {} ms ({} errors)", millis, sent,
-                      err);
+      logger->debug("Sent {} metrics in {} ms ({} errors)", millis, sent, err);
 
       if (millis < freq_millis) {
         std::unique_lock<std::mutex> lock{cv_mutex_};
         auto sleep = milliseconds(freq_millis) - elapsed;
-        Logger()->debug("Sleeping {}ms until the next interval",
-                        freq_millis - millis);
+        logger->debug("Sleeping {}ms until the next interval",
+                      freq_millis - millis);
         cv_.wait_for(lock, sleep);
       }
     }
-    Logger()->info("Stopping Publisher");
+    logger->info("Stopping Publisher");
   }
 
   // for testing
@@ -218,7 +218,7 @@ class Publisher {
       std::advance(to, to_advance);
       auto http_code = client.Post(cfg.uri, measurements_to_json(from, to));
       if (http_code != 200) {
-        Logger()->error(
+        registry_->GetLogger()->error(
             "Unable to send batch of {} measurements to publish: {}",
             to_advance, http_code);
 

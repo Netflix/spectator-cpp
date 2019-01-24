@@ -4,45 +4,46 @@
 
 namespace {
 using spectator::Config;
+using spectator::DefaultLogger;
 using spectator::Registry;
 
 TEST(Registry, Counter) {
-  Registry r{Config{}};
+  Registry r{Config{}, DefaultLogger()};
   auto c = r.GetCounter("foo");
   c->Increment();
   EXPECT_EQ(c->Count(), 1);
 }
 
 TEST(Registry, CounterGet) {
-  Registry r{Config{}};
+  Registry r{Config{}, DefaultLogger()};
   auto c = r.GetCounter("foo");
   c->Increment();
   EXPECT_EQ(r.GetCounter("foo")->Count(), 1);
 }
 
 TEST(Registry, DistSummary) {
-  Registry r{Config{}};
+  Registry r{Config{}, DefaultLogger()};
   auto ds = r.GetDistributionSummary("ds");
   ds->Record(100);
   EXPECT_EQ(r.GetDistributionSummary("ds")->TotalAmount(), 100);
 }
 
 TEST(Registry, Gauge) {
-  Registry r{Config{}};
+  Registry r{Config{}, DefaultLogger()};
   auto g = r.GetGauge("g");
   g->Set(100);
   EXPECT_DOUBLE_EQ(r.GetGauge("g")->Get(), 100);
 }
 
 TEST(Registry, MaxGauge) {
-  Registry r{Config{}};
+  Registry r{Config{}, DefaultLogger()};
   auto g = r.GetMaxGauge("g");
   g->Update(100);
   EXPECT_DOUBLE_EQ(r.GetMaxGauge("g")->Get(), 100);
 }
 
 TEST(Registry, MonotonicCounter) {
-  Registry r{Config{}};
+  Registry r{Config{}, DefaultLogger()};
   auto c = r.GetMonotonicCounter("m");
   c->Set(100);
   c->Measure();
@@ -51,14 +52,14 @@ TEST(Registry, MonotonicCounter) {
 }
 
 TEST(Registry, Timer) {
-  Registry r{Config{}};
+  Registry r{Config{}, DefaultLogger()};
   auto t = r.GetTimer("t");
   t->Record(std::chrono::microseconds(1));
   EXPECT_EQ(r.GetTimer("t")->TotalTime(), 1000);
 }
 
 TEST(Registry, WrongType) {
-  Registry r{Config{}};
+  Registry r{Config{}, DefaultLogger()};
   auto t = r.GetTimer("meter");
   t->Record(std::chrono::nanoseconds(1));
 
@@ -74,7 +75,7 @@ TEST(Registry, WrongType) {
 }
 
 TEST(Registry, Meters) {
-  Registry r{Config{}};
+  Registry r{Config{}, DefaultLogger()};
   auto t = r.GetTimer("t");
   auto c = r.GetCounter("c");
   r.GetTimer("t")->Count();
@@ -83,7 +84,7 @@ TEST(Registry, Meters) {
 }
 
 TEST(Registry, MeasurementTest) {
-  Registry r{Config{}};
+  Registry r{Config{}, DefaultLogger()};
   auto c = r.GetCounter("c");
   c->Increment();
   auto m = c->Measure().front();
