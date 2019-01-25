@@ -13,8 +13,8 @@ workingprocess() { echo -e "${BB}$1${NC}"; }
 allert () { echo -e "${RED}$1${NC}"; }
 
 # Building project
-mkdir -p build
-cd build
+mkdir -p cmake-build
+cd cmake-build
 
 if [ "$CC" = gcc ] ; then
   export CC=gcc-5
