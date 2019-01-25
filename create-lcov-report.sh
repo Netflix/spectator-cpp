@@ -6,7 +6,7 @@ fi
 echo $PWD
 # capture coverage info
 lcov --directory . --capture --output-file coverage.info
-# filter out system, build, tests and 3rd-party code from our test coverage
-lcov --remove coverage.info '/usr/*' '*/usr/*' '*/3rd-party/*' '*/build/*' '*/test/*' --output-file coverage.info
+# filter out system, cmake-build, tests and 3rd-party code from our test coverage
+lcov --remove coverage.info '/usr/*' '*/usr/*' '*/3rd-party/*' '*/cmake-build/*' '*/test/*' --output-file coverage.info
 # print report to stdout for debugging
 lcov --list coverage.info
