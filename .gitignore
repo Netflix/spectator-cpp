@@ -12,3 +12,4 @@ npm-debug.log
 cmake-build-*
 logs/
 .idea/
+.vscode/
