@@ -36,6 +36,9 @@ class Publisher {
 
   void Stop() {
     if (!started_) {
+      registry_->GetLogger()->warn(
+          "Registry was never started. Ignoring stop request");
+
       return;
     }
 
@@ -56,8 +59,14 @@ class Publisher {
   void sender() noexcept {
     using std::chrono::duration_cast;
     using std::chrono::milliseconds;
-    auto freq_millis = registry_->GetConfig().frequency * 1000;
+
+    const auto& cfg = registry_->GetConfig();
+
+    auto freq_millis = cfg.frequency * 1000;
     auto logger = registry_->GetLogger();
+
+    logger->info("Starting to send metrics to {} every {}s.", cfg.uri,
+                 cfg.frequency);
 
     while (!should_stop_) {
       auto start = R::clock::now();

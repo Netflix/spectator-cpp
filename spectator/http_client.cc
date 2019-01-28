@@ -152,7 +152,7 @@ int HttpClient::do_post(const std::string& url,
   }
 
   if (!error) {
-    logger->info("Was able to POST to {} - status code: {}", url, http_code);
+    logger->debug("Was able to POST to {} - status code: {}", url, http_code);
   }
 
   auto duration = Registry::clock::now() - start;
