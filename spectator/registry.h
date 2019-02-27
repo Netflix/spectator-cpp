@@ -17,7 +17,7 @@ class Registry {
   using clock = std::chrono::steady_clock;
   using logger_ptr = std::shared_ptr<spdlog::logger>;
 
-  Registry(Config config, logger_ptr logger) noexcept;
+  Registry(std::unique_ptr<Config> config, logger_ptr logger) noexcept;
   const Config& GetConfig() const noexcept;
   logger_ptr GetLogger() const noexcept;
 
@@ -51,7 +51,7 @@ class Registry {
   void Stop() noexcept;
 
  private:
-  Config config_;
+  std::unique_ptr<Config> config_;
   logger_ptr logger_;
   mutable std::mutex meters_mutex{};
   ska::flat_hash_map<IdPtr, std::shared_ptr<Meter>> meters_;

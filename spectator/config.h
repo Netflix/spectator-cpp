@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <memory>
 #include <string>
 
 namespace spectator {
@@ -25,7 +26,13 @@ class Config {
   int batch_size;
   int frequency;  // in seconds
   std::string uri;
+
+  // sub-classes can override this method implementing custom logic
+  // that can disable publishing under certain conditions
   virtual bool is_enabled() const { return true; }
 };
+
+// Get a new spectator configuration.
+std::unique_ptr<Config> GetConfiguration();
 
 }  // namespace spectator
