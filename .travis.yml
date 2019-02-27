@@ -12,18 +12,16 @@ matrix:
           sources:
             - ubuntu-toolchain-r-test
           packages:
-            - g++-5
             - lcov
-      env: CC='gcc-5' CXX='g++-5'
 
     - os: linux
       compiler: clang5
       addons:
         apt:
-          sources: [ 'ubuntu-toolchain-r-test', 'llvm-toolchain-trusty-5.0' ]
+          sources: [ 'ubuntu-toolchain-r-test', 'llvm-toolchain-xenial-7' ]
           packages:
-            - clang-5.0
-      env: CC='clang-5.0' CXX='clang++-5.0'
+            - clang-7.0
+      env: CC='clang-7.0' CXX='clang++-7.0'
 
 after_success:
   - ./create-lcov-report.sh
