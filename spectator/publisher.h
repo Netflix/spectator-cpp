@@ -214,6 +214,9 @@ class Publisher {
     auto batch_size =
         static_cast<std::vector<Measurement>::difference_type>(cfg.batch_size);
     auto measurements = registry_->Measurements();
+    if (!cfg.is_enabled()) {
+      return std::make_pair(0, 0);
+    }
     std::vector<rapidjson::Document> batches;
 
     auto from = measurements.begin();

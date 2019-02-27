@@ -49,7 +49,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL Linux)
 else()
   configure_file(${CMAKE_SOURCE_DIR}/bundle/libcurl-osx.a libcurl.a COPYONLY)
 endif()
-target_link_libraries(spectator_cpp ${CMAKE_BINARY_DIR}/libcurl.a z )
+target_link_libraries(spectator_cpp ${CMAKE_BINARY_DIR}/libcurl.a z)
 
 # test configuration
 enable_testing()
