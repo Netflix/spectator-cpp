@@ -70,11 +70,7 @@ Request get_next_request() {
 }
 
 int main() {
-  std::map<std::string, std::string> common_tags = {{"nf.app", "example"},
-                                                    {"nf.region", "us-west-1"}};
-  spectator::Config config{common_tags, kDefault, kDefault,
-                           kDefault,    kDefault, "http://example.org/api/v1/publish"};
-  spectator::Registry registry{config};
+  spectator::Registry registry{spectator::GetConfiguration()};
 
   registry.Start();
 

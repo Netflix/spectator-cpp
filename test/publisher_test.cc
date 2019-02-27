@@ -16,7 +16,8 @@ class TestClock {};
 class TestRegistry : public Registry {
  public:
   using clock = TestClock;
-  TestRegistry(Config config) : Registry(std::move(config), DefaultLogger()) {}
+  TestRegistry(std::unique_ptr<Config> config)
+      : Registry(std::move(config), DefaultLogger()) {}
 };
 
 class TestPublisher : public Publisher<TestRegistry> {
@@ -31,10 +32,10 @@ class TestPublisher : public Publisher<TestRegistry> {
   }
 };
 
-Config get_test_config() {
-  Config config{};
-  config.common_tags["app"] = "atlas";
-  config.common_tags["node"] = "i-1234";
+std::unique_ptr<Config> get_test_config() {
+  auto config = spectator::GetConfiguration();
+  config->common_tags["app"] = "atlas";
+  config->common_tags["node"] = "i-1234";
   return config;
 }
 

@@ -4,12 +4,13 @@
 
 namespace spectator {
 
-Registry::Registry(Config config, Registry::logger_ptr logger) noexcept
+Registry::Registry(std::unique_ptr<Config> config,
+                   Registry::logger_ptr logger) noexcept
     : config_{std::move(config)},
       logger_{std::move(logger)},
       publisher_(this) {}
 
-const Config& Registry::GetConfig() const noexcept { return config_; }
+const Config& Registry::GetConfig() const noexcept { return *config_; }
 
 Registry::logger_ptr Registry::GetLogger() const noexcept { return logger_; }
 
