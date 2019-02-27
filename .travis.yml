@@ -6,7 +6,8 @@ script: ./run-build.sh
 matrix:
   include:
     - os: linux
-      compiler: gcc5
+      compiler: gcc
+      env: CC='gcc' CXX='g++'
       addons:
         apt:
           sources:
@@ -15,13 +16,8 @@ matrix:
             - lcov
 
     - os: linux
-      compiler: clang5
-      addons:
-        apt:
-          sources: [ 'ubuntu-toolchain-r-test', 'llvm-toolchain-xenial-7' ]
-          packages:
-            - clang-7.0
-      env: CC='clang-7.0' CXX='clang++-7.0'
+      compiler: clang
+      env: CC='clang' CXX='clang++'
 
 after_success:
   - ./create-lcov-report.sh
