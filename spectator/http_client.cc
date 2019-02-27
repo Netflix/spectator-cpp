@@ -34,6 +34,9 @@ class CurlHeaders {
 namespace {
 
 constexpr const char* const kUserAgent = "spectator-cpp/1.0";
+static size_t curl_ignore_output_fun(char*, size_t size, size_t nmemb, void*) {
+  return size * nmemb;
+}
 
 class CurlHandle {
  public:
@@ -92,6 +95,10 @@ class CurlHandle {
     curl_easy_setopt(handle_, CURLOPT_POSTFIELDSIZE, size);
   }
 
+  void ignore_output() {
+    curl_easy_setopt(handle_, CURLOPT_WRITEFUNCTION, curl_ignore_output_fun);
+  }
+
  private:
   CURL* handle_;
   std::unique_ptr<CurlHeaders> headers_;
@@ -131,6 +138,7 @@ int HttpClient::do_post(const std::string& url,
   curl.set_url(url);
   curl.set_headers(std::move(headers));
   curl.post_payload(std::move(payload), size);
+  curl.ignore_output();
 
   auto curl_res = curl.perform();
   auto error = false;
