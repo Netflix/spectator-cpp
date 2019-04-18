@@ -1,6 +1,5 @@
 language: cpp
 dist: xenial
-sudo: true
 script: ./run-build.sh
 
 matrix:
