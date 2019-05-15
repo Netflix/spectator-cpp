@@ -20,11 +20,12 @@ std::vector<Measurement> Timer::Measure() const noexcept {
   auto t_sq = totalSq_.exchange(0.0, std::memory_order_relaxed);
   auto t_sq_secs = t_sq / 1e18;
   auto mx = max_.exchange(0, std::memory_order_relaxed);
+  auto mx_secs = mx / 1e9;
   results.reserve(4);
   results.push_back({id_->WithStat("count"), static_cast<double>(cnt)});
   results.push_back({id_->WithStat("totalTime"), total_secs});
   results.push_back({id_->WithStat("totalOfSquares"), t_sq_secs});
-  results.push_back({id_->WithStat("max"), static_cast<double>(mx)});
+  results.push_back({id_->WithStat("max"), mx_secs});
   return results;
 }
 
