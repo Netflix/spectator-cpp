@@ -41,7 +41,7 @@ inline std::ostream& operator<<(std::ostream& os, const MeterType& mt) {
 
 class Meter {
  public:
-  virtual ~Meter(){};
+  virtual ~Meter() = default;
   virtual IdPtr MeterId() const noexcept = 0;
   virtual std::vector<Measurement> Measure() const noexcept = 0;
   virtual MeterType GetType() const noexcept = 0;

@@ -35,10 +35,26 @@ endif()
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-file(GLOB LIB_SOURCE_FILES spectator/*.h spectator/*.cc)
-add_library(spectator_cpp SHARED ${LIB_SOURCE_FILES})
-set_target_properties(spectator_cpp PROPERTIES COMPILE_FLAGS "-Wextra -Wno-missing-braces")
+add_executable(gen_perc_bucket_tags ./gen_perc_bucket_tags.cc)
+add_executable(gen_perc_bucket_values ./gen_perc_bucket_values.cc)
 
+# add the commands to generate the include files
+add_custom_command (
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/percentile_bucket_tags.inc
+        COMMAND gen_perc_bucket_tags ${CMAKE_CURRENT_BINARY_DIR}/percentile_bucket_tags.inc
+        DEPENDS gen_perc_bucket_tags
+)
+add_custom_command (
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/percentile_bucket_values.inc
+        COMMAND gen_perc_bucket_values ${CMAKE_CURRENT_BINARY_DIR}/percentile_bucket_values.inc
+        DEPENDS gen_perc_bucket_values
+)
+
+file(GLOB LIB_SOURCE_FILES spectator/*.h spectator/*.cc)
+add_library(spectator_cpp SHARED ${LIB_SOURCE_FILES}
+        ${CMAKE_CURRENT_BINARY_DIR}/percentile_bucket_tags.inc
+        ${CMAKE_CURRENT_BINARY_DIR}/percentile_bucket_values.inc)
+set_target_properties(spectator_cpp PROPERTIES COMPILE_FLAGS "-Wextra -Wno-missing-braces")
 
 if(CMAKE_SYSTEM_NAME STREQUAL Linux)
   configure_file(${CMAKE_SOURCE_DIR}/bundle/libcurl-linux.a libcurl.a COPYONLY)
