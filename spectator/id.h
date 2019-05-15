@@ -39,9 +39,9 @@ class Tags {
 
   bool operator==(const Tags& that) const { return that.entries_ == entries_; }
 
-  bool has(K key) const { return entries_.find(key) != entries_.end(); }
+  bool has(const K& key) const { return entries_.find(key) != entries_.end(); }
 
-  K at(K key) const {
+  K at(const K& key) const {
     auto entry = entries_.find(key);
     if (entry != entries_.end()) {
       return entry->second;
@@ -73,6 +73,15 @@ class Id {
   std::unique_ptr<Id> WithStat(const std::string& stat) const {
     return WithTag("statistic", stat);
   };
+
+  static std::shared_ptr<Id> WithDefaultStat(std::shared_ptr<Id> baseId,
+                                             const std::string& stat) {
+    if (baseId->GetTags().has("statistic")) {
+      return baseId;
+    } else {
+      return baseId->WithStat(stat);
+    }
+  }
 
   friend std::ostream& operator<<(std::ostream& os, const Id& id);
 

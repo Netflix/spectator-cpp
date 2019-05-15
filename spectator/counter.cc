@@ -10,7 +10,8 @@ IdPtr Counter::MeterId() const noexcept { return id_; }
 std::vector<Measurement> Counter::Measure() const noexcept {
   auto count = count_.exchange(0.0, std::memory_order_relaxed);
   if (count > 0) {
-    return std::vector<Measurement>({{id_->WithStat("count"), count}});
+    return std::vector<Measurement>(
+        {{Id::WithDefaultStat(id_, "count"), count}});
   }
   return std::vector<Measurement>();
 }
