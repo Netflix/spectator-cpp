@@ -45,7 +45,7 @@ void expect_timer(const Timer& t, int64_t count, int64_t total, double total_sq,
   expected[id->WithStat("count")] = count;
   expected[id->WithStat("totalTime")] = total / 1e9;
   expected[id->WithStat("totalOfSquares")] = total_sq / 1e18;
-  expected[id->WithStat("max")] = max;
+  expected[id->WithStat("max")] = max / 1e9;
 
   for (const auto& m : ms) {
     auto it = expected.find(m.id);
