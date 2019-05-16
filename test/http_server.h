@@ -1,9 +1,11 @@
 #pragma once
 
+#include <atomic>
 #include <string>
 #include <map>
 #include <memory>
 #include <mutex>
+#include <thread>
 #include <vector>
 
 class http_server {
@@ -16,15 +18,26 @@ class http_server {
 
   ~http_server();
 
-  void set_read_sleep(int millis) { read_sleep_ = millis; }
+  void set_read_sleep(std::chrono::milliseconds millis) {
+    read_sleep_ = millis;
+  }
 
-  void set_accept_sleep(int millis) { accept_sleep_ = millis; }
+  void set_accept_sleep(std::chrono::milliseconds millis) {
+    accept_sleep_ = millis;
+  }
+
+  void set_sleep_number(int nr) {
+    sleep_number_ = nr;
+  }
 
   void start() noexcept;
 
-  int get_port() const { return port_; };
+  void stop() {
+    is_done = true;
+    accept_.join();
+  }
 
-  void stop() { is_done = true; }
+  int get_port() const { return port_; };
 
   class Request {
    public:
@@ -55,12 +68,15 @@ class http_server {
   const std::vector<Request>& get_requests() const;
 
  private:
-  volatile int sockfd_ = -1;
-  volatile int port_ = 0;
-  volatile int accept_sleep_ = 0;
-  volatile int read_sleep_ = 0;
+  std::atomic<int> sockfd_{-1};
+  std::atomic<int> port_{0};
+  std::thread accept_{};
 
-  volatile bool is_done{false};
+  std::atomic<int> sleep_number_{3};
+  std::chrono::milliseconds accept_sleep_{0};
+  std::chrono::milliseconds read_sleep_{0};
+
+  std::atomic<bool> is_done{false};
   mutable std::mutex requests_mutex_{};
   std::vector<Request> requests_;
 

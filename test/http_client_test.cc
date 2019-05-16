@@ -58,12 +58,14 @@ TEST(HttpTest, Post) {
   logger->info("Server started on port {}", port);
 
   TestRegistry registry{GetConfiguration()};
-  HttpClient client{&registry, 100, 100};
+  HttpClient client{&registry, std::chrono::milliseconds(100),
+                    std::chrono::milliseconds(100)};
   auto url = fmt::format("http://localhost:{}/foo", port);
   const std::string post_data = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
   client.Post(url, "Content-type: application/json", post_data.c_str(),
               post_data.length());
 
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
   server.stop();
   auto timer_for_req = find_meter(&registry, "http.req.complete", "200");
   ASSERT_TRUE(timer_for_req != nullptr);
@@ -97,7 +99,7 @@ TEST(HttpTest, Post) {
 TEST(HttpTest, Timeout) {
   using spectator::HttpClient;
   http_server server;
-  server.set_read_sleep(1100);
+  server.set_read_sleep(std::chrono::milliseconds(100));
   server.start();
 
   auto port = server.get_port();
@@ -106,16 +108,43 @@ TEST(HttpTest, Timeout) {
   auto logger = registry.GetLogger();
   logger->info("Server started on port {}", port);
 
-  HttpClient client{&registry, 1, 1};
+  HttpClient client{&registry, std::chrono::milliseconds(10),
+                    std::chrono::milliseconds(10)};
   auto url = fmt::format("http://localhost:{}/foo", port);
   const std::string post_data = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
   auto status = client.Post(url, "Content-type: application/json",
                             post_data.c_str(), post_data.length());
 
   server.stop();
-  EXPECT_EQ(status, 400);
+  ASSERT_EQ(status, 400);
 
   auto timer_for_req = find_meter(&registry, "http.req.complete", "timeout");
+  ASSERT_TRUE(timer_for_req != nullptr);
+
+  auto expected_tags = Tags{{"client", "spectator-cpp"},
+                            {"statusCode", "timeout"},
+                            {"status", "timeout"},
+                            {"mode", "http-client"},
+                            {"method", "POST"}};
+  EXPECT_EQ(expected_tags, timer_for_req->MeterId()->GetTags());
+}
+
+TEST(HttpTest, ConnectTimeout) {
+  using spectator::HttpClient;
+  TestRegistry registry{GetConfiguration()};
+  auto logger = registry.GetLogger();
+
+  HttpClient client{&registry, std::chrono::milliseconds(10),
+                    std::chrono::milliseconds(100)};
+  const std::string url = "http://192.168.255.255:81/foo";
+  const std::string post_data = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+  auto status = client.Post(url, "Content-type: application/json",
+                            post_data.c_str(), post_data.length());
+
+  ASSERT_EQ(status, 400);
+
+  auto timer_for_req = find_meter(&registry, "http.req.complete", "timeout");
+  ASSERT_TRUE(timer_for_req != nullptr);
   auto expected_tags = Tags{{"client", "spectator-cpp"},
                             {"statusCode", "timeout"},
                             {"status", "timeout"},

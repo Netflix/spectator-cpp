@@ -1,7 +1,8 @@
+#include <utility>
+
 #include "http_client.h"
 #include "gzip.h"
 #include "json.h"
-#include "logger.h"
 #include "memory.h"
 #include "registry.h"
 #include "strings.h"
@@ -34,7 +35,7 @@ class CurlHeaders {
 namespace {
 
 constexpr const char* const kUserAgent = "spectator-cpp/1.0";
-static size_t curl_ignore_output_fun(char*, size_t size, size_t nmemb, void*) {
+size_t curl_ignore_output_fun(char*, size_t size, size_t nmemb, void*) {
   return size * nmemb;
 }
 
@@ -74,21 +75,22 @@ class CurlHandle {
 
   void set_url(const std::string& url) { set_opt(CURLOPT_URL, url.c_str()); }
 
-  void set_headers(std::unique_ptr<CurlHeaders> headers) {
+  void set_headers(std::shared_ptr<CurlHeaders> headers) {
     headers_ = std::move(headers);
     set_opt(CURLOPT_HTTPHEADER, headers_->headers());
   }
 
-  void set_connect_timeout(int connect_timeout_seconds) {
-    curl_easy_setopt(handle_, CURLOPT_CONNECTTIMEOUT,
-                     (long)connect_timeout_seconds);
+  void set_connect_timeout(std::chrono::milliseconds connect_timeout) {
+    auto millis = static_cast<long>(connect_timeout.count());
+    curl_easy_setopt(handle_, CURLOPT_CONNECTTIMEOUT_MS, millis);
   }
 
-  void set_read_timeout(int read_timeout_seconds) {
-    curl_easy_setopt(handle_, CURLOPT_TIMEOUT, (long)read_timeout_seconds);
+  void set_timeout(std::chrono::milliseconds total_timeout) {
+    auto millis = static_cast<long>(total_timeout.count());
+    curl_easy_setopt(handle_, CURLOPT_TIMEOUT_MS, millis);
   }
 
-  void post_payload(std::unique_ptr<char[]> payload, size_t size) {
+  void post_payload(std::shared_ptr<char> payload, size_t size) {
     payload_ = std::move(payload);
     curl_easy_setopt(handle_, CURLOPT_POST, 1L);
     curl_easy_setopt(handle_, CURLOPT_POSTFIELDS, payload_.get());
@@ -101,8 +103,8 @@ class CurlHandle {
 
  private:
   CURL* handle_;
-  std::unique_ptr<CurlHeaders> headers_;
-  std::unique_ptr<char[]> payload_;
+  std::shared_ptr<CurlHeaders> headers_;
+  std::shared_ptr<char> payload_;
 };
 
 void add_status_tags(Tags* tags, CURLcode curl_res, int status_code) {
@@ -124,20 +126,24 @@ void add_status_tags(Tags* tags, CURLcode curl_res, int status_code) {
 }  // namespace
 
 int HttpClient::do_post(const std::string& url,
-                        std::unique_ptr<CurlHeaders> headers,
-                        std::unique_ptr<char[]> payload, size_t size) const {
+                        std::shared_ptr<CurlHeaders> headers,
+                        std::shared_ptr<char> payload, size_t size,
+                        int attempt_number) const {
+  using std::chrono::duration_cast;
+  using std::chrono::milliseconds;
+
   const auto start = Registry::clock::now();
   Tags tags{
       {"method", "POST"}, {"mode", "http-client"}, {"client", "spectator-cpp"}};
   CurlHandle curl;
+  curl.set_timeout(total_timeout_);
   curl.set_connect_timeout(connect_timeout_);
-  curl.set_read_timeout(read_timeout_);
 
   auto logger = registry_->GetLogger();
   logger->debug("POSTing to url: {}", url);
   curl.set_url(url);
-  curl.set_headers(std::move(headers));
-  curl.post_payload(std::move(payload), size);
+  curl.set_headers(headers);
+  curl.post_payload(payload, size);
   curl.ignore_output();
 
   auto curl_res = curl.perform();
@@ -147,7 +153,19 @@ int HttpClient::do_post(const std::string& url,
   if (curl_res != CURLE_OK) {
     logger->error("Failed to POST {}: {}", url, curl_easy_strerror(curl_res));
     error = true;
-    if (curl_res == CURLE_OPERATION_TIMEDOUT) {
+    if (curl_res == CURLE_OPERATION_TIMEDOUT ||
+        curl_res == CURLE_COULDNT_CONNECT) {
+      auto elapsed =
+          duration_cast<milliseconds>(Registry::clock::now() - start);
+      // retry connect timeouts if possible, not read timeouts
+      logger->info(
+          "HTTP timeout to {}: {}ms elapsed - connect_to={} read_to={}", url,
+          elapsed.count(), connect_timeout_.count(),
+          (total_timeout_ - connect_timeout_).count());
+      if (elapsed < total_timeout_ && attempt_number < 2) {
+        return do_post(url, std::move(headers), std::move(payload), size,
+                       attempt_number + 1);
+      }
       tags.add("status", "timeout");
       tags.add("statusCode", "timeout");
     } else {
@@ -174,11 +192,12 @@ static constexpr const char* const kGzipEncoding = "Content-Encoding: gzip";
 
 int HttpClient::Post(const std::string& url, const char* content_type,
                      const char* payload, size_t size) const {
-  auto headers = std::make_unique<CurlHeaders>();
+  auto headers = std::make_shared<CurlHeaders>();
   headers->append(content_type);
   headers->append(kGzipEncoding);
   auto compressed_size = compressBound(size) + kGzipHeaderSize;
-  auto compressed_payload = std::unique_ptr<char[]>(new char[compressed_size]);
+  auto compressed_payload = std::shared_ptr<char>(
+      new char[compressed_size], [](const char* p) { delete[] p; });
   auto compress_res =
       gzip_compress(compressed_payload.get(), &compressed_size, payload, size);
   if (compress_res != Z_OK) {
@@ -190,7 +209,7 @@ int HttpClient::Post(const std::string& url, const char* content_type,
   }
 
   return do_post(url, std::move(headers), std::move(compressed_payload),
-                 compressed_size);
+                 compressed_size, 0);
 }
 
 int HttpClient::Post(const std::string& url,

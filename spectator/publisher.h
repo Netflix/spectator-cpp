@@ -208,8 +208,14 @@ class Publisher {
 
   std::pair<size_t, size_t> send_metrics() {
     const auto& cfg = registry_->GetConfig();
-    auto read_timeout = cfg.read_timeout || 2;
-    auto connect_timeout = cfg.connect_timeout || 1;
+    auto read_timeout = cfg.read_timeout;
+    auto connect_timeout = cfg.connect_timeout;
+    if (read_timeout.count() == 0) {
+      read_timeout = std::chrono::seconds(2);
+    }
+    if (connect_timeout.count() == 0) {
+      connect_timeout = std::chrono::seconds(2);
+    }
     HttpClient client{registry_, connect_timeout, read_timeout};
     auto batch_size =
         static_cast<std::vector<Measurement>::difference_type>(cfg.batch_size);
