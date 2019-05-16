@@ -9,7 +9,7 @@ using namespace spectator;
 
 std::unique_ptr<PercentileDistributionSummary> getDS(Registry* r) {
   auto id = r->CreateId("ds", Tags{});
-  return std::make_unique<PercentileDistributionSummary>(r, id);
+  return std::make_unique<PercentileDistributionSummary>(r, id, 0, 1000 * 1000);
 }
 
 TEST(PercentileDistributionSummary, Percentile) {
@@ -62,4 +62,45 @@ TEST(PercentileDistributionSummary, CountTotal) {
 
   EXPECT_EQ(t->Count(), 100);
   EXPECT_EQ(t->TotalAmount(), 100 * 99 / 2);  // sum(1,n) = n * (n - 1) / 2
+}
+
+TEST(PercentileDistributionSummary, Restrict) {
+  Registry r{GetConfiguration(), DefaultLogger()};
+  auto id = r.CreateId("ds", Tags{});
+  PercentileDistributionSummary ds{&r, id, 5, 2000};
+
+  ds.Record(-1);
+  ds.Record(0);
+  ds.Record(10);
+  ds.Record(10000);
+
+  auto total = 0 + 10 + 10000;  // we ignore the negative value
+  EXPECT_EQ(ds.TotalAmount(), total);
+  EXPECT_EQ(ds.Count(), 3);
+
+  auto measurements = r.Measurements();
+  auto actual = measurements_to_map(measurements);
+  auto expected = std::map<std::string, double>{};
+
+  auto minPercTag = kDistTags.at(PercentileBucketIndexOf(5));
+  auto maxPercTag = kDistTags.at(PercentileBucketIndexOf(2000));
+  auto percTag = kDistTags.at(PercentileBucketIndexOf(10));
+
+  expected[fmt::format("ds|percentile={}|statistic=percentile", minPercTag)] =
+      1;
+  expected[fmt::format("ds|percentile={}|statistic=percentile", maxPercTag)] =
+      1;
+  expected[fmt::format("ds|percentile={}|statistic=percentile", percTag)] = 1;
+
+  expected["ds|statistic=count"] = 3;
+  auto totalSq = 10 * 10 + 10000 * 10000;
+  expected["ds|statistic=max"] = 10000;
+  expected["ds|statistic=totalAmount"] = total;
+  expected["ds|statistic=totalOfSquares"] = totalSq;
+
+  ASSERT_EQ(expected.size(), actual.size());
+  for (const auto& expected_m : expected) {
+    EXPECT_DOUBLE_EQ(expected_m.second, actual[expected_m.first])
+        << expected_m.first;
+  }
 }

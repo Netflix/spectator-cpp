@@ -1,5 +1,6 @@
 #include "percentile_timer.h"
 #include "percentile_bucket_tags.inc"
+#include "util.h"
 
 using nanos = std::chrono::nanoseconds;
 
@@ -14,16 +15,6 @@ PercentileTimer::PercentileTimer(spectator::Registry* registry,
       min_{min},
       max_{max},
       timer_{registry->GetTimer(id_)} {}
-
-static nanos restrict(nanos amount, nanos min, nanos max) {
-  auto r = amount;
-  if (r > max) {
-    r = max;
-  } else if (r < min) {
-    r = min;
-  }
-  return r;
-}
 
 void PercentileTimer::Record(std::chrono::nanoseconds amount) noexcept {
   timer_->Record(amount);
