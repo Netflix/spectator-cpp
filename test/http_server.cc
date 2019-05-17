@@ -33,7 +33,7 @@ void http_server::start() noexcept {
   serv_addr.sin_family = AF_INET;
   serv_addr.sin_port = 0;
 
-  auto sockfd = sockfd_;
+  int sockfd = sockfd_;
   ASSERT_TRUE(bind(sockfd, (sockaddr*)&serv_addr, sizeof serv_addr) >= 0);
   ASSERT_TRUE(listen(sockfd, 32) == 0);
 
@@ -41,8 +41,8 @@ void http_server::start() noexcept {
   ASSERT_TRUE(getsockname(sockfd, (sockaddr*)&serv_addr, &serv_len) >= 0);
   port_ = ntohs(serv_addr.sin_port);
 
-  std::thread acceptor(&http_server::accept_loop, this);
-  acceptor.detach();
+  DefaultLogger()->info("Http server started");
+  accept_ = std::thread{&http_server::accept_loop, this};
 }
 
 static std::string to_lower(const std::string& s) {
@@ -163,8 +163,8 @@ void http_server::accept_request(int client) {
     requests_.emplace_back(method, path, headers, content_len, std::move(body));
   }
 
-  if (read_sleep_ > 0) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(read_sleep_));
+  if (read_sleep_.count() > 0) {
+    std::this_thread::sleep_for(read_sleep_);
   }
 
   // TODO handle 404s
@@ -179,16 +179,29 @@ void http_server::accept_request(int client) {
 }
 
 void http_server::accept_loop() {
+  fd_set fds;
+  timeval tv{};
+  int slept_number = 0;
   while (!is_done) {
+    FD_ZERO(&fds);
+    FD_SET(sockfd_, &fds);
     struct sockaddr_in cli_addr;
     socklen_t cli_len = sizeof(cli_addr);
-    if (accept_sleep_ > 0) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(accept_sleep_));
+    if (accept_sleep_.count() > 0 && slept_number < sleep_number_) {
+      DefaultLogger()->debug("Sleeping before accept {} < {}", slept_number,
+                             sleep_number_.load());
+      std::this_thread::sleep_for(accept_sleep_);
+      slept_number++;
     }
-    int client_socket = accept(sockfd_, (sockaddr*)&cli_addr, &cli_len);
-    if (client_socket >= 0) {
-      accept_request(client_socket);
-      close(client_socket);
+    tv.tv_sec = 0;
+    tv.tv_usec = 10 * 1000l;
+    if (select(sockfd_ + 1, &fds, nullptr, nullptr, &tv) > 0) {
+      DefaultLogger()->debug("Http server accepting client connection");
+      int client_socket = accept(sockfd_, (sockaddr*)&cli_addr, &cli_len);
+      if (client_socket >= 0) {
+        accept_request(client_socket);
+        close(client_socket);
+      }
     }
   }
 }

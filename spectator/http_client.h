@@ -12,10 +12,11 @@ class CurlHeaders;
 
 class HttpClient {
  public:
-  HttpClient(Registry* registry, int connect_timeout, int read_timeout)
+  HttpClient(Registry* registry, std::chrono::milliseconds connect_timeout,
+             std::chrono::milliseconds read_timeout)
       : registry_(registry),
         connect_timeout_(connect_timeout),
-        read_timeout_(read_timeout) {}
+        total_timeout_(read_timeout + connect_timeout) {}
 
   int Post(const std::string& url, const char* content_type,
            const char* payload, size_t size) const;
@@ -27,11 +28,12 @@ class HttpClient {
 
  private:
   Registry* registry_;
-  int connect_timeout_;
-  int read_timeout_;
+  std::chrono::milliseconds connect_timeout_;
+  std::chrono::milliseconds total_timeout_;
 
-  int do_post(const std::string& url, std::unique_ptr<CurlHeaders> headers,
-              std::unique_ptr<char[]> payload, size_t size) const;
+  int do_post(const std::string& url, std::shared_ptr<CurlHeaders> headers,
+              std::shared_ptr<char> payload, size_t size,
+              int attempt_number) const;
 };
 
 }  // namespace spectator

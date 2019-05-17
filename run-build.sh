@@ -27,16 +27,7 @@ else
   cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DASAN=ON ..
 fi
 
-make -j4
-# Checks if last comand didn't output 0
-# $? checks what last command outputed
-# If output is 0 then command is succesfuly executed
-# If command fails it outputs number between 0 to 255
-if [ $? -ne 0 ]; then
-    error "Error: there are compile errors!"
-	# Terminate script and outputs 3
-    exit 3
-fi
+make -j4 || make
 
 showinfo "Running tests ..."
 
