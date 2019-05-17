@@ -1,9 +1,10 @@
 #include <utility>
 
-#include "http_client.h"
 #include "gzip.h"
+#include "http_client.h"
 #include "json.h"
 #include "memory.h"
+#include "percentile_timer.h"
 #include "registry.h"
 #include "strings.h"
 
@@ -35,7 +36,8 @@ class CurlHeaders {
 namespace {
 
 constexpr const char* const kUserAgent = "spectator-cpp/1.0";
-size_t curl_ignore_output_fun(char*, size_t size, size_t nmemb, void*) {
+size_t curl_ignore_output_fun(char* /*unused*/, size_t size, size_t nmemb,
+                              void* /*unused*/) {
   return size * nmemb;
 }
 
@@ -107,21 +109,67 @@ class CurlHandle {
   std::shared_ptr<char> payload_;
 };
 
-void add_status_tags(Tags* tags, CURLcode curl_res, int status_code) {
-  if (curl_res == CURLE_OK) {
-    auto code = fmt::format("{}", status_code);
-    auto status = fmt::format("{}xx", status_code / 100);
+class LogEntry {
+ public:
+  LogEntry(Registry* registry, std::string method, std::string url)
+      : registry_{registry},
+        start_{Registry::clock::now()},
+        url_{std::move(url)},
+        id_{registry_->CreateId("ipc.client.call",
+                                Tags{{"owner", "spectator-cpp"},
+                                     {"http.method", std::move(method)},
+                                     {"http.status", "-1"}})} {}
 
-    tags->add("status", status);
-    tags->add("statusCode", code);
-  } else if (curl_res == CURLE_OPERATION_TIMEDOUT) {
-    tags->add("status", "timeout");
-    tags->add("statusCode", "timeout");
-  } else {
-    tags->add("status", "error");
-    tags->add("statusCode", "error");
+  Registry::clock::time_point start() const { return start_; }
+
+  void log() {
+    using millis = std::chrono::milliseconds;
+    using std::chrono::seconds;
+    PercentileTimer timer{registry_, std::move(id_), millis(1), seconds(5)};
+
+    timer.Record(Registry::clock::now() - start_);
   }
-}
+
+  void set_status_code(int code) {
+    id_ = id_->WithTag("http.status", fmt::format("{}", code));
+  }
+
+  void set_attempt(int attempt_number, bool is_final) {
+    id_ = id_->WithTag("ipc.attempt", attempt(attempt_number))
+              ->WithTag("ipc.attempt.final", is_final ? "true" : "false");
+  }
+
+  void set_error(const std::string& error) {
+    id_ = id_->WithTag("ipc.result", "failure")->WithTag("ipc.status", error);
+  }
+
+  void set_success() {
+    const std::string ipc_success = "success";
+    id_ = id_->WithTag("ipc.status", ipc_success)
+              ->WithTag("ipc.result", ipc_success);
+  }
+
+ private:
+  Registry* registry_;
+  Registry::clock::time_point start_;
+  std::string url_;
+  IdPtr id_;
+
+  std::string attempt(int attempt_number) {
+    static std::string initial = "initial";
+    static std::string second = "second";
+    static std::string third_up = "third_up";
+
+    switch (attempt_number) {
+      case 0:
+        return initial;
+      case 1:
+        return second;
+      default:
+        return third_up;
+    }
+  }
+};
 
 }  // namespace
 
@@ -132,9 +180,8 @@ int HttpClient::do_post(const std::string& url,
   using std::chrono::duration_cast;
   using std::chrono::milliseconds;
 
-  const auto start = Registry::clock::now();
-  Tags tags{
-      {"method", "POST"}, {"mode", "http-client"}, {"client", "spectator-cpp"}};
+  LogEntry entry{registry_, "POST", url};
+
   CurlHandle curl;
   curl.set_timeout(total_timeout_);
   curl.set_connect_timeout(connect_timeout_);
@@ -147,43 +194,47 @@ int HttpClient::do_post(const std::string& url,
   curl.ignore_output();
 
   auto curl_res = curl.perform();
-  auto error = false;
   auto http_code = 400;
 
   if (curl_res != CURLE_OK) {
     logger->error("Failed to POST {}: {}", url, curl_easy_strerror(curl_res));
-    error = true;
-    if (curl_res == CURLE_OPERATION_TIMEDOUT ||
-        curl_res == CURLE_COULDNT_CONNECT) {
-      auto elapsed =
-          duration_cast<milliseconds>(Registry::clock::now() - start);
-      // retry connect timeouts if possible, not read timeouts
-      logger->info(
-          "HTTP timeout to {}: {}ms elapsed - connect_to={} read_to={}", url,
-          elapsed.count(), connect_timeout_.count(),
-          (total_timeout_ - connect_timeout_).count());
-      if (elapsed < total_timeout_ && attempt_number < 2) {
-        return do_post(url, std::move(headers), std::move(payload), size,
-                       attempt_number + 1);
-      }
-      tags.add("status", "timeout");
-      tags.add("statusCode", "timeout");
-    } else {
-      tags.add("status", "error");
-      tags.add("statusCode", "error");
+    switch (curl_res) {
+      case CURLE_COULDNT_CONNECT:
+        entry.set_error("connection_error");
+        break;
+      case CURLE_OPERATION_TIMEDOUT:
+        entry.set_error("timeout");
+        break;
+      default:
+        entry.set_error("unknown");
     }
+    auto elapsed =
+        duration_cast<milliseconds>(Registry::clock::now() - entry.start());
+    // retry connect timeouts if possible, not read timeouts
+    logger->info("HTTP timeout to {}: {}ms elapsed - connect_to={} read_to={}",
+                 url, elapsed.count(), connect_timeout_.count(),
+                 (total_timeout_ - connect_timeout_).count());
+    if (elapsed < total_timeout_ && attempt_number < 2) {
+      entry.set_attempt(attempt_number, false);
+      entry.log();
+      return do_post(url, std::move(headers), std::move(payload), size,
+                     attempt_number + 1);
+    }
+
+    entry.set_status_code(-1);
   } else {
     http_code = curl.status_code();
-    add_status_tags(&tags, curl_res, http_code);
-  }
-
-  if (!error) {
+    entry.set_status_code(http_code);
+    if (http_code / 100 == 2) {
+      entry.set_success();
+    } else {
+      entry.set_error("http_error");
+    }
     logger->debug("Was able to POST to {} - status code: {}", url, http_code);
   }
+  entry.set_attempt(attempt_number, true);
+  entry.log();
 
-  auto duration = Registry::clock::now() - start;
-  registry_->GetTimer(registry_->CreateId("http.req.complete", tags))
-      ->Record(duration);
   return http_code;
 }
 

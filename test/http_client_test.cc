@@ -6,14 +6,17 @@
 #include <sys/types.h>
 #include <zlib.h>
 
+#include <fmt/ostream.h>
 #include "../spectator/gzip.h"
 #include "../spectator/http_client.h"
 #include "../spectator/logger.h"
 #include "../spectator/registry.h"
 #include "../spectator/strings.h"
+#include "../spectator/timer.h"
 #include "http_server.h"
-#include <fstream>
-#include <thread>
+#include "test_utils.h"
+#include "percentile_bucket_tags.inc"
+#include "../spectator/percentile_buckets.h"
 
 using spectator::Config;
 using spectator::DefaultLogger;
@@ -23,27 +26,26 @@ using spectator::HttpClient;
 using spectator::Registry;
 using spectator::Tags;
 
-static std::shared_ptr<spectator::Meter> find_meter(
+static std::shared_ptr<spectator::Meter> find_timer(
     Registry* registry, const std::string& name,
     const std::string& status_code) {
   auto meters = registry->Meters();
   for (const auto& m : meters) {
-    auto meter_name = m->MeterId()->Name();
-    if (meter_name == name) {
-      auto t = m->MeterId()->GetTags().at("statusCode");
-      if (t == status_code) {
-        return m;
+    if (m->GetType() == spectator::MeterType::Timer) {
+      auto meter_name = m->MeterId()->Name();
+      if (meter_name == name) {
+        auto t = m->MeterId()->GetTags().at("http.status");
+        if (t == status_code) {
+          return m;
+        }
       }
     }
   }
   return nullptr;
 }
 
-class TestClock {};
-
 class TestRegistry : public Registry {
  public:
-  using clock = TestClock;
   TestRegistry(std::unique_ptr<Config> config)
       : Registry(std::move(config), DefaultLogger()) {}
 };
@@ -67,14 +69,17 @@ TEST(HttpTest, Post) {
 
   std::this_thread::sleep_for(std::chrono::milliseconds(50));
   server.stop();
-  auto timer_for_req = find_meter(&registry, "http.req.complete", "200");
+
+  auto timer_for_req = find_timer(&registry, "ipc.client.call", "200");
   ASSERT_TRUE(timer_for_req != nullptr);
-  auto expected_tags = Tags{{"client", "spectator-cpp"},
-                            {"statusCode", "200"},
-                            {"status", "2xx"},
-                            {"mode", "http-client"},
-                            {"method", "POST"}};
-  EXPECT_EQ(expected_tags, timer_for_req->MeterId()->GetTags());
+  auto expected_tags =
+      Tags{{"owner", "spectator-cpp"},   {"http.status", "200"},
+           {"http.method", "POST"},      {"ipc.status", "success"},
+           {"ipc.result", "success"},    {"ipc.attempt", "initial"},
+           {"ipc.attempt.final", "true"}};
+
+  const auto& actual_tags = timer_for_req->MeterId()->GetTags();
+  EXPECT_EQ(expected_tags, actual_tags);
 
   const auto& requests = server.get_requests();
   EXPECT_EQ(requests.size(), 1);
@@ -114,18 +119,17 @@ TEST(HttpTest, Timeout) {
   const std::string post_data = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
   auto status = client.Post(url, "Content-type: application/json",
                             post_data.c_str(), post_data.length());
-
   server.stop();
-  ASSERT_EQ(status, 400);
 
-  auto timer_for_req = find_meter(&registry, "http.req.complete", "timeout");
+  ASSERT_EQ(status, 400);
+  auto timer_for_req = find_timer(&registry, "ipc.client.call", "-1");
   ASSERT_TRUE(timer_for_req != nullptr);
 
-  auto expected_tags = Tags{{"client", "spectator-cpp"},
-                            {"statusCode", "timeout"},
-                            {"status", "timeout"},
-                            {"mode", "http-client"},
-                            {"method", "POST"}};
+  auto expected_tags =
+      Tags{{"owner", "spectator-cpp"}, {"http.status", "-1"},
+           {"ipc.result", "failure"},  {"ipc.status", "timeout"},
+           {"ipc.attempt", "initial"}, {"ipc.attempt.final", "true"},
+           {"http.method", "POST"}};
   EXPECT_EQ(expected_tags, timer_for_req->MeterId()->GetTags());
 }
 
@@ -143,12 +147,8 @@ TEST(HttpTest, ConnectTimeout) {
 
   ASSERT_EQ(status, 400);
 
-  auto timer_for_req = find_meter(&registry, "http.req.complete", "timeout");
-  ASSERT_TRUE(timer_for_req != nullptr);
-  auto expected_tags = Tags{{"client", "spectator-cpp"},
-                            {"statusCode", "timeout"},
-                            {"status", "timeout"},
-                            {"mode", "http-client"},
-                            {"method", "POST"}};
-  EXPECT_EQ(expected_tags, timer_for_req->MeterId()->GetTags());
+  auto meters = registry.Meters();
+  for (const auto& m : meters) {
+    logger->info("{}", m->MeterId()->GetTags());
+  }
 }

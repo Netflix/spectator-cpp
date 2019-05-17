@@ -26,9 +26,7 @@ class http_server {
     accept_sleep_ = millis;
   }
 
-  void set_sleep_number(int nr) {
-    sleep_number_ = nr;
-  }
+  void set_sleep_number(int nr) { sleep_number_ = nr; }
 
   void start() noexcept;
 
