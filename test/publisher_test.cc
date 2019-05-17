@@ -11,11 +11,9 @@ using spectator::Publisher;
 using spectator::Registry;
 
 namespace {
-class TestClock {};
 
 class TestRegistry : public Registry {
  public:
-  using clock = TestClock;
   TestRegistry(std::unique_ptr<Config> config)
       : Registry(std::move(config), DefaultLogger()) {}
 };

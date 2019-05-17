@@ -1,6 +1,5 @@
 #include "id.h"
 #include "memory.h"
-#include <ostream>
 #include <utility>
 
 namespace spectator {
@@ -19,21 +18,6 @@ std::unique_ptr<spectator::Id> Id::WithTag(const std::string& key,
   Tags tags{GetTags()};
   tags.add(key, value);
   return std::make_unique<Id>(Name(), tags);
-}
-
-inline std::ostream& operator<<(std::ostream& os, const Tags& tags) {
-  bool first = true;
-  os << '[';
-  for (const auto& tag : tags) {
-    if (first) {
-      first = false;
-    } else {
-      os << ", ";
-    }
-    os << tag.first << "->" << tag.second;
-  }
-  os << ']';
-  return os;
 }
 
 std::ostream& operator<<(std::ostream& os, const Id& id) {

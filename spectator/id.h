@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <ostream>
 #include <string>
 #include <ska/flat_hash_map.hpp>
 
@@ -55,6 +56,21 @@ class Tags {
 
   table_t::const_iterator end() const { return entries_.end(); }
 };
+
+inline std::ostream& operator<<(std::ostream& os, const Tags& tags) {
+  bool first = true;
+  os << '[';
+  for (const auto& tag : tags) {
+    if (first) {
+      first = false;
+    } else {
+      os << ", ";
+    }
+    os << tag.first << "->" << tag.second;
+  }
+  os << ']';
+  return os;
+}
 
 class Id {
  public:
