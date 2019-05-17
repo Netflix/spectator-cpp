@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.0)
 
 set(PROJECT_NAME_STR spectator_cpp)
 set(CMAKE_MACOSX_RPATH 1)
@@ -48,16 +48,21 @@ add_custom_command (
         COMMAND gen_perc_bucket_values ${CMAKE_CURRENT_BINARY_DIR}/percentile_bucket_values.inc
         DEPENDS gen_perc_bucket_values
 )
+add_custom_target(generated-files DEPENDS 
+        ${CMAKE_CURRENT_BINARY_DIR}/percentile_bucket_tags.inc
+        ${CMAKE_CURRENT_BINARY_DIR}/percentile_bucket_values.inc)
 
 file(GLOB LIB_SOURCE_FILES spectator/*.h spectator/*.cc)
 add_library(spectator_cpp SHARED ${LIB_SOURCE_FILES}
         ${CMAKE_CURRENT_BINARY_DIR}/percentile_bucket_tags.inc
         ${CMAKE_CURRENT_BINARY_DIR}/percentile_bucket_values.inc)
 set_target_properties(spectator_cpp PROPERTIES COMPILE_FLAGS "-Wextra -Wno-missing-braces")
+add_dependencies(spectator_cpp generated-files)
 
 if(CMAKE_SYSTEM_NAME STREQUAL Linux)
   configure_file(${CMAKE_SOURCE_DIR}/bundle/libcurl-linux.a libcurl.a COPYONLY)
   add_library(spectatorStatic STATIC ${LIB_SOURCE_FILES})
+  add_dependencies(spectatorStatic generated-files)
   
   set_target_properties(spectatorStatic PROPERTIES OUTPUT_NAME spectator_cpp)
   target_link_libraries(spectatorStatic ${CMAKE_BINARY_DIR}/libcurl.a z)

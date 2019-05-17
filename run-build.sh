@@ -27,7 +27,7 @@ else
   cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DASAN=ON ..
 fi
 
-make -j4 || make
+make -j4 
 
 showinfo "Running tests ..."
 
