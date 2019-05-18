@@ -21,4 +21,6 @@ inline void TrimRight(std::string* s) {
            s->end());
 }
 
+std::string PathFromUrl(const std::string& url) noexcept;
+
 }  // namespace spectator

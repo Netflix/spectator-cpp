@@ -114,9 +114,9 @@ class LogEntry {
   LogEntry(Registry* registry, std::string method, std::string url)
       : registry_{registry},
         start_{Registry::clock::now()},
-        url_{std::move(url)},
         id_{registry_->CreateId("ipc.client.call",
                                 Tags{{"owner", "spectator-cpp"},
+                                     {"ipc.endpoint", PathFromUrl(url)},
                                      {"http.method", std::move(method)},
                                      {"http.status", "-1"}})} {}
 
@@ -152,7 +152,6 @@ class LogEntry {
  private:
   Registry* registry_;
   Registry::clock::time_point start_;
-  std::string url_;
   IdPtr id_;
 
   std::string attempt(int attempt_number) {
