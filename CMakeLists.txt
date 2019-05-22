@@ -94,5 +94,6 @@ install(DIRECTORY 3rd-party/rapidjson DESTINATION include FILES_MATCHING PATTERN
 if(CMAKE_SYSTEM_NAME STREQUAL Linux)
   install(TARGETS spectatorStatic DESTINATION lib)
   install(FILES ${CMAKE_SOURCE_DIR}/bundle/libcurl-linux.a DESTINATION lib RENAME libspectator_curl.a)
+  install(FILES ${CMAKE_SOURCE_DIR}/bundle/libcares-linux.a DESTINATION lib RENAME libspectator_cares.a)
 endif()
 
