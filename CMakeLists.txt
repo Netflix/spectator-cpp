@@ -61,6 +61,7 @@ add_dependencies(spectator_cpp generated-files)
 
 if(CMAKE_SYSTEM_NAME STREQUAL Linux)
   configure_file(${CMAKE_SOURCE_DIR}/bundle/libcurl-linux.a libcurl.a COPYONLY)
+  configure_file(${CMAKE_SOURCE_DIR}/bundle/libcares-linux.a libcares.a COPYONLY)
   add_library(spectatorStatic STATIC ${LIB_SOURCE_FILES})
   add_dependencies(spectatorStatic generated-files)
   
@@ -68,8 +69,9 @@ if(CMAKE_SYSTEM_NAME STREQUAL Linux)
   target_link_libraries(spectatorStatic ${CMAKE_BINARY_DIR}/libcurl.a z)
 else()
   configure_file(${CMAKE_SOURCE_DIR}/bundle/libcurl-osx.a libcurl.a COPYONLY)
+  configure_file(${CMAKE_SOURCE_DIR}/bundle/libcares-osx.a libcares.a COPYONLY)
 endif()
-target_link_libraries(spectator_cpp ${CMAKE_BINARY_DIR}/libcurl.a z)
+target_link_libraries(spectator_cpp ${CMAKE_BINARY_DIR}/libcurl.a ${CMAKE_BINARY_DIR}/libcares.a z)
 
 # test configuration
 enable_testing()
