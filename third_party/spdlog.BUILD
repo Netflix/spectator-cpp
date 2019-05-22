@@ -1,3 +1,5 @@
+# https://github.com/envoyproxy/envoy/blob/master/bazel/external/spdlog.BUILD.
+
 cc_library(
     name = "spdlog",
     hdrs = glob([
@@ -7,5 +9,5 @@ cc_library(
     defines = ["SPDLOG_FMT_EXTERNAL"],
     includes = ["include"],
     visibility = ["//visibility:public"],
-    deps = ["@spectator_fmtlib//:fmtlib"],
+    deps = ["@com_github_fmtlib_fmt//:fmtlib"],
 )

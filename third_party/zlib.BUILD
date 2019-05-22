@@ -1,3 +1,5 @@
+# https://github.com/tensorflow/tensorflow/blob/master/third_party/zlib.BUILD
+
 licenses(["notice"])  # BSD/MIT-like license (for zlib)
 
 cc_library(
