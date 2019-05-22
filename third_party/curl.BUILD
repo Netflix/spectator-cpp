@@ -254,10 +254,10 @@ cc_library(
     }),
     visibility = ["//visibility:public"],
     deps = [
-        "@spectator_zlib//:zlib",
+        "@net_zlib_zlib//:zlib",
     ] + select({
         "//conditions:default": [
-            "@spectator_boringssl//:ssl",
+            "@boringssl//:ssl",
         ],
     }),
 )
