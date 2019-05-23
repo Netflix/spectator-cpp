@@ -1,3 +1,13 @@
+config_setting(
+    name = "c_ares_via_cmake",
+    values = {"define": "c_ares_via_cmake=enabled"},
+)
+
+config_setting(
+    name = "zlib_via_cmake",
+    values = {"define": "zlib_via_cmake=enabled"},
+)
+
 cc_library(
     name = "spectator",
     srcs = glob(["spectator/*.cc"]),

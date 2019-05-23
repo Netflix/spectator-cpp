@@ -1,4 +1,4 @@
-# https://github.com/tensorflow/tensorflow/blob/master/third_party/curl.BUILD minus non-linux options.
+# https://github.com/tensorflow/tensorflow/blob/master/third_party/curl.BUILD minus non-linux options plus c-ares.
 
 # Description:
 #   curl is a tool for talking to web servers.
@@ -233,6 +233,7 @@ cc_library(
             "-Iexternal/curl/lib",
             "-D_GNU_SOURCE",
             "-DBUILDING_LIBCURL",
+            "-DUSE_ARES",
             "-DHAVE_CONFIG_H",
             "-DCURL_DISABLE_FTP",
             "-DCURL_DISABLE_NTLM",  # turning it off in configure is not enough
@@ -254,12 +255,23 @@ cc_library(
     }),
     visibility = ["//visibility:public"],
     deps = [
-        "@net_zlib_zlib//:zlib",
-    ] + select({
-        "//conditions:default": [
-            "@boringssl//:ssl",
-        ],
-    }),
+               "@boringssl//:ssl",
+           ] + select({
+               "//conditions:default": [
+                   "@com_github_c_ares_c_ares//:ares",
+               ],
+               "@spectator//:c_ares_via_cmake": [
+                   "//external:ares",
+               ],
+           }) +
+           select({
+               "//conditions:default": [
+                   "@net_zlib//:zlib",
+               ],
+               "@spectator//:zlib_via_cmake": [
+                   "//external:zlib",
+               ],
+           }),
 )
 
 cc_binary(
