@@ -9,13 +9,19 @@
 # omit_xxx = True when calling the dependency declaration function and reuse their version. See
 # https://github.com/google/nomulus/blob/master/java/google/registry/repositories.bzl and the corresponding
 # https://github.com/google/nomulus/blob/master/WORKSPACE. Discussion https://github.com/bazelbuild/bazel/issues/1952.
+#
+# New cmake_external style dependencies are referenced in a different way (e.g. "//external:<name>") so in order to
+# provide a way for the consumer to use their own version of the dependency which is pulled in a different way
+# i.e. cmake_external vs Bazel native we provide configuration settings and select the name based on those.
+# Probably easier to eventually let consumers specify the names altogether.
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 def spectator_dependencies(
         omit_curl = False,
+        omit_com_github_c_ares_c_ares = False,
         omit_boringssl = False,
-        omit_net_zlib_zlib = False,
+        omit_net_zlib = False,
         omit_com_github_skarupke_flat_hash_map = False,
         omit_com_github_fmtlib_fmt = False,
         omit_org_exim_pcre = False,
@@ -25,13 +31,17 @@ def spectator_dependencies(
     if not omit_curl:
         _curl()
 
+    # Optional curl dependency used to fix https://stackoverflow.com/questions/9191668/error-longjmp-causes-uninitialized-stack-frame.
+    if not omit_com_github_c_ares_c_ares:
+        _com_github_c_ares_c_ares()
+
     # curl dependency.
     if not omit_boringssl:
         _boringssl()
 
     # curl dependency.
-    if not omit_net_zlib_zlib:
-        _net_zlib_zlib()
+    if not omit_net_zlib:
+        _net_zlib()
 
     if not omit_com_github_skarupke_flat_hash_map:
         _com_github_skarupke_flat_hash_map()
@@ -65,21 +75,30 @@ def _curl():
         ],
     )
 
+def _com_github_c_ares_c_ares():
+    # https://github.com/grpc/grpc/blob/master/bazel/grpc_deps.bzl.
+    http_archive(
+        name = "com_github_c_ares_c_ares",
+        build_file = "@spectator//third_party:cares.BUILD",
+        sha256 = "e8c2751ddc70fed9dc6f999acd92e232d5846f009ee1674f8aee81f19b2b915a",
+        strip_prefix = "c-ares-e982924acee7f7313b4baa4ee5ec000c5e373c30",
+        url = "https://github.com/c-ares/c-ares/archive/e982924acee7f7313b4baa4ee5ec000c5e373c30.tar.gz",
+    )
+
 def _boringssl():
     # https://github.com/tensorflow/tensorflow/blob/master/tensorflow/workspace.bzl.
     http_archive(
-        # OSS projects like Envoy use short name, update when switch to reverse fqdn.
+        # Envoy uses short name, update when switch to reverse fqdn.
         name = "boringssl",
         sha256 = "1188e29000013ed6517168600fc35a010d58c5d321846d6a6dfee74e4c788b45",
         strip_prefix = "boringssl-7f634429a04abc48e2eb041c81c5235816c96514",
         urls = ["https://github.com/google/boringssl/archive/7f634429a04abc48e2eb041c81c5235816c96514.tar.gz"],
     )
 
-def _net_zlib_zlib():
+def _net_zlib():
     # https://github.com/tensorflow/tensorflow/blob/master/tensorflow/workspace.bzl.
     http_archive(
-        # Envoy defines archive source "net_zib" for external cmake target "zlib" so neither are usable.
-        name = "net_zlib_zlib",
+        name = "net_zlib",
         build_file = "@spectator//third_party:zlib.BUILD",
         sha256 = "c3e5e9fdd5004dcb542feda5ee4f0ff0744628baf8ed2dd5d66f8ca1197cb1a1",
         strip_prefix = "zlib-1.2.11",
