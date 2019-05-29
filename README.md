@@ -5,7 +5,7 @@
 
 > :warning: Experimental
 
-Simple library for instructing code to record dimentional time series.
+Simple library for instructing code to record dimensional time series.
 
 ## Description
 
