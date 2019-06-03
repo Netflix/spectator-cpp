@@ -62,11 +62,17 @@ class Publisher {
 
     const auto& cfg = registry_->GetConfig();
 
-    auto freq_millis = cfg.frequency * 1000;
+    auto freq_millis = cfg.frequency.count();
     auto logger = registry_->GetLogger();
+    if (freq_millis < 1000) {
+      logger->error(
+          "Frequency should be expressed in milliseconds. Got {} which is too "
+          "low", freq_millis);
+      exit(1);
+    }
 
     logger->info("Starting to send metrics to {} every {}s.", cfg.uri,
-                 cfg.frequency);
+                 cfg.frequency.count() / 1000);
 
     while (!should_stop_) {
       auto start = R::clock::now();
@@ -82,7 +88,7 @@ class Publisher {
 
       if (millis < freq_millis) {
         std::unique_lock<std::mutex> lock{cv_mutex_};
-        auto sleep = milliseconds(freq_millis) - elapsed;
+        auto sleep = cfg.frequency - elapsed;
         logger->debug("Sleeping {}ms until the next interval",
                       freq_millis - millis);
         cv_.wait_for(lock, sleep);
