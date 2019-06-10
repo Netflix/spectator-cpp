@@ -137,18 +137,15 @@ class Publisher {
     return strings;
   }
 
-  enum class Op { Unknown = -1, Add = 0, Max = 10 };
+  enum class Op { Add = 0, Max = 10 };
 
   Op op_from_tags(const Tags& tags) {
     auto stat = tags.at("statistic");
     if (stat == "count" || stat == "totalAmount" || stat == "totalTime" ||
         stat == "totalOfSquares" || stat == "percentile") {
       return Op::Add;
-    } else if (stat == "max" || stat == "gauge" || stat == "activeTasks" ||
-               stat == "duration") {
-      return Op::Max;
-    }
-    return Op::Unknown;
+    } 
+    return Op::Max;
   }
 
   template <typename T>
@@ -170,20 +167,18 @@ class Publisher {
                           const Measurement& m) {
     auto& alloc = payload->GetAllocator();
     auto op = op_from_tags(m.id->GetTags());
-    if (op != Op::Unknown) {
-      const auto& common_tags = registry_->GetConfig().common_tags;
-      int64_t total_tags = m.id->GetTags().size() + 1 + common_tags.size();
-      payload->PushBack(total_tags, alloc);
-      add_tags(payload, strings, common_tags);
-      add_tags(payload, strings, m.id->GetTags());
-      auto name_idx = strings.find("name")->second;
-      auto name_value_idx = strings.find(m.id->Name())->second;
-      payload->PushBack(name_idx, alloc);
-      payload->PushBack(name_value_idx, alloc);
-      auto op_num = static_cast<int>(op);
-      payload->PushBack(op_num, alloc);
-      payload->PushBack(m.value, alloc);
-    }
+    const auto& common_tags = registry_->GetConfig().common_tags;
+    int64_t total_tags = m.id->GetTags().size() + 1 + common_tags.size();
+    payload->PushBack(total_tags, alloc);
+    add_tags(payload, strings, common_tags);
+    add_tags(payload, strings, m.id->GetTags());
+    auto name_idx = strings.find("name")->second;
+    auto name_value_idx = strings.find(m.id->Name())->second;
+    payload->PushBack(name_idx, alloc);
+    payload->PushBack(name_value_idx, alloc);
+    auto op_num = static_cast<int>(op);
+    payload->PushBack(op_num, alloc);
+    payload->PushBack(m.value, alloc);
   }
 
   rapidjson::Document measurements_to_json(
