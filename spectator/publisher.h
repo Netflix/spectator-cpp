@@ -15,9 +15,8 @@ class Publisher {
   explicit Publisher(R* registry)
       : registry_(registry), started_{false}, should_stop_{false} {}
   void Start() {
-    static auto http_initialized = false;
-    if (!http_initialized) {
-      http_initialized = true;
+    if (!http_initialized_) {
+      http_initialized_ = true;
       HttpClient::GlobalInit();
     }
     const auto& cfg = registry_->GetConfig();
@@ -28,6 +27,7 @@ class Publisher {
     }
     if (started_.exchange(true)) {
       logger->warn("Registry already started. Ignoring start request");
+
       return;
     }
 
@@ -35,22 +35,25 @@ class Publisher {
   }
 
   void Stop() {
-    if (!started_) {
+    if (started_.exchange(false)) {
       registry_->GetLogger()->warn(
           "Registry was never started. Ignoring stop request");
 
-      return;
+    } else {
+      should_stop_ = true;
+      cv_.notify_all();
+      sender_thread_.join();
     }
 
-    should_stop_ = true;
-    cv_.notify_all();
-    sender_thread_.join();
-    HttpClient::GlobalShutdown();
+    if (http_initialized_.exchange(false)) {
+      HttpClient::GlobalShutdown();
+    }
   }
 
  private:
   R* registry_;
   std::atomic<bool> started_;
+  std::atomic<bool> http_initialized_{false};
   std::atomic<bool> should_stop_;
   std::mutex cv_mutex_;
   std::condition_variable cv_;
@@ -67,7 +70,8 @@ class Publisher {
     if (freq_millis < 1000) {
       logger->error(
           "Frequency should be expressed in milliseconds. Got {} which is too "
-          "low", freq_millis);
+          "low",
+          freq_millis);
       exit(1);
     }
 
@@ -144,7 +148,7 @@ class Publisher {
     if (stat == "count" || stat == "totalAmount" || stat == "totalTime" ||
         stat == "totalOfSquares" || stat == "percentile") {
       return Op::Add;
-    } 
+    }
     return Op::Max;
   }
 
