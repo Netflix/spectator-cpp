@@ -186,7 +186,6 @@ int HttpClient::do_post(const std::string& url,
   curl.set_connect_timeout(connect_timeout_);
 
   auto logger = registry_->GetLogger();
-  logger->debug("POSTing to url: {}", url);
   curl.set_url(url);
   curl.set_headers(headers);
   curl.post_payload(payload, size);
@@ -241,32 +240,44 @@ static constexpr const char* const kJsonType = "Content-Type: application/json";
 static constexpr const char* const kGzipEncoding = "Content-Encoding: gzip";
 
 int HttpClient::Post(const std::string& url, const char* content_type,
-                     const char* payload, size_t size) const {
+                     const char* payload, size_t size, bool compress) const {
+  auto logger = registry_->GetLogger();
   auto headers = std::make_shared<CurlHeaders>();
   headers->append(content_type);
-  headers->append(kGzipEncoding);
-  auto compressed_size = compressBound(size) + kGzipHeaderSize;
-  auto compressed_payload = std::shared_ptr<char>(
-      new char[compressed_size], [](const char* p) { delete[] p; });
-  auto compress_res =
-      gzip_compress(compressed_payload.get(), &compressed_size, payload, size);
-  if (compress_res != Z_OK) {
-    registry_->GetLogger()->error(
-        "Failed to compress payload: {}, while posting to {} - uncompressed "
-        "size: {}",
-        compress_res, url, size);
-    return 400;
+  std::shared_ptr<char> body;
+  size_t body_size;
+  if (compress) {
+    headers->append(kGzipEncoding);
+    auto compressed_size = compressBound(size) + kGzipHeaderSize;
+    auto compressed_payload = std::shared_ptr<char>(
+        new char[compressed_size], [](const char* p) { delete[] p; });
+    auto compress_res = gzip_compress(compressed_payload.get(),
+                                      &compressed_size, payload, size);
+    if (compress_res != Z_OK) {
+      logger->error(
+          "Failed to compress payload: {}, while posting to {} - uncompressed "
+          "size: {}",
+          compress_res, url, size);
+      return 400;
+    }
+
+    body = std::move(compressed_payload);
+    body_size = compressed_size;
+  } else {
+    body = std::shared_ptr<char>(new char[size + 1],
+                                 [](const char* p) { delete[] p; });
+    body_size = size;
+    memcpy(body.get(), payload, size + 1);
   }
 
-  return do_post(url, std::move(headers), std::move(compressed_payload),
-                 compressed_size, 0);
+  return do_post(url, std::move(headers), std::move(body), body_size, 0);
 }
 
-int HttpClient::Post(const std::string& url,
-                     const rapidjson::Document& payload) const {
+int HttpClient::Post(const std::string& url, const rapidjson::Document& payload,
+                     bool compress) const {
   rapidjson::StringBuffer buffer;
   auto c_str = JsonGetString(buffer, payload);
-  return Post(url, kJsonType, c_str, std::strlen(c_str));
+  return Post(url, kJsonType, c_str, std::strlen(c_str), compress);
 }
 
 void HttpClient::GlobalInit() noexcept { curl_global_init(CURL_GLOBAL_ALL); }

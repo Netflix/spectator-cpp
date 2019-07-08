@@ -19,9 +19,10 @@ class HttpClient {
         total_timeout_(read_timeout + connect_timeout) {}
 
   int Post(const std::string& url, const char* content_type,
-           const char* payload, size_t size) const;
+           const char* payload, size_t size, bool compress = true) const;
 
-  int Post(const std::string& url, const rapidjson::Document& payload) const;
+  int Post(const std::string& url, const rapidjson::Document& payload,
+           bool compress = true) const;
 
   static void GlobalInit() noexcept;
   static void GlobalShutdown() noexcept;
