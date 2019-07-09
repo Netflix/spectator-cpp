@@ -36,13 +36,12 @@ class Publisher {
 
   void Stop() {
     if (started_.exchange(false)) {
-      registry_->GetLogger()->warn(
-          "Registry was never started. Ignoring stop request");
-
-    } else {
       should_stop_ = true;
       cv_.notify_all();
       sender_thread_.join();
+    } else {
+      registry_->GetLogger()->warn(
+          "Registry was never started. Ignoring stop request");
     }
 
     if (http_initialized_.exchange(false)) {
