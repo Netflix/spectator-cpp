@@ -10,7 +10,7 @@ struct SharedAllocator {
 
   void* Malloc(size_t size) {
     if (size != 0u) {
-      mem.reset(new char[size]);
+      mem.reset(new char[size], std::default_delete<char[]>());
     } else {
       mem.reset();
     }
@@ -24,7 +24,7 @@ struct SharedAllocator {
       auto p = new char[new_size];
       auto size = std::min(prev_size, new_size);
       memcpy(p, mem.get(), size);
-      mem.reset(p);
+      mem.reset(p, std::default_delete<char[]>());
     }
     return mem.get();
   }
@@ -42,6 +42,7 @@ std::shared_ptr<char> JsonGetString(const rapidjson::Document& document) {
   document.Accept(writer);
   auto& alloc =
       reinterpret_cast<SharedAllocator&>(buffer.stack_.GetAllocator());
+  buffer.GetString(); // force a C string
   return alloc.mem;
 }
 
