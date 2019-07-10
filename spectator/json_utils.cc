@@ -42,6 +42,7 @@ std::shared_ptr<char> JsonGetString(const rapidjson::Document& document) {
   document.Accept(writer);
   auto& alloc =
       reinterpret_cast<SharedAllocator&>(buffer.stack_.GetAllocator());
+  buffer.GetString(); // force a C string
   return alloc.mem;
 }
 
