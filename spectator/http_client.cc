@@ -2,7 +2,7 @@
 
 #include "gzip.h"
 #include "http_client.h"
-#include "json.h"
+#include "json_utils.h"
 #include "memory.h"
 #include "percentile_timer.h"
 #include "registry.h"
@@ -111,7 +111,7 @@ class CurlHandle {
 
 class LogEntry {
  public:
-  LogEntry(Registry* registry, std::string method, std::string url)
+  LogEntry(Registry* registry, std::string method, const std::string& url)
       : registry_{registry},
         start_{Registry::clock::now()},
         id_{registry_->CreateId("ipc.client.call",
@@ -273,15 +273,38 @@ int HttpClient::Post(const std::string& url, const char* content_type,
   return do_post(url, std::move(headers), std::move(body), body_size, 0);
 }
 
-int HttpClient::Post(const std::string& url, const rapidjson::Document& payload,
+int HttpClient::Post(const std::string& url, const char* content_type,
+                     std::shared_ptr<char> payload, size_t len,
                      bool compress) const {
-  rapidjson::StringBuffer buffer;
-  auto c_str = JsonGetString(buffer, payload);
-  return Post(url, kJsonType, c_str, std::strlen(c_str), compress);
+  if (compress) {
+    return Post(url, content_type, payload.get(), len, compress);
+  }
+
+  auto headers = std::make_shared<CurlHeaders>();
+  headers->append(content_type);
+  return do_post(url, std::move(headers), std::move(payload), len, 0);
 }
 
-void HttpClient::GlobalInit() noexcept { curl_global_init(CURL_GLOBAL_ALL); }
+int HttpClient::Post(const std::string& url, const rapidjson::Document& payload,
+                     bool compress) const {
+  auto ptr = JsonGetString(payload);
+  auto len = std::strlen(ptr.get());
+  return Post(url, kJsonType, ptr, len, compress);
+}
 
-void HttpClient::GlobalShutdown() noexcept { curl_global_cleanup(); }
+void HttpClient::GlobalInit() noexcept {
+  static bool init = false;
+  if (init) return;
+
+  init = true;
+  curl_global_init(CURL_GLOBAL_ALL);
+}
+
+void HttpClient::GlobalShutdown() noexcept {
+  static bool shutdown = false;
+  if (shutdown) return;
+  shutdown = true;
+  curl_global_cleanup();
+}
 
 }  // namespace spectator

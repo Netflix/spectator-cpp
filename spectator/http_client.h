@@ -1,9 +1,10 @@
 #pragma once
 
-#include <rapidjson/document.h>
-#include <spdlog/spdlog.h>
+#include <chrono>
 #include <memory>
 #include <string>
+
+#include <rapidjson/document.h>
 
 namespace spectator {
 
@@ -20,6 +21,9 @@ class HttpClient {
 
   int Post(const std::string& url, const char* content_type,
            const char* payload, size_t size, bool compress = true) const;
+
+  int Post(const std::string& url, const char* content_type,
+           std::shared_ptr<char> payload, size_t len, bool compress = true) const;
 
   int Post(const std::string& url, const rapidjson::Document& payload,
            bool compress = true) const;
