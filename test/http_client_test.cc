@@ -23,6 +23,7 @@ using spectator::DefaultLogger;
 using spectator::GetConfiguration;
 using spectator::gzip_uncompress;
 using spectator::HttpClient;
+using spectator::HttpClientConfig;
 using spectator::Registry;
 using spectator::Tags;
 
@@ -50,6 +51,12 @@ class TestRegistry : public Registry {
       : Registry(std::move(config), DefaultLogger()) {}
 };
 
+static HttpClientConfig get_cfg(int read_to, int connect_to) {
+  using millis = std::chrono::milliseconds;
+
+  return HttpClientConfig{millis(connect_to), millis(read_to), true, 1024};
+}
+
 TEST(HttpTest, Post) {
   http_server server;
   server.start();
@@ -60,8 +67,7 @@ TEST(HttpTest, Post) {
   logger->info("Server started on port {}", port);
 
   TestRegistry registry{GetConfiguration()};
-  HttpClient client{&registry, std::chrono::milliseconds(100),
-                    std::chrono::milliseconds(100)};
+  HttpClient client{&registry, get_cfg(100, 100)};
   auto url = fmt::format("http://localhost:{}/foo", port);
   const std::string post_data = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
   client.Post(url, "Content-type: application/json", post_data.c_str(),
@@ -101,6 +107,54 @@ TEST(HttpTest, Post) {
   EXPECT_EQ(post_data, body_str);
 }
 
+TEST(HttpTest, PostUncompressed) {
+  http_server server;
+  server.start();
+
+  auto port = server.get_port();
+  ASSERT_TRUE(port > 0) << "Port = " << port;
+  auto logger = DefaultLogger();
+  logger->info("Server started on port {}", port);
+
+  TestRegistry registry{GetConfiguration()};
+  auto cfg = get_cfg(100, 100);
+  cfg.json_buffer_size = 10;
+  cfg.compress = false;
+  HttpClient client{&registry, cfg};
+  auto url = fmt::format("http://localhost:{}/foo", port);
+  const std::string post_data = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+  client.Post(url, "Content-type: application/json", post_data.c_str(),
+              post_data.length());
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  server.stop();
+
+  auto timer_for_req = find_timer(&registry, "ipc.client.call", "200");
+  ASSERT_TRUE(timer_for_req != nullptr);
+  auto expected_tags =
+      Tags{{"owner", "spectator-cpp"}, {"http.status", "200"},
+           {"http.method", "POST"},    {"ipc.status", "success"},
+           {"ipc.result", "success"},  {"ipc.attempt", "initial"},
+           {"ipc.endpoint", "/foo"},   {"ipc.attempt.final", "true"}};
+
+  const auto& actual_tags = timer_for_req->MeterId()->GetTags();
+  EXPECT_EQ(expected_tags, actual_tags);
+
+  const auto& requests = server.get_requests();
+  EXPECT_EQ(requests.size(), 1);
+
+  const auto& r = requests[0];
+  EXPECT_EQ(r.method(), "POST");
+  EXPECT_EQ(r.path(), "/foo");
+  EXPECT_EQ(r.get_header("Content-Type"), "application/json");
+
+  const auto src = r.body();
+  const auto src_len = r.size();
+
+  std::string body_str{src, src_len};
+  EXPECT_EQ(post_data, body_str);
+}
+
 TEST(HttpTest, Timeout) {
   using spectator::HttpClient;
   http_server server;
@@ -113,8 +167,7 @@ TEST(HttpTest, Timeout) {
   auto logger = registry.GetLogger();
   logger->info("Server started on port {}", port);
 
-  HttpClient client{&registry, std::chrono::milliseconds(10),
-                    std::chrono::milliseconds(10)};
+  HttpClient client{&registry, get_cfg(10, 10)};
   auto url = fmt::format("http://localhost:{}/foo", port);
   const std::string post_data = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
   auto status = client.Post(url, "Content-type: application/json",
@@ -138,12 +191,10 @@ TEST(HttpTest, ConnectTimeout) {
   TestRegistry registry{GetConfiguration()};
   auto logger = registry.GetLogger();
 
-  HttpClient client{&registry, std::chrono::milliseconds(10),
-                    std::chrono::milliseconds(100)};
+  HttpClient client{&registry, get_cfg(100, 100)};
   const std::string url = "http://192.168.255.255:81/foo";
   const std::string post_data = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-  auto status = client.Post(url, "Content-type: application/json",
-                            post_data.c_str(), post_data.length());
+  auto status = client.Post(url, "Content-type: application/json", post_data);
 
   ASSERT_EQ(status, 400);
 

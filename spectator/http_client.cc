@@ -1,15 +1,10 @@
-#include <utility>
-
-#include "gzip.h"
 #include "http_client.h"
-#include "json_utils.h"
+#include "gzip.h"
 #include "log_entry.h"
-#include "memory.h"
-#include "percentile_timer.h"
-#include "registry.h"
-#include "strings.h"
 
 #include <algorithm>
+#include <utility>
+
 #include <curl/curl.h>
 #include <curl/multi.h>
 #include <rapidjson/stringbuffer.h>
@@ -93,10 +88,10 @@ class CurlHandle {
     curl_easy_setopt(handle_, CURLOPT_TIMEOUT_MS, millis);
   }
 
-  void post_payload(std::shared_ptr<char> payload, size_t size) {
-    payload_ = std::move(payload);
+  void post_payload(const void* payload, size_t size) {
+    payload_ = payload;
     curl_easy_setopt(handle_, CURLOPT_POST, 1L);
-    curl_easy_setopt(handle_, CURLOPT_POSTFIELDS, payload_.get());
+    curl_easy_setopt(handle_, CURLOPT_POSTFIELDS, payload_);
     curl_easy_setopt(handle_, CURLOPT_POSTFIELDSIZE, size);
   }
 
@@ -107,23 +102,25 @@ class CurlHandle {
  private:
   CURL* handle_;
   std::shared_ptr<CurlHeaders> headers_;
-  std::shared_ptr<char> payload_;
+  const void* payload_ = nullptr;
 };
 
 }  // namespace
 
 int HttpClient::do_post(const std::string& url,
                         std::shared_ptr<CurlHeaders> headers,
-                        std::shared_ptr<char> payload, size_t size,
+                        const char* payload, size_t size,
                         int attempt_number) const {
+  using clock = Registry::clock;
   using std::chrono::duration_cast;
   using std::chrono::milliseconds;
 
   LogEntry entry{registry_, "POST", url};
 
   CurlHandle curl;
-  curl.set_timeout(total_timeout_);
-  curl.set_connect_timeout(connect_timeout_);
+  auto total_timeout = config_.connect_timeout + config_.read_timeout;
+  curl.set_timeout(total_timeout);
+  curl.set_connect_timeout(config_.connect_timeout);
 
   auto logger = registry_->GetLogger();
   curl.set_url(url);
@@ -146,16 +143,15 @@ int HttpClient::do_post(const std::string& url,
       default:
         entry.set_error("unknown");
     }
-    auto elapsed =
-        duration_cast<milliseconds>(Registry::clock::now() - entry.start());
+    auto elapsed = duration_cast<milliseconds>(clock::now() - entry.start());
     // retry connect timeouts if possible, not read timeouts
     logger->info("HTTP timeout to {}: {}ms elapsed - connect_to={} read_to={}",
-                 url, elapsed.count(), connect_timeout_.count(),
-                 (total_timeout_ - connect_timeout_).count());
-    if (elapsed < total_timeout_ && attempt_number < 2) {
+                 url, elapsed.count(), config_.connect_timeout.count(),
+                 (total_timeout - config_.connect_timeout).count());
+    if (elapsed < total_timeout && attempt_number < 2) {
       entry.set_attempt(attempt_number, false);
       entry.log();
-      return do_post(url, std::move(headers), std::move(payload), size,
+      return do_post(url, std::move(headers), payload, size,
                      attempt_number + 1);
     }
 
@@ -176,21 +172,18 @@ int HttpClient::do_post(const std::string& url,
   return http_code;
 }
 
-static constexpr const char* const kJsonType = "Content-Type: application/json";
 static constexpr const char* const kGzipEncoding = "Content-Encoding: gzip";
 
 int HttpClient::Post(const std::string& url, const char* content_type,
-                     const char* payload, size_t size, bool compress) const {
+                     const char* payload, size_t size) const {
   auto logger = registry_->GetLogger();
   auto headers = std::make_shared<CurlHeaders>();
   headers->append(content_type);
-  std::shared_ptr<char> body;
-  size_t body_size;
-  if (compress) {
+  if (config_.compress) {
     headers->append(kGzipEncoding);
     auto compressed_size = compressBound(size) + kGzipHeaderSize;
-    auto compressed_payload = std::shared_ptr<char>(
-        new char[compressed_size], [](const char* p) { delete[] p; });
+    auto compressed_payload =
+        std::unique_ptr<char[]>(new char[compressed_size]);
     auto compress_res = gzip_compress(compressed_payload.get(),
                                       &compressed_size, payload, size);
     if (compress_res != Z_OK) {
@@ -201,40 +194,24 @@ int HttpClient::Post(const std::string& url, const char* content_type,
       return 400;
     }
 
-    body = std::move(compressed_payload);
-    body_size = compressed_size;
-  } else {
-    body = std::shared_ptr<char>(new char[size + 1],
-                                 [](const char* p) { delete[] p; });
-    body_size = size;
-    memcpy(body.get(), payload, size + 1);
+    return do_post(url, std::move(headers), compressed_payload.get(),
+                   compressed_size, 0);
   }
 
-  return do_post(url, std::move(headers), std::move(body), body_size, 0);
+  // no compression
+  return do_post(url, std::move(headers), payload, size, 0);
 }
 
-int HttpClient::Post(const std::string& url, const char* content_type,
-                     std::shared_ptr<char> payload, size_t len,
-                     bool compress) const {
-  if (compress) {
-    return Post(url, content_type, payload.get(), len, compress);
-  }
-
-  auto headers = std::make_shared<CurlHeaders>();
-  headers->append(content_type);
-  return do_post(url, std::move(headers), std::move(payload), len, 0);
-}
-
-int HttpClient::Post(const std::string& url, const rapidjson::Document& payload,
-                     bool compress) const {
-  auto ptr = JsonGetString(payload);
-  auto len = std::strlen(ptr.get());
-  return Post(url, kJsonType, ptr, len, compress);
+int HttpClient::Post(const std::string& url,
+                     const rapidjson::Document& payload) const {
+  return Post(url, kJsonType, payload_to_str(payload));
 }
 
 void HttpClient::GlobalInit() noexcept {
   static bool init = false;
-  if (init) return;
+  if (init) {
+    return;
+  }
 
   init = true;
   curl_global_init(CURL_GLOBAL_ALL);
@@ -242,9 +219,25 @@ void HttpClient::GlobalInit() noexcept {
 
 void HttpClient::GlobalShutdown() noexcept {
   static bool shutdown = false;
-  if (shutdown) return;
+  if (shutdown) {
+    return;
+  }
   shutdown = true;
   curl_global_cleanup();
+}
+
+std::string HttpClient::payload_to_str(
+    const rapidjson::Document& payload) const {
+  rapidjson::MemoryPoolAllocator<> allocator{json_buffer_.get(),
+                                             config_.json_buffer_size};
+  using MyBuffer =
+      rapidjson::GenericStringBuffer<rapidjson::UTF8<>,
+                                     rapidjson::MemoryPoolAllocator<>>;
+  MyBuffer buffer{&allocator};
+  rapidjson::Writer<MyBuffer> writer;
+  payload.Accept(writer);
+  std::string res{buffer.GetString()};
+  return res;
 }
 
 }  // namespace spectator

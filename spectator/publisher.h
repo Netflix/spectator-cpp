@@ -3,6 +3,7 @@
 #include <atomic>
 #include <mutex>
 #include <thread>
+#include "config.h"
 #include "logger.h"
 #include "http_client.h"
 #include "measurement.h"
@@ -210,8 +211,7 @@ class Publisher {
         ->Add(num_not_sent);
   }
 
-  std::pair<size_t, size_t> send_metrics() {
-    const auto& cfg = registry_->GetConfig();
+  static HttpClientConfig get_http_config(const Config& cfg) {
     auto read_timeout = cfg.read_timeout;
     auto connect_timeout = cfg.connect_timeout;
     if (read_timeout.count() == 0) {
@@ -220,7 +220,13 @@ class Publisher {
     if (connect_timeout.count() == 0) {
       connect_timeout = std::chrono::seconds(2);
     }
-    HttpClient client{registry_, connect_timeout, read_timeout};
+    return HttpClientConfig{connect_timeout, read_timeout, true, 32u * 1024u};
+  }
+
+  std::pair<size_t, size_t> send_metrics() {
+    const auto& cfg = registry_->GetConfig();
+    auto http_cfg = get_http_config(cfg);
+    HttpClient client{registry_, http_cfg};
     auto batch_size =
         static_cast<std::vector<Measurement>::difference_type>(cfg.batch_size);
     auto measurements = registry_->Measurements();
