@@ -94,7 +94,8 @@ static void get_line(int client, char* buf, size_t size) {
 void http_server::accept_request(int client) {
   using namespace std;
 
-  char buf[4096];
+  auto logger = DefaultLogger();
+  char buf[65536];
   get_line(client, buf, sizeof buf);
 
   char method[256];
@@ -143,6 +144,7 @@ void http_server::accept_request(int client) {
     headers[header_name] = header_value;
   }
 
+  logger->debug("Reading body of HTTP POST request");
   // do the body
   auto len = headers["content-length"];
   int content_len = len.empty() ? 0 : stoi(len);
@@ -153,11 +155,18 @@ void http_server::accept_request(int client) {
   auto n = content_len;
   while (n > 0) {
     auto bytes_read = read(client, p, (size_t)n);
+    if (bytes_read == 0) {
+      logger->info("EOF while reading request body. {} bytes read, {} missing", content_len - n, n);
+      break;
+    } else if (bytes_read < 0) {
+      logger->error("Error reading client request: {}", strerror(errno));
+      break;
+    }
     n -= bytes_read;
     p += bytes_read;
   }
   *p = '\0';
-  DefaultLogger()->debug("Adding request {} {}", method, path);
+  logger->debug("Adding request {} {}", method, path);
   {
     std::lock_guard<std::mutex> guard(requests_mutex_);
     requests_.emplace_back(method, path, headers, content_len, std::move(body));

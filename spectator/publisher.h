@@ -220,7 +220,7 @@ class Publisher {
     if (connect_timeout.count() == 0) {
       connect_timeout = std::chrono::seconds(2);
     }
-    return HttpClientConfig{connect_timeout, read_timeout, true, 32u * 1024u};
+    return HttpClientConfig{connect_timeout, read_timeout, true};
   }
 
   std::pair<size_t, size_t> send_metrics() {

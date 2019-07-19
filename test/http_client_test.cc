@@ -7,6 +7,8 @@
 #include <zlib.h>
 
 #include <fmt/ostream.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
 #include "../spectator/gzip.h"
 #include "../spectator/http_client.h"
 #include "../spectator/logger.h"
@@ -53,8 +55,7 @@ class TestRegistry : public Registry {
 
 static HttpClientConfig get_cfg(int read_to, int connect_to) {
   using millis = std::chrono::milliseconds;
-
-  return HttpClientConfig{millis(connect_to), millis(read_to), true, 1024};
+  return HttpClientConfig{millis(connect_to), millis(read_to), true};
 }
 
 TEST(HttpTest, Post) {
@@ -118,7 +119,6 @@ TEST(HttpTest, PostUncompressed) {
 
   TestRegistry registry{GetConfiguration()};
   auto cfg = get_cfg(100, 100);
-  cfg.json_buffer_size = 10;
   cfg.compress = false;
   HttpClient client{&registry, cfg};
   auto url = fmt::format("http://localhost:{}/foo", port);
@@ -202,4 +202,63 @@ TEST(HttpTest, ConnectTimeout) {
   for (const auto& m : meters) {
     logger->info("{}", m->MeterId()->GetTags());
   }
+}
+
+TEST(HttpTest, PostJson) {
+  http_server server;
+  server.start();
+
+  auto port = server.get_port();
+  ASSERT_TRUE(port > 0) << "Port = " << port;
+  auto logger = DefaultLogger();
+  logger->info("Server started on port {}", port);
+
+  TestRegistry registry{GetConfiguration()};
+  auto cfg = get_cfg(5000, 5000);
+  cfg.compress = false;
+  HttpClient client{&registry, cfg};
+  auto url = fmt::format("http://localhost:{}/foo", port);
+  rapidjson::Document payload{rapidjson::kObjectType};
+  // ensure we have a bigger document than the size of the initial
+  // buffer to test how well the json allocators deal with it
+  for (auto i = 0; i < 128; i++) {
+    auto key = fmt::format("key-{}", i);
+    auto value = fmt::format("value-{}", i);
+    rapidjson::Value k{key.c_str(), payload.GetAllocator()};
+    rapidjson::Value v{value.c_str(), payload.GetAllocator()};
+    payload.AddMember(k, v, payload.GetAllocator());
+  }
+  client.Post(url, payload);
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  server.stop();
+
+  auto timer_for_req = find_timer(&registry, "ipc.client.call", "200");
+  ASSERT_TRUE(timer_for_req != nullptr);
+  auto expected_tags =
+      Tags{{"owner", "spectator-cpp"}, {"http.status", "200"},
+           {"http.method", "POST"},    {"ipc.status", "success"},
+           {"ipc.result", "success"},  {"ipc.attempt", "initial"},
+           {"ipc.endpoint", "/foo"},   {"ipc.attempt.final", "true"}};
+
+  const auto& actual_tags = timer_for_req->MeterId()->GetTags();
+  EXPECT_EQ(expected_tags, actual_tags);
+
+  const auto& requests = server.get_requests();
+  EXPECT_EQ(requests.size(), 1);
+
+  const auto& r = requests[0];
+  EXPECT_EQ(r.method(), "POST");
+  EXPECT_EQ(r.path(), "/foo");
+  EXPECT_EQ(r.get_header("Content-Type"), "application/json");
+
+  const auto src = r.body();
+  const auto src_len = r.size();
+  std::string body_str{src, src_len};
+
+  rapidjson::StringBuffer buffer;
+  rapidjson::Writer<rapidjson::StringBuffer> writer{buffer};
+  payload.Accept(writer);
+  std::string post_data{buffer.GetString()};
+  EXPECT_EQ(post_data, body_str);
 }
