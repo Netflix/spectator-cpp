@@ -16,7 +16,6 @@ struct HttpClientConfig {
   std::chrono::milliseconds connect_timeout;
   std::chrono::milliseconds read_timeout;
   bool compress;
-  size_t json_buffer_size;
 };
 
 class HttpClient {
@@ -24,11 +23,7 @@ class HttpClient {
   static constexpr const char* const kJsonType =
       "Content-Type: application/json";
 
-  HttpClient(Registry* registry, HttpClientConfig config)
-      : registry_(registry),
-        config_{config},
-        json_buffer_{
-            std::unique_ptr<char[]>(new char[config.json_buffer_size])} {}
+  HttpClient(Registry* registry, HttpClientConfig config);
 
   int Post(const std::string& url, const char* content_type,
            const char* payload, size_t size) const;
@@ -46,7 +41,6 @@ class HttpClient {
  private:
   Registry* registry_;
   HttpClientConfig config_;
-  std::unique_ptr<char[]> json_buffer_;
 
   int do_post(const std::string& url, std::shared_ptr<CurlHeaders> headers,
               const char* payload, size_t size, int attempt_number) const;

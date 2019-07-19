@@ -107,6 +107,10 @@ class CurlHandle {
 
 }  // namespace
 
+HttpClient::HttpClient(Registry* registry, HttpClientConfig config)
+    : registry_(registry),
+      config_{config} {}
+
 int HttpClient::do_post(const std::string& url,
                         std::shared_ptr<CurlHeaders> headers,
                         const char* payload, size_t size,
@@ -228,13 +232,8 @@ void HttpClient::GlobalShutdown() noexcept {
 
 std::string HttpClient::payload_to_str(
     const rapidjson::Document& payload) const {
-  rapidjson::MemoryPoolAllocator<> allocator{json_buffer_.get(),
-                                             config_.json_buffer_size};
-  using MyBuffer =
-      rapidjson::GenericStringBuffer<rapidjson::UTF8<>,
-                                     rapidjson::MemoryPoolAllocator<>>;
-  MyBuffer buffer{&allocator};
-  rapidjson::Writer<MyBuffer> writer{buffer};
+  rapidjson::StringBuffer buffer;
+  rapidjson::Writer<rapidjson::StringBuffer> writer{buffer};
   payload.Accept(writer);
   std::string res{buffer.GetString()};
   return res;

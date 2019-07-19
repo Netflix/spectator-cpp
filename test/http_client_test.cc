@@ -55,8 +55,7 @@ class TestRegistry : public Registry {
 
 static HttpClientConfig get_cfg(int read_to, int connect_to) {
   using millis = std::chrono::milliseconds;
-
-  return HttpClientConfig{millis(connect_to), millis(read_to), true, 1024};
+  return HttpClientConfig{millis(connect_to), millis(read_to), true};
 }
 
 TEST(HttpTest, Post) {
@@ -120,7 +119,6 @@ TEST(HttpTest, PostUncompressed) {
 
   TestRegistry registry{GetConfiguration()};
   auto cfg = get_cfg(100, 100);
-  cfg.json_buffer_size = 10;
   cfg.compress = false;
   HttpClient client{&registry, cfg};
   auto url = fmt::format("http://localhost:{}/foo", port);
@@ -216,14 +214,20 @@ TEST(HttpTest, PostJson) {
   logger->info("Server started on port {}", port);
 
   TestRegistry registry{GetConfiguration()};
-  auto cfg = get_cfg(100, 100);
-  cfg.json_buffer_size = 10;
+  auto cfg = get_cfg(5000, 5000);
   cfg.compress = false;
   HttpClient client{&registry, cfg};
   auto url = fmt::format("http://localhost:{}/foo", port);
   rapidjson::Document payload{rapidjson::kObjectType};
-  payload.AddMember("appName", "app", payload.GetAllocator());
-  payload.AddMember("hostname", "localhost", payload.GetAllocator());
+  // ensure we have a bigger document than the size of the initial
+  // buffer to test how well the json allocators deal with it
+  for (auto i = 0; i < 128; i++) {
+    auto key = fmt::format("key-{}", i);
+    auto value = fmt::format("value-{}", i);
+    rapidjson::Value k{key.c_str(), payload.GetAllocator()};
+    rapidjson::Value v{value.c_str(), payload.GetAllocator()};
+    payload.AddMember(k, v, payload.GetAllocator());
+  }
   client.Post(url, payload);
 
   std::this_thread::sleep_for(std::chrono::milliseconds(50));
