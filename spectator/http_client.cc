@@ -234,7 +234,7 @@ std::string HttpClient::payload_to_str(
       rapidjson::GenericStringBuffer<rapidjson::UTF8<>,
                                      rapidjson::MemoryPoolAllocator<>>;
   MyBuffer buffer{&allocator};
-  rapidjson::Writer<MyBuffer> writer;
+  rapidjson::Writer<MyBuffer> writer{buffer};
   payload.Accept(writer);
   std::string res{buffer.GetString()};
   return res;
