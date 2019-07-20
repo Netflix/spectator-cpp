@@ -220,7 +220,7 @@ class Publisher {
     if (connect_timeout.count() == 0) {
       connect_timeout = std::chrono::seconds(2);
     }
-    return HttpClientConfig{connect_timeout, read_timeout, true};
+    return HttpClientConfig{connect_timeout, read_timeout, true, false, false};
   }
 
   std::pair<size_t, size_t> send_metrics() {
@@ -244,7 +244,8 @@ class Publisher {
       auto to_advance = std::min(batch_size, to_end);
       auto to = from;
       std::advance(to, to_advance);
-      auto http_code = client.Post(cfg.uri, measurements_to_json(from, to));
+      auto http_code =
+          client.Post(cfg.uri, measurements_to_json(from, to)).status;
       if (http_code != 200) {
         registry_->GetLogger()->error(
             "Unable to send batch of {} measurements to publish: {}",

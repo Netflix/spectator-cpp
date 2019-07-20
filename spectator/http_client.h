@@ -1,10 +1,12 @@
 #pragma once
 
 #include <chrono>
+#include <map>
 #include <memory>
 #include <string>
 
 #include <rapidjson/document.h>
+#include <unordered_map>
 #include "memory.h"
 
 namespace spectator {
@@ -16,6 +18,15 @@ struct HttpClientConfig {
   std::chrono::milliseconds connect_timeout;
   std::chrono::milliseconds read_timeout;
   bool compress;
+  bool read_headers;
+  bool read_body;
+};
+
+using HttpHeaders = std::unordered_map<std::string, std::string>;
+struct HttpResponse {
+  int status;
+  std::string raw_body;
+  HttpHeaders headers;
 };
 
 class HttpClient {
@@ -25,15 +36,16 @@ class HttpClient {
 
   HttpClient(Registry* registry, HttpClientConfig config);
 
-  int Post(const std::string& url, const char* content_type,
-           const char* payload, size_t size) const;
+  HttpResponse Post(const std::string& url, const char* content_type,
+                    const char* payload, size_t size) const;
 
-  int Post(const std::string& url, const char* content_type,
-           const std::string& payload) const {
+  HttpResponse Post(const std::string& url, const char* content_type,
+                    const std::string& payload) const {
     return Post(url, content_type, payload.c_str(), payload.length());
   };
 
-  int Post(const std::string& url, const rapidjson::Document& payload) const;
+  HttpResponse Post(const std::string& url,
+                    const rapidjson::Document& payload) const;
 
   static void GlobalInit() noexcept;
   static void GlobalShutdown() noexcept;
@@ -42,8 +54,10 @@ class HttpClient {
   Registry* registry_;
   HttpClientConfig config_;
 
-  int do_post(const std::string& url, std::shared_ptr<CurlHeaders> headers,
-              const char* payload, size_t size, int attempt_number) const;
+  HttpResponse do_post(const std::string& url,
+                       std::shared_ptr<CurlHeaders> headers,
+                       const char* payload, size_t size,
+                       int attempt_number) const;
 
   std::string payload_to_str(const rapidjson::Document& payload) const;
 };

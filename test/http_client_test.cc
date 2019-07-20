@@ -26,6 +26,7 @@ using spectator::GetConfiguration;
 using spectator::gzip_uncompress;
 using spectator::HttpClient;
 using spectator::HttpClientConfig;
+using spectator::HttpResponse;
 using spectator::Registry;
 using spectator::Tags;
 
@@ -55,7 +56,8 @@ class TestRegistry : public Registry {
 
 static HttpClientConfig get_cfg(int read_to, int connect_to) {
   using millis = std::chrono::milliseconds;
-  return HttpClientConfig{millis(connect_to), millis(read_to), true};
+  return HttpClientConfig{millis(connect_to), millis(read_to), true, true,
+                          true};
 }
 
 TEST(HttpTest, Post) {
@@ -123,8 +125,11 @@ TEST(HttpTest, PostUncompressed) {
   HttpClient client{&registry, cfg};
   auto url = fmt::format("http://localhost:{}/foo", port);
   const std::string post_data = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-  client.Post(url, "Content-type: application/json", post_data.c_str(),
-              post_data.length());
+  auto resp = client.Post(url, "Content-type: application/json",
+                          post_data.c_str(), post_data.length());
+
+  EXPECT_EQ(resp.status, 200);
+  EXPECT_EQ(resp.raw_body, std::string("OK\n"));
 
   std::this_thread::sleep_for(std::chrono::milliseconds(50));
   server.stop();
@@ -156,7 +161,6 @@ TEST(HttpTest, PostUncompressed) {
 }
 
 TEST(HttpTest, Timeout) {
-  using spectator::HttpClient;
   http_server server;
   server.set_read_sleep(std::chrono::milliseconds(100));
   server.start();
@@ -170,11 +174,13 @@ TEST(HttpTest, Timeout) {
   HttpClient client{&registry, get_cfg(10, 10)};
   auto url = fmt::format("http://localhost:{}/foo", port);
   const std::string post_data = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-  auto status = client.Post(url, "Content-type: application/json",
-                            post_data.c_str(), post_data.length());
+  auto response = client.Post(url, "Content-type: application/json",
+                              post_data.c_str(), post_data.length());
   server.stop();
 
-  ASSERT_EQ(status, 400);
+  auto expected_response = HttpResponse{400, ""};
+  ASSERT_EQ(response.status, expected_response.status);
+  ASSERT_EQ(response.raw_body, expected_response.raw_body);
   auto timer_for_req = find_timer(&registry, "ipc.client.call", "-1");
   ASSERT_TRUE(timer_for_req != nullptr);
 
@@ -194,9 +200,11 @@ TEST(HttpTest, ConnectTimeout) {
   HttpClient client{&registry, get_cfg(100, 100)};
   const std::string url = "http://192.168.255.255:81/foo";
   const std::string post_data = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-  auto status = client.Post(url, "Content-type: application/json", post_data);
+  auto response = client.Post(url, "Content-type: application/json", post_data);
 
-  ASSERT_EQ(status, 400);
+  auto expected_response = HttpResponse{400, ""};
+  ASSERT_EQ(response.status, expected_response.status);
+  ASSERT_EQ(response.raw_body, expected_response.raw_body);
 
   auto meters = registry.Meters();
   for (const auto& m : meters) {
@@ -216,11 +224,10 @@ TEST(HttpTest, PostJson) {
   TestRegistry registry{GetConfiguration()};
   auto cfg = get_cfg(5000, 5000);
   cfg.compress = false;
+  cfg.read_body = false;
   HttpClient client{&registry, cfg};
   auto url = fmt::format("http://localhost:{}/foo", port);
   rapidjson::Document payload{rapidjson::kObjectType};
-  // ensure we have a bigger document than the size of the initial
-  // buffer to test how well the json allocators deal with it
   for (auto i = 0; i < 128; i++) {
     auto key = fmt::format("key-{}", i);
     auto value = fmt::format("value-{}", i);
@@ -228,7 +235,10 @@ TEST(HttpTest, PostJson) {
     rapidjson::Value v{value.c_str(), payload.GetAllocator()};
     payload.AddMember(k, v, payload.GetAllocator());
   }
-  client.Post(url, payload);
+  // not interested in the output from the server
+  auto resp = client.Post(url, payload);
+  EXPECT_EQ(resp.raw_body, "");
+  EXPECT_EQ(resp.status, 200);
 
   std::this_thread::sleep_for(std::chrono::milliseconds(50));
   server.stop();
@@ -261,4 +271,34 @@ TEST(HttpTest, PostJson) {
   payload.Accept(writer);
   std::string post_data{buffer.GetString()};
   EXPECT_EQ(post_data, body_str);
+}
+
+TEST(HttpTest, PostHeaders) {
+  http_server server;
+  server.start();
+
+  auto port = server.get_port();
+  ASSERT_TRUE(port > 0) << "Port = " << port;
+  auto logger = DefaultLogger();
+  logger->info("Server started on port {}", port);
+
+  TestRegistry registry{GetConfiguration()};
+  auto cfg = get_cfg(5000, 5000);
+  cfg.compress = false;
+  cfg.read_body = true;
+  cfg.read_headers = true;
+  HttpClient client{&registry, cfg};
+  auto url = fmt::format("http://localhost:{}/hdr", port);
+  std::string payload{"stuff"};
+  // not interested in the output from the server
+  auto resp = client.Post(url, "Content-Type: text/plain", payload);
+  auto expected_body = std::string("header body: ok\n");
+  EXPECT_EQ(resp.raw_body, expected_body);
+  EXPECT_EQ(resp.status, 200);
+
+  auto expected_len = fmt::format("{}", expected_body.length());
+  EXPECT_EQ(resp.headers.size(), 2);
+  EXPECT_EQ(resp.headers["Content-Length"], expected_len);
+  EXPECT_EQ(resp.headers["X-Test"], "some server");
+  server.stop();
 }
