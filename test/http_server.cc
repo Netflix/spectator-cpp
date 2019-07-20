@@ -13,7 +13,13 @@ using spectator::gzip_compress;
 
 http_server::http_server() noexcept {
   path_response_["/foo"] =
-      "HTTP/1.0 200 OK\nContent-Encoding: gzip\nContent-Length: 0\n";
+      "HTTP/1.0 200 OK\nContent-Length: 3\nX-Test: foo\n\nOK\n";
+  auto hdr_body = std::string("header body: ok\n");
+  auto hdr_response = fmt::format(
+      "HTTP/1.0 200 OK\nContent-Length: {}\nX-Test: some "
+      "server\nX-NoContent:\n\n{}",
+      hdr_body.length(), hdr_body);
+  path_response_["/hdr"] = hdr_response;
 }
 
 http_server::~http_server() {
@@ -156,7 +162,8 @@ void http_server::accept_request(int client) {
   while (n > 0) {
     auto bytes_read = read(client, p, (size_t)n);
     if (bytes_read == 0) {
-      logger->info("EOF while reading request body. {} bytes read, {} missing", content_len - n, n);
+      logger->info("EOF while reading request body. {} bytes read, {} missing",
+                   content_len - n, n);
       break;
     } else if (bytes_read < 0) {
       logger->error("Error reading client request: {}", strerror(errno));
