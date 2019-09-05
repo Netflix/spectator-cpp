@@ -67,11 +67,10 @@ def _curl():
         # Needs build file updates to build with reverse fqdn.
         name = "curl",
         build_file = "@spectator//third_party:curl.BUILD",
-        sha256 = "e9c37986337743f37fd14fe8737f246e97aec94b39d1b71e8a5973f72a9fc4f5",
-        strip_prefix = "curl-7.60.0",
+        sha256 = "4376ac72b95572fb6c4fbffefb97c7ea0dd083e1974c0e44cd7e49396f454839",
+        strip_prefix = "curl-7.65.3",
         urls = [
-            "https://mirror.bazel.build/curl.haxx.se/download/curl-7.60.0.tar.gz",
-            "https://curl.haxx.se/download/curl-7.60.0.tar.gz",
+            "https://curl.haxx.se/download/curl-7.65.3.tar.gz",
         ],
     )
 
