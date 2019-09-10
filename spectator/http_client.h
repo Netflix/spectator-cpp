@@ -47,6 +47,8 @@ class HttpClient {
   HttpResponse Post(const std::string& url,
                     const rapidjson::Document& payload) const;
 
+  HttpResponse Get(const std::string& url) const;
+
   static void GlobalInit() noexcept;
   static void GlobalShutdown() noexcept;
 
@@ -58,6 +60,8 @@ class HttpClient {
                        std::shared_ptr<CurlHeaders> headers,
                        const char* payload, size_t size,
                        int attempt_number) const;
+
+  HttpResponse do_get(const std::string& url, int attempt_number) const;
 
   std::string payload_to_str(const rapidjson::Document& payload) const;
 };

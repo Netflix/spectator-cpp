@@ -302,3 +302,33 @@ TEST(HttpTest, PostHeaders) {
   EXPECT_EQ(resp.headers["X-Test"], "some server");
   server.stop();
 }
+
+TEST(HttpTest, Get) {
+  auto cfg = get_cfg(5000, 5000);
+  TestRegistry registry{GetConfiguration()};
+  HttpClient client{&registry, cfg};
+
+  http_server server;
+  server.start();
+
+  auto port = server.get_port();
+  ASSERT_TRUE(port > 0) << "Port = " << port;
+  auto logger = DefaultLogger();
+  logger->info("Server started on port {}", port);
+
+  auto response = client.Get(fmt::format("http://localhost:{}/get", port));
+  server.stop();
+  EXPECT_EQ(response.status, 200);
+  EXPECT_EQ(response.raw_body, "InsightInstanceProfile");
+
+  EXPECT_EQ(registry.Meters().size(), 2);
+
+  spectator::Tags timer_tags{
+      {"http.status", "200"},    {"ipc.attempt", "initial"},
+      {"ipc.result", "success"}, {"owner", "spectator-cpp"},
+      {"ipc.status", "success"}, {"ipc.attempt.final", "true"},
+      {"http.method", "GET"},    {"ipc.endpoint", "/get"}};
+  auto timer_id = registry.CreateId("ipc.client.call", timer_tags);
+  auto timer = registry.GetTimer(timer_id);
+  EXPECT_EQ(timer->Count(), 1);
+}

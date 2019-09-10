@@ -20,6 +20,17 @@ http_server::http_server() noexcept {
       "server\nX-NoContent:\n\n{}",
       hdr_body.length(), hdr_body);
   path_response_["/hdr"] = hdr_response;
+
+  path_response_["/get"] =
+      "HTTP/1.1 200 OK\n"
+      "Content-Type: text/plain\n"
+      "Accept-Ranges: none\n"
+      "Last-Modified: Tue, 10 Sep 2019 18:22:20 GMT\n"
+      "Content-Length: 22\n"
+      "Date: Tue, 10 Sep 2019 18:23:27 GMT\n"
+      "Connection: close\n"
+      "\n"
+      "InsightInstanceProfile";
 }
 
 http_server::~http_server() {
@@ -150,7 +161,7 @@ void http_server::accept_request(int client) {
     headers[header_name] = header_value;
   }
 
-  logger->debug("Reading body of HTTP POST request");
+  logger->debug("Reading body of HTTP {} request", method);
   // do the body
   auto len = headers["content-length"];
   int content_len = len.empty() ? 0 : stoi(len);
