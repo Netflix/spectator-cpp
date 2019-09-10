@@ -233,6 +233,78 @@ HttpResponse HttpClient::do_post(const std::string& url,
   return HttpResponse{http_code, std::move(resp), std::move(resp_headers)};
 }
 
+HttpResponse HttpClient::Get(const std::string& url) const {
+  return do_get(url, 0);
+}
+
+HttpResponse HttpClient::do_get(const std::string& url,
+                                int attempt_number) const {
+  using clock = Registry::clock;
+  using std::chrono::duration_cast;
+  using std::chrono::milliseconds;
+
+  LogEntry entry{registry_, "GET", url};
+
+  CurlHandle curl;
+  auto total_timeout = config_.connect_timeout + config_.read_timeout;
+  curl.set_timeout(total_timeout);
+  curl.set_connect_timeout(config_.connect_timeout);
+
+  auto logger = registry_->GetLogger();
+  curl.set_url(url);
+
+  auto headers = std::make_shared<CurlHeaders>();
+  curl.set_headers(headers);
+  curl.capture_headers();
+  curl.capture_output();
+  auto curl_res = curl.perform();
+  auto http_code = 400;
+
+  if (curl_res != CURLE_OK) {
+    logger->error("Failed to GET {}: {}", url, curl_easy_strerror(curl_res));
+    switch (curl_res) {
+      case CURLE_COULDNT_CONNECT:
+        entry.set_error("connection_error");
+        break;
+      case CURLE_OPERATION_TIMEDOUT:
+        entry.set_error("timeout");
+        break;
+      default:
+        entry.set_error("unknown");
+    }
+    auto elapsed = duration_cast<milliseconds>(clock::now() - entry.start());
+    // retry connect timeouts if possible, not read timeouts
+    logger->info("HTTP timeout to {}: {}ms elapsed - connect_to={} read_to={}",
+                 url, elapsed.count(), config_.connect_timeout.count(),
+                 (total_timeout - config_.connect_timeout).count());
+    if (elapsed < total_timeout && attempt_number < 2) {
+      entry.set_attempt(attempt_number, false);
+      entry.log();
+      return do_get(url, attempt_number + 1);
+    }
+
+    entry.set_status_code(-1);
+  } else {
+    http_code = curl.status_code();
+    entry.set_status_code(http_code);
+    if (http_code / 100 == 2) {
+      entry.set_success();
+    } else {
+      entry.set_error("http_error");
+    }
+    logger->debug("Was able to GET to {} - status code: {}", url, http_code);
+  }
+  entry.set_attempt(attempt_number, true);
+  entry.log();
+
+  std::string resp;
+  curl.move_response(&resp);
+
+  HttpHeaders resp_headers;
+  curl.move_headers(&resp_headers);
+  return HttpResponse{http_code, std::move(resp), std::move(resp_headers)};
+}
+
 static constexpr const char* const kGzipEncoding = "Content-Encoding: gzip";
 
 HttpResponse HttpClient::Post(const std::string& url, const char* content_type,
