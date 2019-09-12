@@ -56,12 +56,11 @@ class HttpClient {
   Registry* registry_;
   HttpClientConfig config_;
 
-  HttpResponse do_post(const std::string& url,
+  HttpResponse perform(const char* method,
+      const std::string& url,
                        std::shared_ptr<CurlHeaders> headers,
                        const char* payload, size_t size,
                        int attempt_number) const;
-
-  HttpResponse do_get(const std::string& url, int attempt_number) const;
 
   std::string payload_to_str(const rapidjson::Document& payload) const;
 };

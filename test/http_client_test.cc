@@ -1,9 +1,5 @@
-#include <arpa/inet.h>
 #include <atomic>
 #include <gtest/gtest.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <sys/types.h>
 #include <zlib.h>
 
 #include <fmt/ostream.h>
@@ -16,9 +12,7 @@
 #include "../spectator/strings.h"
 #include "../spectator/timer.h"
 #include "http_server.h"
-#include "test_utils.h"
 #include "percentile_bucket_tags.inc"
-#include "../spectator/percentile_buckets.h"
 
 using spectator::Config;
 using spectator::DefaultLogger;

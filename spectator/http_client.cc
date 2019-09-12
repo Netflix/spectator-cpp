@@ -155,7 +155,11 @@ class CurlHandle {
 HttpClient::HttpClient(Registry* registry, HttpClientConfig config)
     : registry_(registry), config_{config} {}
 
-HttpResponse HttpClient::do_post(const std::string& url,
+HttpResponse HttpClient::Get(const std::string& url) const {
+  return perform("GET", url, std::make_shared<CurlHeaders>(), nullptr, 0u, 0);
+}
+
+HttpResponse HttpClient::perform(const char* method, const std::string& url,
                                  std::shared_ptr<CurlHeaders> headers,
                                  const char* payload, size_t size,
                                  int attempt_number) const {
@@ -163,7 +167,7 @@ HttpResponse HttpClient::do_post(const std::string& url,
   using std::chrono::duration_cast;
   using std::chrono::milliseconds;
 
-  LogEntry entry{registry_, "POST", url};
+  LogEntry entry{registry_, method, url};
 
   CurlHandle curl;
   auto total_timeout = config_.connect_timeout + config_.read_timeout;
@@ -173,7 +177,9 @@ HttpResponse HttpClient::do_post(const std::string& url,
   auto logger = registry_->GetLogger();
   curl.set_url(url);
   curl.set_headers(headers);
-  curl.post_payload(payload, size);
+  if (strcmp("POST", method) == 0) {
+    curl.post_payload(payload, size);
+  }
   if (config_.read_body) {
     curl.capture_output();
   } else {
@@ -188,7 +194,8 @@ HttpResponse HttpClient::do_post(const std::string& url,
   auto http_code = 400;
 
   if (curl_res != CURLE_OK) {
-    logger->error("Failed to POST {}: {}", url, curl_easy_strerror(curl_res));
+    logger->error("Failed to {} {}: {}", method, url,
+                  curl_easy_strerror(curl_res));
     switch (curl_res) {
       case CURLE_COULDNT_CONNECT:
         entry.set_error("connection_error");
@@ -207,7 +214,7 @@ HttpResponse HttpClient::do_post(const std::string& url,
     if (elapsed < total_timeout && attempt_number < 2) {
       entry.set_attempt(attempt_number, false);
       entry.log();
-      return do_post(url, std::move(headers), payload, size,
+      return perform(method, url, std::move(headers), payload, size,
                      attempt_number + 1);
     }
 
@@ -221,78 +228,6 @@ HttpResponse HttpClient::do_post(const std::string& url,
       entry.set_error("http_error");
     }
     logger->debug("Was able to POST to {} - status code: {}", url, http_code);
-  }
-  entry.set_attempt(attempt_number, true);
-  entry.log();
-
-  std::string resp;
-  curl.move_response(&resp);
-
-  HttpHeaders resp_headers;
-  curl.move_headers(&resp_headers);
-  return HttpResponse{http_code, std::move(resp), std::move(resp_headers)};
-}
-
-HttpResponse HttpClient::Get(const std::string& url) const {
-  return do_get(url, 0);
-}
-
-HttpResponse HttpClient::do_get(const std::string& url,
-                                int attempt_number) const {
-  using clock = Registry::clock;
-  using std::chrono::duration_cast;
-  using std::chrono::milliseconds;
-
-  LogEntry entry{registry_, "GET", url};
-
-  CurlHandle curl;
-  auto total_timeout = config_.connect_timeout + config_.read_timeout;
-  curl.set_timeout(total_timeout);
-  curl.set_connect_timeout(config_.connect_timeout);
-
-  auto logger = registry_->GetLogger();
-  curl.set_url(url);
-
-  auto headers = std::make_shared<CurlHeaders>();
-  curl.set_headers(headers);
-  curl.capture_headers();
-  curl.capture_output();
-  auto curl_res = curl.perform();
-  auto http_code = 400;
-
-  if (curl_res != CURLE_OK) {
-    logger->error("Failed to GET {}: {}", url, curl_easy_strerror(curl_res));
-    switch (curl_res) {
-      case CURLE_COULDNT_CONNECT:
-        entry.set_error("connection_error");
-        break;
-      case CURLE_OPERATION_TIMEDOUT:
-        entry.set_error("timeout");
-        break;
-      default:
-        entry.set_error("unknown");
-    }
-    auto elapsed = duration_cast<milliseconds>(clock::now() - entry.start());
-    // retry connect timeouts if possible, not read timeouts
-    logger->info("HTTP timeout to {}: {}ms elapsed - connect_to={} read_to={}",
-                 url, elapsed.count(), config_.connect_timeout.count(),
-                 (total_timeout - config_.connect_timeout).count());
-    if (elapsed < total_timeout && attempt_number < 2) {
-      entry.set_attempt(attempt_number, false);
-      entry.log();
-      return do_get(url, attempt_number + 1);
-    }
-
-    entry.set_status_code(-1);
-  } else {
-    http_code = curl.status_code();
-    entry.set_status_code(http_code);
-    if (http_code / 100 == 2) {
-      entry.set_success();
-    } else {
-      entry.set_error("http_error");
-    }
-    logger->debug("Was able to GET to {} - status code: {}", url, http_code);
   }
   entry.set_attempt(attempt_number, true);
   entry.log();
@@ -329,12 +264,12 @@ HttpResponse HttpClient::Post(const std::string& url, const char* content_type,
       return err;
     }
 
-    return do_post(url, std::move(headers), compressed_payload.get(),
+    return perform("POST", url, std::move(headers), compressed_payload.get(),
                    compressed_size, 0);
   }
 
   // no compression
-  return do_post(url, std::move(headers), payload, size, 0);
+  return perform("POST", url, std::move(headers), payload, size, 0);
 }
 
 HttpResponse HttpClient::Post(const std::string& url,
