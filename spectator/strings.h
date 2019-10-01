@@ -16,7 +16,7 @@ bool IStartsWith(const std::string& s, const std::string& prefix) noexcept;
 /// Remove whitespace from the end of a string
 inline void TrimRight(std::string* s) {
   s->erase(std::find_if(s->rbegin(), s->rend(),
-                        std::not1(std::ptr_fun<int, int>(std::isspace)))
+                        std::not1(std::ref<int(int)>(std::isspace)))
                .base(),
            s->end());
 }
