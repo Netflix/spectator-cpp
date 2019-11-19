@@ -326,3 +326,43 @@ TEST(HttpTest, Get) {
   auto timer = registry.GetTimer(timer_id);
   EXPECT_EQ(timer->Count(), 1);
 }
+
+TEST(HttpTest, Get503) {
+  auto cfg = get_cfg(5000, 5000);
+  TestRegistry registry{GetConfiguration()};
+  HttpClient client{&registry, cfg};
+
+  http_server server;
+  server.start();
+
+  auto port = server.get_port();
+  ASSERT_TRUE(port > 0) << "Port = " << port;
+  auto logger = DefaultLogger();
+  logger->info("Server started on port {}", port);
+
+  auto response = client.Get(fmt::format("http://localhost:{}/get503", port));
+  server.stop();
+  EXPECT_EQ(response.status, 200);
+  EXPECT_EQ(response.raw_body, "InsightInstanceProfile");
+
+  // 2 percentile timers, one for success, one for error
+  EXPECT_EQ(registry.Meters().size(), 4);
+
+  spectator::Tags err_timer_tags{
+      {"http.status", "503"},       {"ipc.attempt", "initial"},
+      {"ipc.result", "failure"},    {"owner", "spectator-cpp"},
+      {"ipc.status", "http_error"}, {"ipc.attempt.final", "false"},
+      {"http.method", "GET"},       {"ipc.endpoint", "/get503"}};
+  spectator::Tags success_timer_tags{
+      {"http.status", "200"},    {"ipc.attempt", "second"},
+      {"ipc.result", "success"}, {"owner", "spectator-cpp"},
+      {"ipc.status", "success"}, {"ipc.attempt.final", "true"},
+      {"http.method", "GET"},    {"ipc.endpoint", "/get503"}};
+  auto err_id = registry.CreateId("ipc.client.call", err_timer_tags);
+  auto err_timer = registry.GetTimer(err_id);
+  EXPECT_EQ(err_timer->Count(), 1);
+
+  auto success_id = registry.CreateId("ipc.client.call", success_timer_tags);
+  auto success_timer = registry.GetTimer(success_id);
+  EXPECT_EQ(success_timer->Count(), 1);
+}

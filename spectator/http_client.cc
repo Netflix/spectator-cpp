@@ -159,6 +159,10 @@ HttpResponse HttpClient::Get(const std::string& url) const {
   return perform("GET", url, std::make_shared<CurlHeaders>(), nullptr, 0u, 0);
 }
 
+inline bool is_retryable_error(int http_code) {
+  return http_code == 429 || http_code == 503;
+}
+
 HttpResponse HttpClient::perform(const char* method, const std::string& url,
                                  std::shared_ptr<CurlHeaders> headers,
                                  const char* payload, size_t size,
@@ -227,7 +231,17 @@ HttpResponse HttpClient::perform(const char* method, const std::string& url,
     } else {
       entry.set_error("http_error");
     }
-    logger->debug("Was able to POST to {} - status code: {}", url, http_code);
+    if (is_retryable_error(http_code) && attempt_number < 2) {
+      logger->info("Got a retryable http code from {}: {} (attempt {})", url,
+                   http_code, attempt_number);
+      entry.set_attempt(attempt_number, false);
+      entry.log();
+      auto sleep_ms = uint32_t(200) << attempt_number;  // 200, 400ms
+      std::this_thread::sleep_for(std::chrono::milliseconds(sleep_ms));
+      return perform(method, url, std::move(headers), payload, size,
+                     attempt_number + 1);
+    }
+    logger->debug("{} {} - status code: {}", method, url, http_code);
   }
   entry.set_attempt(attempt_number, true);
   entry.log();

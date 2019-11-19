@@ -21,6 +21,16 @@ http_server::http_server() noexcept {
       hdr_body.length(), hdr_body);
   path_response_["/hdr"] = hdr_response;
 
+  path_response_["/get503"] =
+      "HTTP/1.1 503 OK\n"
+      "Content-Type: text/plain\n"
+      "Accept-Ranges: none\n"
+      "Last-Modified: Tue, 10 Sep 2019 18:22:20 GMT\n"
+      "Content-Length: 4\n"
+      "Date: Tue, 10 Sep 2019 18:23:27 GMT\n"
+      "Connection: close\n"
+      "\n"
+      "Busy";
   path_response_["/get"] =
       "HTTP/1.1 200 OK\n"
       "Content-Type: text/plain\n"
@@ -202,6 +212,11 @@ void http_server::accept_request(int client) {
     auto written = write(client, resp_ptr, left_to_write);
     resp_ptr += written;
     left_to_write -= written;
+  }
+
+  // hack for /get503
+  if (strcmp(path, "/get503") == 0) {
+    path_response_["/get503"] = path_response_["/get"];
   }
 }
 
