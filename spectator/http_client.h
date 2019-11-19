@@ -56,8 +56,7 @@ class HttpClient {
   Registry* registry_;
   HttpClientConfig config_;
 
-  HttpResponse perform(const char* method,
-      const std::string& url,
+  HttpResponse perform(const char* method, const std::string& url,
                        std::shared_ptr<CurlHeaders> headers,
                        const char* payload, size_t size,
                        int attempt_number) const;
