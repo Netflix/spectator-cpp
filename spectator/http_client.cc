@@ -125,6 +125,8 @@ class CurlHandle {
     curl_easy_setopt(handle_, CURLOPT_POSTFIELDSIZE, size);
   }
 
+  void put_method() { curl_easy_setopt(handle_, CURLOPT_PUT, 1L); }
+
   void ignore_output() {
     curl_easy_setopt(handle_, CURLOPT_WRITEFUNCTION, curl_ignore_output_fun);
   }
@@ -160,11 +162,22 @@ HttpResponse HttpClient::Get(const std::string& url) const {
 
 HttpResponse HttpClient::Get(const std::string& url,
                              const std::vector<std::string>& headers) const {
+  return method_header("GET", url, headers);
+}
+
+HttpResponse HttpClient::Put(const std::string& url,
+                             const std::vector<std::string>& headers) const {
+  return method_header("PUT", url, headers);
+}
+
+HttpResponse HttpClient::method_header(
+    const char* method, const std::string& url,
+    const std::vector<std::string>& headers) const {
   auto curl_headers = std::make_shared<CurlHeaders>();
   for (const auto& h : headers) {
     curl_headers->append(h);
   }
-  return perform("GET", url, std::move(curl_headers), nullptr, 0u, 0);
+  return perform(method, url, std::move(curl_headers), nullptr, 0u, 0);
 }
 
 inline bool is_retryable_error(int http_code) {
@@ -191,6 +204,11 @@ HttpResponse HttpClient::perform(const char* method, const std::string& url,
   curl.set_headers(headers);
   if (strcmp("POST", method) == 0) {
     curl.post_payload(payload, size);
+  } else if (strcmp("PUT", method) == 0) {
+    curl.put_method();
+  } else if (strcmp("GET", method) != 0) {
+    // unknown method
+    return HttpResponse{400, "", {}};
   }
   if (config_.read_body) {
     curl.capture_output();

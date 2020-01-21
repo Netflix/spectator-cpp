@@ -367,7 +367,7 @@ TEST(HttpTest, Get503) {
   EXPECT_EQ(success_timer->Count(), 1);
 }
 
-TEST(HttpTest, GetHeader) {
+static void test_method_header(const std::string& method) {
   auto cfg = get_cfg(5000, 5000);
   TestRegistry registry{GetConfiguration()};
   HttpClient client{&registry, cfg};
@@ -381,8 +381,10 @@ TEST(HttpTest, GetHeader) {
   logger->info("Server started on port {}", port);
   std::vector<std::string> headers{"X-Spectator: foo", "X-Other-Header: bar"};
 
+  auto url = fmt::format("http://localhost:{}/getheader", port);
   auto response =
-      client.Get(fmt::format("http://localhost:{}/getheader", port), headers);
+      method == "GET" ? client.Get(url, headers) : client.Put(url, headers);
+
   server.stop();
   EXPECT_EQ(response.status, 200);
   EXPECT_EQ(response.raw_body, "x-other-header: bar\nx-spectator: foo\n");
@@ -393,8 +395,12 @@ TEST(HttpTest, GetHeader) {
       {"http.status", "200"},    {"ipc.attempt", "initial"},
       {"ipc.result", "success"}, {"owner", "spectator-cpp"},
       {"ipc.status", "success"}, {"ipc.attempt.final", "true"},
-      {"http.method", "GET"},    {"ipc.endpoint", "/getheader"}};
+      {"http.method", method},   {"ipc.endpoint", "/getheader"}};
   auto timer_id = registry.CreateId("ipc.client.call", timer_tags);
   auto timer = registry.GetTimer(timer_id);
   EXPECT_EQ(timer->Count(), 1);
 }
+
+TEST(HttpTest, GetHeader) { test_method_header("GET"); }
+
+TEST(HttpTest, PutHeader) { test_method_header("PUT"); }

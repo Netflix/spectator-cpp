@@ -52,6 +52,9 @@ class HttpClient {
   HttpResponse Get(const std::string& url,
                    const std::vector<std::string>& headers) const;
 
+  HttpResponse Put(const std::string& url,
+                   const std::vector<std::string>& headers) const;
+
   static void GlobalInit() noexcept;
   static void GlobalShutdown() noexcept;
 
@@ -64,6 +67,8 @@ class HttpClient {
                        const char* payload, size_t size,
                        int attempt_number) const;
 
+  HttpResponse method_header(const char* method, const std::string& url,
+                             const std::vector<std::string>& headers) const;
   std::string payload_to_str(const rapidjson::Document& payload) const;
 };
 
