@@ -224,11 +224,6 @@ void http_server::accept_request(int client) {
   // TODO handle 404s
   const auto& response = path_response_[path];
 
-  // hack for /get503
-  if (strcmp(path, "/get503") == 0) {
-    path_response_["/get503"] = path_response_["/get"];
-  }
-
   // hack for /getheader - just echo the headers that start with X- back
   if (strcmp(path, "/getheader") != 0) {
     do_write(client, response);
@@ -242,6 +237,11 @@ void http_server::accept_request(int client) {
     }
     do_write(client, fmt::format("{}Content-length: {}\n\n{}", response,
                                  resp.length(), resp));
+  }
+
+  // hack for /get503
+  if (strcmp(path, "/get503") == 0) {
+    path_response_["/get503"] = path_response_["/get"];
   }
 }
 
