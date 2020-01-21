@@ -41,6 +41,13 @@ http_server::http_server() noexcept {
       "Connection: close\n"
       "\n"
       "InsightInstanceProfile";
+  path_response_["/getheader"] =
+      "HTTP/1.1 200 OK\n"
+      "Content-Type: text/plain\n"
+      "Accept-Ranges: none\n"
+      "Last-Modified: Tue, 10 Sep 2019 18:22:20 GMT\n"
+      "Date: Tue, 10 Sep 2019 18:23:27 GMT\n"
+      "Connection: close\n";
 }
 
 http_server::~http_server() {
@@ -116,6 +123,16 @@ static void get_line(int client, char* buf, size_t size) {
     }
   }
   buf[i] = '\0';
+}
+
+static void do_write(int socket, const std::string& response) {
+  auto left_to_write = response.length() + 1;
+  auto resp_ptr = response.c_str();
+  while (left_to_write > 0) {
+    auto written = write(socket, resp_ptr, left_to_write);
+    resp_ptr += written;
+    left_to_write -= written;
+  }
 }
 
 void http_server::accept_request(int client) {
@@ -206,17 +223,25 @@ void http_server::accept_request(int client) {
 
   // TODO handle 404s
   const auto& response = path_response_[path];
-  auto left_to_write = response.length() + 1;
-  auto resp_ptr = response.c_str();
-  while (left_to_write > 0) {
-    auto written = write(client, resp_ptr, left_to_write);
-    resp_ptr += written;
-    left_to_write -= written;
-  }
 
   // hack for /get503
   if (strcmp(path, "/get503") == 0) {
     path_response_["/get503"] = path_response_["/get"];
+  }
+
+  // hack for /getheader - just echo the headers that start with X- back
+  if (strcmp(path, "/getheader") != 0) {
+    do_write(client, response);
+  } else {
+    std::string resp;
+    for (const auto& pair : headers) {
+      const auto& name = pair.first;
+      if (name.length() > 2 && name[0] == 'x' && name[1] == '-') {
+        resp += fmt::format("{}: {}\n", name, pair.second);
+      }
+    }
+    do_write(client, fmt::format("{}Content-length: {}\n\n{}", response,
+                                 resp.length(), resp));
   }
 }
 

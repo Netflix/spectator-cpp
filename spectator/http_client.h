@@ -48,6 +48,8 @@ class HttpClient {
                     const rapidjson::Document& payload) const;
 
   HttpResponse Get(const std::string& url) const;
+  HttpResponse Get(const std::string& url,
+                   const std::vector<std::string>& headers) const;
 
   static void GlobalInit() noexcept;
   static void GlobalShutdown() noexcept;
