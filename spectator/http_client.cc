@@ -125,7 +125,9 @@ class CurlHandle {
     curl_easy_setopt(handle_, CURLOPT_POSTFIELDSIZE, size);
   }
 
-  void put_method() { curl_easy_setopt(handle_, CURLOPT_PUT, 1L); }
+  void custom_request(const char* method) {
+    curl_easy_setopt(handle_, CURLOPT_CUSTOMREQUEST, method);
+  }
 
   void ignore_output() {
     curl_easy_setopt(handle_, CURLOPT_WRITEFUNCTION, curl_ignore_output_fun);
@@ -204,11 +206,8 @@ HttpResponse HttpClient::perform(const char* method, const std::string& url,
   curl.set_headers(headers);
   if (strcmp("POST", method) == 0) {
     curl.post_payload(payload, size);
-  } else if (strcmp("PUT", method) == 0) {
-    curl.put_method();
   } else if (strcmp("GET", method) != 0) {
-    // unknown method
-    return HttpResponse{400, "", {}};
+    curl.custom_request(method);
   }
   if (config_.read_body) {
     curl.capture_output();
