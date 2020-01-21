@@ -6,7 +6,6 @@
 #include <utility>
 
 #include <curl/curl.h>
-#include <curl/multi.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
@@ -157,6 +156,15 @@ HttpClient::HttpClient(Registry* registry, HttpClientConfig config)
 
 HttpResponse HttpClient::Get(const std::string& url) const {
   return perform("GET", url, std::make_shared<CurlHeaders>(), nullptr, 0u, 0);
+}
+
+HttpResponse HttpClient::Get(const std::string& url,
+                             const std::vector<std::string>& headers) const {
+  auto curl_headers = std::make_shared<CurlHeaders>();
+  for (const auto& h : headers) {
+    curl_headers->append(h);
+  }
+  return perform("GET", url, std::move(curl_headers), nullptr, 0u, 0);
 }
 
 inline bool is_retryable_error(int http_code) {
