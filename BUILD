@@ -48,11 +48,13 @@ cc_library(
 cc_binary(
     name = "gen_perc_bucket_tags",
     srcs = ["gen_perc_bucket_tags.cc"],
+    linkopts = ["-pthread"],
 )
 
 cc_binary(
     name = "gen_perc_bucket_values",
     srcs = ["gen_perc_bucket_values.cc"],
+    linkopts = ["-pthread"],
 )
 
 genrule(

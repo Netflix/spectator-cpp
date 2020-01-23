@@ -30,7 +30,7 @@ std::vector<Measurement> Timer::Measure() const noexcept {
 }
 
 void Timer::Record(std::chrono::nanoseconds amount) noexcept {
-  auto ns = amount.count();
+  int64_t ns = amount.count();
   if (ns >= 0) {
     count_.fetch_add(1, std::memory_order_relaxed);
     total_.fetch_add(ns, std::memory_order_relaxed);
