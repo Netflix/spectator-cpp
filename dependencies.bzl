@@ -78,10 +78,10 @@ def _com_github_c_ares_c_ares():
     # https://github.com/grpc/grpc/blob/master/bazel/grpc_deps.bzl.
     http_archive(
         name = "com_github_c_ares_c_ares",
-        build_file = "@spectator//third_party:cares.BUILD",
-        sha256 = "e8c2751ddc70fed9dc6f999acd92e232d5846f009ee1674f8aee81f19b2b915a",
-        strip_prefix = "c-ares-e982924acee7f7313b4baa4ee5ec000c5e373c30",
-        url = "https://github.com/c-ares/c-ares/archive/e982924acee7f7313b4baa4ee5ec000c5e373c30.tar.gz",
+        build_file = "@spectator//third_party/cares:cares.BUILD",
+        strip_prefix = "c-ares-1.15.0",
+        sha256 = "6cdb97871f2930530c97deb7cf5c8fa4be5a0b02c7cea6e7c7667672a39d6852",
+        url = "https://github.com/c-ares/c-ares/releases/download/cares-1_15_0/c-ares-1.15.0.tar.gz",
     )
 
 def _boringssl():

@@ -1,15 +1,34 @@
-# https://github.com/grpc/grpc/blob/master/third_party/cares/cares.BUILD minus non-Linux.
+# https://github.com/grpc/grpc/blob/master/third_party/cares/cares.BUILD minus ios/watchos/tvos
+config_setting(
+    name = "darwin",
+    values = {"cpu": "darwin"},
+)
+
+config_setting(
+    name = "darwin_x86_64",
+    values = {"cpu": "darwin_x86_64"},
+)
+
+config_setting(
+    name = "windows",
+    values = {"cpu": "x64_windows"},
+)
 
 genrule(
     name = "ares_build_h",
-    srcs = ["@spectator//third_party:ares_build_genrule.h"],
+    srcs = ["@spectator//third_party/cares:ares_build.h"],
     outs = ["ares_build.h"],
     cmd = "cat $< > $@",
 )
 
 genrule(
     name = "ares_config_h",
-    srcs = ["@spectator//third_party:ares_config_genrule.h"],
+    srcs = select({
+        ":darwin": ["@spectator//third_party/cares:config_darwin/ares_config.h"],
+        ":darwin_x86_64": ["@spectator//third_party/cares:config_darwin/ares_config.h"],
+        ":windows": ["@spectator//third_party/cares:config_windows/ares_config.h"],
+        "//conditions:default": ["@spectator//third_party/cares:config_linux/ares_config.h"],
+    }),
     outs = ["ares_config.h"],
     cmd = "cat $< > $@",
 )
@@ -58,8 +77,8 @@ cc_library(
         "ares_send.c",
         "ares_strcasecmp.c",
         "ares_strdup.c",
-        "ares_strerror.c",
         "ares_strsplit.c",
+        "ares_strerror.c",
         "ares_timeout.c",
         "ares_version.c",
         "ares_writev.c",
@@ -101,11 +120,18 @@ cc_library(
         "-D_HAS_EXCEPTIONS=0",
         "-DHAVE_CONFIG_H",
     ] + select({
+        ":windows": [
+            "-DNOMINMAX",
+            "-D_CRT_SECURE_NO_DEPRECATE",
+            "-D_CRT_NONSTDC_NO_DEPRECATE",
+            "-D_WIN32_WINNT=0x0600",
+        ],
         "//conditions:default": [],
     }),
     defines = ["CARES_STATICLIB"],
     includes = ["."],
     linkopts = select({
+        ":windows": ["-defaultlib:ws2_32.lib"],
         "//conditions:default": [],
     }),
     linkstatic = 1,
