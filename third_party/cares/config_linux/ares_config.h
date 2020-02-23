@@ -1,5 +1,3 @@
-// https://github.com/grpc/grpc/blob/master/third_party/cares/config_linux/ares_config.h
-
 /* Generated from ares_config.h.cmake*/
 
 /* Define if building universal (internal helper macro) */
@@ -30,10 +28,10 @@
 #define GETHOSTNAME_TYPE_ARG2 size_t
 
 /* Define to the type qualifier of arg 1 for getnameinfo. */
-#define GETNAMEINFO_QUAL_ARG1
+#define GETNAMEINFO_QUAL_ARG1 
 
 /* Define to the type of arg 1 for getnameinfo. */
-#define GETNAMEINFO_TYPE_ARG1 struct sockaddr*
+#define GETNAMEINFO_TYPE_ARG1 struct sockaddr *
 
 /* Define to the type of arg 2 for getnameinfo. */
 #define GETNAMEINFO_TYPE_ARG2 socklen_t
@@ -75,7 +73,7 @@
  * Note: setting HAVE_CLOCK_GETTIME_MONOTONIC causes use of the clock_gettime
  * function from glibc, don't set it to support glibc < 2.17 */
 #ifndef GPR_BACKWARDS_COMPATIBILITY_MODE
-#define HAVE_CLOCK_GETTIME_MONOTONIC
+  #define HAVE_CLOCK_GETTIME_MONOTONIC
 #endif
 
 /* Define to 1 if you have the closesocket function. */
@@ -160,7 +158,7 @@
 /* #undef HAVE_IOCTLSOCKET_CAMEL */
 
 /* Define to 1 if you have a working IoctlSocket camel case FIONBIO function.
- */
+   */
 /* #undef HAVE_IOCTLSOCKET_CAMEL_FIONBIO */
 
 /* Define to 1 if you have a working ioctlsocket FIONBIO function. */
@@ -353,13 +351,13 @@
 /* #undef RANDOM_FILE */
 
 /* Define to the type qualifier pointed by arg 5 for recvfrom. */
-#define RECVFROM_QUAL_ARG5
+#define RECVFROM_QUAL_ARG5 
 
 /* Define to the type of arg 1 for recvfrom. */
 #define RECVFROM_TYPE_ARG1 int
 
 /* Define to the type pointed by arg 2 for recvfrom. */
-#define RECVFROM_TYPE_ARG2 void*
+#define RECVFROM_TYPE_ARG2 void *
 
 /* Define to 1 if the type pointed by arg 2 for recvfrom is void. */
 #define RECVFROM_TYPE_ARG2_IS_VOID 0
@@ -371,13 +369,13 @@
 #define RECVFROM_TYPE_ARG4 int
 
 /* Define to the type pointed by arg 5 for recvfrom. */
-#define RECVFROM_TYPE_ARG5 struct sockaddr*
+#define RECVFROM_TYPE_ARG5 struct sockaddr *
 
 /* Define to 1 if the type pointed by arg 5 for recvfrom is void. */
 #define RECVFROM_TYPE_ARG5_IS_VOID 0
 
 /* Define to the type pointed by arg 6 for recvfrom. */
-#define RECVFROM_TYPE_ARG6 socklen_t*
+#define RECVFROM_TYPE_ARG6 socklen_t *
 
 /* Define to 1 if the type pointed by arg 6 for recvfrom is void. */
 #define RECVFROM_TYPE_ARG6_IS_VOID 0
@@ -389,7 +387,7 @@
 #define RECV_TYPE_ARG1 int
 
 /* Define to the type of arg 2 for recv. */
-#define RECV_TYPE_ARG2 void*
+#define RECV_TYPE_ARG2 void *
 
 /* Define to the type of arg 3 for recv. */
 #define RECV_TYPE_ARG3 size_t
@@ -401,16 +399,16 @@
 #define RECV_TYPE_RETV ssize_t
 
 /* Define as the return type of signal handlers (`int' or `void'). */
-#define RETSIGTYPE
+#define RETSIGTYPE 
 
 /* Define to the type qualifier of arg 2 for send. */
-#define SEND_QUAL_ARG2
+#define SEND_QUAL_ARG2 
 
 /* Define to the type of arg 1 for send. */
 #define SEND_TYPE_ARG1 int
 
 /* Define to the type of arg 2 for send. */
-#define SEND_TYPE_ARG2 void*
+#define SEND_TYPE_ARG2 void *
 
 /* Define to the type of arg 3 for send. */
 #define SEND_TYPE_ARG3 size_t
@@ -434,30 +432,30 @@
 #undef in_addr_t
 
 #ifdef GPR_BACKWARDS_COMPATIBILITY_MODE
-/* IMPORTANT: gRPC MANUAL EDIT HERE!
- * Redefine the fd_set macros for GLIBC < 2.15 support.
- * This is a backwards compatibility hack. At version 2.15, GLIBC introduces
- * the __fdelt_chk function, and starts using it within its fd_set macros
- * (which c-ares uses). For compatibility with GLIBC < 2.15, we need to redefine
- * the fd_set macros to not use __fdelt_chk. */
-#include <sys/select.h>
-#undef FD_SET
-#undef FD_CLR
-#undef FD_ISSET
-/* 'FD_ZERO' doesn't use __fdelt_chk, no need to redefine. */
+  /* IMPORTANT: gRPC MANUAL EDIT HERE!
+   * Redefine the fd_set macros for GLIBC < 2.15 support.
+   * This is a backwards compatibility hack. At version 2.15, GLIBC introduces
+   * the __fdelt_chk function, and starts using it within its fd_set macros
+   * (which c-ares uses). For compatibility with GLIBC < 2.15, we need to redefine
+   * the fd_set macros to not use __fdelt_chk. */
+  #include <sys/select.h>
+  #undef FD_SET
+  #undef FD_CLR
+  #undef FD_ISSET
+  /* 'FD_ZERO' doesn't use __fdelt_chk, no need to redefine. */
 
-#ifdef __FDS_BITS
-#define GRPC_CARES_FDS_BITS(set) __FDS_BITS(set)
-#else
-#define GRPC_CARES_FDS_BITS(set) ((set)->fds_bits)
-#endif
+  #ifdef __FDS_BITS
+    #define GRPC_CARES_FDS_BITS(set) __FDS_BITS(set)
+  #else
+    #define GRPC_CARES_FDS_BITS(set) ((set)->fds_bits)
+  #endif
 
-#define GRPC_CARES_FD_MASK(d) ((long int)(1UL << (d) % NFDBITS))
+  #define GRPC_CARES_FD_MASK(d) ((long int)(1UL << (d) % NFDBITS))
 
-#define FD_SET(d, set) \
-  ((void)(GRPC_CARES_FDS_BITS(set)[(d) / NFDBITS] |= GRPC_CARES_FD_MASK(d)))
-#define FD_CLR(d, set) \
-  ((void)(GRPC_CARES_FDS_BITS(set)[(d) / NFDBITS] &= ~GRPC_CARES_FD_MASK(d)))
-#define FD_ISSET(d, set) \
-  ((GRPC_CARES_FDS_BITS(set)[(d) / NFDBITS] & GRPC_CARES_FD_MASK(d)) != 0)
+  #define FD_SET(d, set) \
+      ((void) (GRPC_CARES_FDS_BITS (set)[ (d) / NFDBITS ] |= GRPC_CARES_FD_MASK(d)))
+  #define FD_CLR(d, set) \
+      ((void) (GRPC_CARES_FDS_BITS (set)[ (d) / NFDBITS ] &= ~GRPC_CARES_FD_MASK(d)))
+  #define FD_ISSET(d, set) \
+      ((GRPC_CARES_FDS_BITS (set)[ (d) / NFDBITS ] & GRPC_CARES_FD_MASK(d)) != 0)
 #endif /* GPR_BACKWARDS_COMPATIBILITY_MODE */
