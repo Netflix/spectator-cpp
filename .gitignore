@@ -4,7 +4,6 @@ CTestTestfile.cmake
 Makefile
 cmake_install.cmake
 bazel-*
-build
 build-*
 node_modules/
 npm-debug.log
