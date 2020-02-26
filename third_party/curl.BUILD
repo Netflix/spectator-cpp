@@ -3,6 +3,12 @@
 # Description:
 #   curl is a tool for talking to web servers.
 
+config_setting(
+    name = "darwin",
+    values = {"cpu": "darwin"},
+)
+
+
 licenses(["notice"])  # MIT/X derivative license
 
 exports_files(["COPYING"])
@@ -260,6 +266,12 @@ cc_library(
     defines = ["CURL_STATICLIB"],
     includes = ["include"],
     linkopts = select({
+        "darwin": [
+                    "-Wl,-framework",
+                    "-Wl,CoreFoundation",
+                    "-Wl,-framework",
+                    "-Wl,Security",
+                ],
         "//conditions:default": [
             "-lrt",
         ],
