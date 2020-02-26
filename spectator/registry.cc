@@ -14,7 +14,7 @@ const Config& Registry::GetConfig() const noexcept { return *config_; }
 
 Registry::logger_ptr Registry::GetLogger() const noexcept { return logger_; }
 
-IdPtr Registry::CreateId(std::string name, Tags tags) noexcept {
+IdPtr Registry::CreateId(std::string name, Tags tags) const noexcept {
   return std::make_shared<Id>(name, tags);
 }
 

@@ -15,6 +15,12 @@ class Publisher {
  public:
   explicit Publisher(R* registry)
       : registry_(registry), started_{false}, should_stop_{false} {}
+  Publisher(const Publisher&) = delete;
+  ~Publisher() {
+    if (started_) {
+      Stop();
+    }
+  }
   void Start() {
     if (!http_initialized_) {
       http_initialized_ = true;
