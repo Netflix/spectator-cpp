@@ -230,6 +230,9 @@ cc_library(
         "lib/doh.h",
         "lib/doh.c",
     ] + select({
+        "darwin": [
+            "lib/vtls/sectransp.c",
+        ],
         "//conditions:default": [
             "lib/vtls/openssl.c",
         ],
