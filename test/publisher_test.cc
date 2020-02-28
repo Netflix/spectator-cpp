@@ -1,3 +1,4 @@
+#include <fmt/ostream.h>
 #include "../spectator/publisher.h"
 #include "../spectator/registry.h"
 #include <gtest/gtest.h>
@@ -48,6 +49,18 @@ struct payload_entry {
   }
 };
 
+std::ostream& operator<<(std::ostream& os, const payload_entry& entry) {
+  std::ostringstream sstr;
+  sstr << "[";
+  for (const auto& pair : entry.tags) {
+    sstr << pair.first << "=" << pair.second << ",";
+  }
+  sstr << "]";
+  os << fmt::format("E(tags={}, op={}, value={})", sstr.str(), entry.op,
+                    entry.value);
+  return os;
+}
+
 std::pair<int, payload_entry> get_entry(const std::vector<std::string>& strings,
                                         const rapidjson::Document& payload,
                                         int base) {
@@ -70,7 +83,7 @@ std::vector<payload_entry> payload_to_entries(
   auto num_strings = static_cast<std::size_t>(payload[0].GetInt());
   std::vector<std::string> strings;
   strings.resize(num_strings);
-  for (auto i = 1; i <= num_strings; ++i) {
+  for (auto i = 1u; i <= num_strings; ++i) {
     strings[i - 1] = payload[i].GetString();
   }
 
@@ -115,9 +128,24 @@ TEST(Publisher, measurements_to_json) {
   gauge_tags["statistic"] = "gauge";
   gauge_tags["name"] = "gauge";
 
-  expected.emplace_back(payload_entry{counter_tags, 0, 1.0});
-  expected.emplace_back(payload_entry{gauge_tags, 10, 42.0});
+  ASSERT_EQ(entries.size(), 2);
+
+  // we cannot rely on the order of entries since it depends on
+  // the internals of the registry (the hash table used to contain the
+  // meters)
+  if (entries.at(0).op == 0) {
+    expected.emplace_back(payload_entry{counter_tags, 0, 1.0});
+    expected.emplace_back(payload_entry{gauge_tags, 10, 42.0});
+  } else {
+    expected.emplace_back(payload_entry{gauge_tags, 10, 42.0});
+    expected.emplace_back(payload_entry{counter_tags, 0, 1.0});
+  }
   EXPECT_EQ(entries, expected);
+  if (entries != expected) {
+    for (auto i = 0u; i < std::min(entries.size(), expected.size()); ++i) {
+      DefaultLogger()->info("{} - {}", entries.at(i), expected.at(i));
+    }
+  }
 }
 
 }  // namespace

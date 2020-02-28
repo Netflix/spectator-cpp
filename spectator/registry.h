@@ -9,7 +9,7 @@
 #include "publisher.h"
 #include "timer.h"
 #include <mutex>
-#include <ska/flat_hash_map.hpp>
+#include <tsl/hopscotch_map.h>
 
 namespace spectator {
 class Registry {
@@ -54,7 +54,10 @@ class Registry {
   std::unique_ptr<Config> config_;
   logger_ptr logger_;
   mutable std::mutex meters_mutex{};
-  ska::flat_hash_map<IdPtr, std::shared_ptr<Meter>> meters_;
+  using table_t = tsl::hopscotch_map<
+      IdPtr, std::shared_ptr<Meter>, std::hash<IdPtr>, std::equal_to<IdPtr>,
+      std::allocator<std::pair<IdPtr, std::shared_ptr<Meter>>>, 30, true>;
+  table_t meters_;
 
   std::shared_ptr<Meter> insert_if_needed(
       std::shared_ptr<Meter> meter) noexcept;
