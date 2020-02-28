@@ -92,3 +92,13 @@ cc_test(
         "@com_github_tessil_hopscotch_map//:hopscotch_map",
       ]
     )
+
+cc_test(
+    name = "tags_bench",
+    srcs = ["bench/bench_tags.cc",],
+    deps = [
+        ":spectator",
+        "@com_google_benchmark//:benchmark",
+        "@com_github_tessil_hopscotch_map//:hopscotch_map",
+      ]
+    )

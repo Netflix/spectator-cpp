@@ -17,12 +17,12 @@ class Tags {
   Tags() = default;
 
   Tags(std::initializer_list<std::pair<std::string, std::string>> vs) {
-    for (const auto& pair : vs) {
-      add(pair.first, pair.second);
+    for (auto& pair : vs) {
+      add(std::move(pair.first), std::move(pair.second));
     }
   }
 
-  void add(K k, V v) { entries_[k] = v; }
+  void add(K k, V v) { entries_[std::move(k)] = std::move(v); }
 
   size_t hash() const {
     size_t h = 0;
