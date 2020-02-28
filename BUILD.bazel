@@ -24,6 +24,7 @@ cc_library(
     deps = [
                "@com_github_fmtlib_fmt//:fmtlib",
                "@com_github_gabime_spdlog//:spdlog",
+               "@com_github_tessil_hopscotch_map//:hopscotch_map",
                "@com_github_skarupke_flat_hash_map//:flat_hash_map",
                "@com_github_tencent_rapidjson//:rapidjson",
            ] + select({
