@@ -23,11 +23,12 @@ def spectator_dependencies(
         omit_boringssl = False,
         omit_net_zlib = False,
         omit_com_github_skarupke_flat_hash_map = False,
+        omit_com_github_tessil_hopscotch_map = False,
         omit_com_github_fmtlib_fmt = False,
-        omit_org_exim_pcre = False,
         omit_com_github_tencent_rapidjson = False,
         omit_com_github_gabime_spdlog = False,
-        omit_com_google_googletest = False):
+        omit_com_google_googletest = False,
+        omit_com_google_googlebench = False):
     if not omit_curl:
         _curl()
 
@@ -46,11 +47,11 @@ def spectator_dependencies(
     if not omit_com_github_skarupke_flat_hash_map:
         _com_github_skarupke_flat_hash_map()
 
+    if not omit_com_github_tessil_hopscotch_map:
+      _com_github_tessil_hopscotch_map()
+
     if not omit_com_github_fmtlib_fmt:
         _com_github_fmtlib_fmt()
-
-    if not omit_org_exim_pcre:
-        _org_exim_pcre()
 
     if not omit_com_github_tencent_rapidjson:
         _com_github_tencent_rapidjson()
@@ -60,6 +61,9 @@ def spectator_dependencies(
 
     if not omit_com_google_googletest:
         _com_google_googletest()
+
+    if not omit_com_google_googlebench:
+        _com_google_googlebench()
 
 def _curl():
     # https://github.com/tensorflow/tensorflow/blob/master/tensorflow/workspace.bzl.
@@ -116,6 +120,15 @@ def _com_github_skarupke_flat_hash_map():
         urls = ["https://github.com/skarupke/flat_hash_map/archive/2c4687431f978f02a3780e24b8b701d22aa32d9c.zip"],
     )
 
+def _com_github_tessil_hopscotch_map():
+    http_archive(
+        name = "com_github_tessil_hopscotch_map",
+        build_file = "@spectator//third_party:hopscotch_map.BUILD",
+        strip_prefix = "hopscotch-map-2.2.1",
+        sha256 = "73e301925e1418c5ed930ef37ebdcab2c395a6d1bdaf5a012034bb75307d33f1",
+        urls = ["https://github.com/Tessil/hopscotch-map/archive/v2.2.1.tar.gz"],
+    )
+
 def _com_github_fmtlib_fmt():
     # https://github.com/envoyproxy/envoy/blob/master/bazel/repository_locations.bzl.
     http_archive(
@@ -124,19 +137,6 @@ def _com_github_fmtlib_fmt():
         sha256 = "4c0741e10183f75d7d6f730b8708a99b329b2f942dad5a9da3385ab92bb4a15c",
         strip_prefix = "fmt-5.3.0",
         urls = ["https://github.com/fmtlib/fmt/releases/download/5.3.0/fmt-5.3.0.zip"],
-    )
-
-def _org_exim_pcre():
-    # https://github.com/tensorflow/tensorflow/blob/master/tensorflow/workspace.bzl.
-    http_archive(
-        name = "org_exim_pcre",
-        build_file = "@spectator//third_party:pcre.BUILD",
-        sha256 = "69acbc2fbdefb955d42a4c606dfde800c2885711d2979e356c0636efde9ec3b5",
-        strip_prefix = "pcre-8.42",
-        urls = [
-            "https://mirror.bazel.build/ftp.exim.org/pub/pcre/pcre-8.42.tar.gz",
-            "http://ftp.exim.org/pub/pcre/pcre-8.42.tar.gz",
-        ],
     )
 
 def _com_github_tencent_rapidjson():
@@ -160,10 +160,19 @@ def _com_github_gabime_spdlog():
     )
 
 def _com_google_googletest():
-    # https://github.com/envoyproxy/envoy/blob/master/bazel/repository_locations.bzl.
     http_archive(
         name = "com_google_googletest",
-        sha256 = "a4cb4b0c3ebb191b798594aca674ad47eee255dcb4c26885cf7f49777703484f",
-        strip_prefix = "googletest-release-1.8.1",
-        urls = ["https://github.com/google/googletest/archive/release-1.8.1.tar.gz"],
+        urls = ["https://github.com/google/googletest/archive/release-1.10.0.tar.gz"],
+        strip_prefix = "googletest-release-1.10.0",
+        sha256 = "9dc9157a9a1551ec7a7e43daea9a694a0bb5fb8bec81235d8a1e6ef64c716dcb",
     )
+
+def _com_google_googlebench():
+    http_archive(
+        name = "com_google_benchmark",
+        urls = ["https://github.com/google/benchmark/archive/v1.5.0.tar.gz"],
+        strip_prefix = "benchmark-1.5.0",
+        sha256 = "3c6a165b6ecc948967a1ead710d4a181d7b0fbcaa183ef7ea84604994966221a",
+    )
+
+
