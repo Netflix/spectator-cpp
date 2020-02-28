@@ -26,7 +26,6 @@ cc_library(
                "@com_github_gabime_spdlog//:spdlog",
                "@com_github_skarupke_flat_hash_map//:flat_hash_map",
                "@com_github_tencent_rapidjson//:rapidjson",
-               "@org_exim_pcre//:pcre",
            ] + select({
                "//conditions:default": [
                    "@curl",
@@ -74,3 +73,22 @@ genrule(
         "gen_perc_bucket_values",
     ],
 )
+
+cc_test(
+    name = "spectator_test",
+    srcs = glob(["test/*.cc", "test/*.h"]),
+    deps = [
+        ":spectator",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "tables_bench",
+    srcs = ["bench/bench_tables.cc",],
+    deps = [
+        ":spectator",
+        "@com_google_benchmark//:benchmark",
+        "@com_github_tessil_hopscotch_map//:hopscotch_map",
+      ]
+    )
