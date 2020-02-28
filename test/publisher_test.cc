@@ -67,7 +67,7 @@ std::pair<int, payload_entry> get_entry(const std::vector<std::string>& strings,
 
 std::vector<payload_entry> payload_to_entries(
     const rapidjson::Document& payload) {
-  auto num_strings = payload[0].GetInt();
+  auto num_strings = static_cast<std::size_t>(payload[0].GetInt());
   std::vector<std::string> strings;
   strings.resize(num_strings);
   for (auto i = 1; i <= num_strings; ++i) {
