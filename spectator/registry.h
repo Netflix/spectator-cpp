@@ -18,6 +18,7 @@ class Registry {
   using logger_ptr = std::shared_ptr<spdlog::logger>;
 
   Registry(std::unique_ptr<Config> config, logger_ptr logger) noexcept;
+  ~Registry() noexcept { Stop(); }
   const Config& GetConfig() const noexcept;
   logger_ptr GetLogger() const noexcept;
 
