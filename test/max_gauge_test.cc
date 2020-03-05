@@ -56,4 +56,17 @@ TEST(MaxGauge, Measure) {
   EXPECT_EQ(expected, measures);
 }
 
+TEST(MaxGauge, Updated) {
+  auto m = getMaxGauge("m");
+  m->Update(1);
+
+  auto t1 = m->Updated();
+  auto t2 = m->Updated();
+  EXPECT_EQ(t1, t2);
+
+  usleep(1);
+  m->Set(2);
+  EXPECT_TRUE(m->Updated() > t1);
+}
+
 }  // namespace

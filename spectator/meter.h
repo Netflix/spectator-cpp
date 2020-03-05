@@ -2,6 +2,7 @@
 
 #include "id.h"
 #include "measurement.h"
+#include <chrono>
 #include <vector>
 
 namespace spectator {
@@ -45,6 +46,15 @@ class Meter {
   virtual IdPtr MeterId() const noexcept = 0;
   virtual std::vector<Measurement> Measure() const noexcept = 0;
   virtual MeterType GetType() const noexcept = 0;
+  std::chrono::system_clock::time_point Updated() const noexcept {
+    return last_updated_;
+  }
+
+ private:
+  std::chrono::system_clock::time_point last_updated_{};
+
+ protected:
+  void Update() { last_updated_ = std::chrono::system_clock::now(); }
 };
 
 }  // namespace spectator

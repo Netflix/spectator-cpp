@@ -66,4 +66,16 @@ TEST(MonotonicCounter, Measure) {
   EXPECT_TRUE(c->Measure().empty())
       << "MonotonicCounters should not report delta=0";
 }
+
+TEST(MonotonicCounter, Update) {
+  auto counter = getMonotonicCounter("m");
+  counter->Set(1);
+
+  auto t1 = counter->Updated();
+  auto t2 = counter->Updated();
+  EXPECT_EQ(t1, t2);
+  usleep(1);
+  counter->Set(2);
+  EXPECT_TRUE(counter->Updated() > t1);
+}
 }  // namespace

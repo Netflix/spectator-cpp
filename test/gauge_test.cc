@@ -37,4 +37,18 @@ TEST(Gauge, Measure) {
   // filter NaNs at the source
   EXPECT_TRUE(g->Measure().empty()) << "Gauges should not include NaNs";
 }
+
+TEST(Gauge, Updated) {
+  auto gauge = getGauge("g");
+  gauge->Set(1);
+
+  auto t1 = gauge->Updated();
+  auto t2 = gauge->Updated();
+  EXPECT_EQ(t1, t2);
+
+  usleep(1);
+  gauge->Set(1);
+  EXPECT_TRUE(gauge->Updated() > t1);
+}
+
 }  // namespace

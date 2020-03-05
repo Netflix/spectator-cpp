@@ -17,6 +17,8 @@ std::vector<Measurement> Gauge::Measure() const noexcept {
 }
 
 void Gauge::Set(double value) noexcept {
+  Update();
+
   value_.store(value, std::memory_order_relaxed);
 }
 

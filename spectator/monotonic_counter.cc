@@ -10,6 +10,7 @@ MonotonicCounter::MonotonicCounter(IdPtr id) noexcept
 IdPtr MonotonicCounter::MeterId() const noexcept { return id_; }
 
 void MonotonicCounter::Set(double amount) noexcept {
+  Update();
   value_.store(amount, std::memory_order_relaxed);
 }
 

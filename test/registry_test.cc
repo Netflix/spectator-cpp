@@ -97,4 +97,32 @@ TEST(Registry, MeasurementTest) {
   auto m2 = c->Measure().front();
   EXPECT_EQ(m, m2);
 }
+
+struct ExpRegistry : public Registry {
+  explicit ExpRegistry(std::unique_ptr<spectator::Config> cfg)
+      : Registry(std::move(cfg), DefaultLogger()) {}
+
+  void expire() { removed_expired_meters(); }
+};
+
+TEST(Registry, Expiration) {
+  auto cfg = GetConfiguration();
+  cfg->expiration_frequency = std::chrono::milliseconds(1);
+  cfg->meter_ttl = std::chrono::milliseconds(1);
+  ExpRegistry r{std::move(cfg)};
+
+  auto c = r.GetCounter("c");
+  auto g = r.GetGauge("g");
+  auto d = r.GetDistributionSummary("d");
+  auto t = r.GetTimer("t");
+  auto m = r.GetMaxGauge("m");
+  ASSERT_EQ(r.Meters().size(), 5);
+
+  usleep(2000);  // 2ms
+  c->Increment();
+  r.expire();
+
+  ASSERT_EQ(r.Meters().size(), 1);
+}
+
 }  // namespace

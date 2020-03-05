@@ -19,10 +19,11 @@ std::vector<Measurement> Counter::Measure() const noexcept {
 void Counter::Increment() noexcept { Add(1.0); }
 
 void Counter::Add(double delta) noexcept {
+  Update();
+
   if (delta < 0) {
     return;
   }
-
   add_double(&count_, delta);
 }
 
