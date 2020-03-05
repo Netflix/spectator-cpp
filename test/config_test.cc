@@ -1,5 +1,4 @@
 #include "../spectator/config.h"
-#include "../spectator/registry.h"
 #include <gtest/gtest.h>
 
 TEST(Config, Constructor) {
