@@ -26,6 +26,9 @@ double MaxGauge::Get() const noexcept {
   return kNaN;
 }
 
-void MaxGauge::Update(double value) noexcept { update_max(&value_, value); }
+void MaxGauge::Update(double value) noexcept {
+  Meter::Update();
+  update_max(&value_, value);
+}
 
 }  // namespace spectator

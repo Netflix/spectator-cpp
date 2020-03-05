@@ -51,6 +51,12 @@ class Registry {
   void Stop() noexcept;
 
  private:
+  std::atomic<bool> should_stop_;
+  std::mutex cv_mutex_;
+  std::condition_variable cv_;
+  std::thread expirer_thread_;
+  std::chrono::milliseconds meter_ttl_;
+
   std::unique_ptr<Config> config_;
   logger_ptr logger_;
   mutable std::mutex meters_mutex{};
@@ -78,7 +84,13 @@ class Registry {
     return std::static_pointer_cast<M>(meter_ptr);
   }
 
+  void expirer() noexcept;
+
   Publisher<Registry> publisher_;
+
+ protected:
+  // for testing
+  void removed_expired_meters() noexcept;
 };
 
 }  // namespace spectator

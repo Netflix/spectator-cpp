@@ -68,4 +68,18 @@ TEST(DistributionSummary, Measure) {
   ds->Record(200);
   expect_dist_summary(*ds, 2, 300, 100 * 100 + 200 * 200, 200);
 }
+
+TEST(DistributionSummary, Updated) {
+  auto ds = getDS();
+  ds->Record(1);
+
+  auto t1 = ds->Updated();
+  auto t2 = ds->Updated();
+  EXPECT_EQ(t1, t2);
+
+  usleep(1);
+  ds->Record(1);
+  EXPECT_TRUE(ds->Updated() > t1);
+}
+
 }  // namespace

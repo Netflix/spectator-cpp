@@ -27,6 +27,8 @@ std::vector<Measurement> DistributionSummary::Measure() const noexcept {
 }
 
 void DistributionSummary::Record(double amount) noexcept {
+  Update();
+
   if (amount >= 0) {
     count_.fetch_add(1, std::memory_order_relaxed);
     add_double(&total_, amount);

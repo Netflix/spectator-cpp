@@ -67,4 +67,17 @@ TEST(Timer, Measure) {
   t->Record(std::chrono::nanoseconds(200));
   expect_timer(*t, 2, 300, 100 * 100 + 200 * 200, 200);
 }
+
+TEST(Timer, Updated) {
+  auto timer = getTimer();
+  timer->Record(std::chrono::nanoseconds(1));
+
+  auto t1 = timer->Updated();
+  auto t2 = timer->Updated();
+  EXPECT_EQ(t1, t2);
+
+  usleep(1);
+  timer->Record(std::chrono::nanoseconds(1));
+  EXPECT_TRUE(timer->Updated() > t1);
+}
 }  // namespace

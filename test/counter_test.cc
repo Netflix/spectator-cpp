@@ -76,4 +76,17 @@ TEST(Counter, Measure) {
   EXPECT_TRUE(c->Measure().empty())
       << "Counters should not report 0 increments";
 }
+
+TEST(Counter, Updated) {
+  auto counter = getCounter("c");
+  counter->Increment();
+
+  auto t1 = counter->Updated();
+  auto t2 = counter->Updated();
+  EXPECT_EQ(t1, t2);
+
+  usleep(1);
+  counter->Increment();
+  EXPECT_TRUE(counter->Updated() > t1);
+}
 }  // namespace
