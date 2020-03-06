@@ -172,6 +172,12 @@ void Registry::expirer() noexcept {
   using std::chrono::duration_cast;
   using std::chrono::milliseconds;
 
+  // do not attempt to expire meters immediately after
+  // Start - wait one freq_millis interval
+  {
+    std::unique_lock<std::mutex> lock{cv_mutex_};
+    cv_.wait_for(lock, freq_millis);
+  }
   while (!should_stop_) {
     auto start = clock::now();
     removed_expired_meters();
