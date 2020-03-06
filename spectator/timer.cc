@@ -15,6 +15,13 @@ std::vector<Measurement> Timer::Measure() const noexcept {
     return results;
   }
 
+  if (!count_id_) {
+    total_id_ = id_->WithStat("totalTime");
+    total_sq_id_ = id_->WithStat("totalOfSquares");
+    max_id_ = id_->WithStat("max");
+    count_id_ = id_->WithStat("count");
+  }
+
   auto total = total_.exchange(0, std::memory_order_relaxed);
   auto total_secs = total / 1e9;
   auto t_sq = totalSq_.exchange(0.0, std::memory_order_relaxed);
@@ -22,10 +29,10 @@ std::vector<Measurement> Timer::Measure() const noexcept {
   auto mx = max_.exchange(0, std::memory_order_relaxed);
   auto mx_secs = mx / 1e9;
   results.reserve(4);
-  results.push_back({id_->WithStat("count"), static_cast<double>(cnt)});
-  results.push_back({id_->WithStat("totalTime"), total_secs});
-  results.push_back({id_->WithStat("totalOfSquares"), t_sq_secs});
-  results.push_back({id_->WithStat("max"), mx_secs});
+  results.push_back({count_id_, static_cast<double>(cnt)});
+  results.push_back({total_id_, total_secs});
+  results.push_back({total_sq_id_, t_sq_secs});
+  results.push_back({max_id_, mx_secs});
   return results;
 }
 

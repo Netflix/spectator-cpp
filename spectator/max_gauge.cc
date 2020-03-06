@@ -15,7 +15,10 @@ std::vector<Measurement> MaxGauge::Measure() const noexcept {
   if (value == kMinValue) {
     return std::vector<Measurement>();
   }
-  return std::vector<Measurement>({{id_->WithStat("max"), value}});
+  if (!max_id_) {
+    max_id_ = id_->WithStat("max");
+  }
+  return std::vector<Measurement>({{max_id_, value}});
 }
 
 double MaxGauge::Get() const noexcept {

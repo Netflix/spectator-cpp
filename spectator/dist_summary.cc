@@ -15,14 +15,21 @@ std::vector<Measurement> DistributionSummary::Measure() const noexcept {
     return results;
   }
 
+  if (!count_id_) {
+    total_id_ = id_->WithStat("totalAmount");
+    total_sq_id_ = id_->WithStat("totalOfSquares");
+    max_id_ = id_->WithStat("max");
+    count_id_ = id_->WithStat("count");
+  }
+
   auto total = total_.exchange(0.0, std::memory_order_relaxed);
   auto t_sq = totalSq_.exchange(0.0, std::memory_order_relaxed);
   auto mx = max_.exchange(0.0, std::memory_order_relaxed);
   results.reserve(4);
-  results.push_back({id_->WithStat("count"), static_cast<double>(cnt)});
-  results.push_back({id_->WithStat("totalAmount"), total});
-  results.push_back({id_->WithStat("totalOfSquares"), t_sq});
-  results.push_back({id_->WithStat("max"), mx});
+  results.push_back({count_id_, static_cast<double>(cnt)});
+  results.push_back({total_id_, total});
+  results.push_back({total_sq_id_, t_sq});
+  results.push_back({max_id_, mx});
   return results;
 }
 

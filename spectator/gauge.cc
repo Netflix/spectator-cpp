@@ -13,7 +13,10 @@ std::vector<Measurement> Gauge::Measure() const noexcept {
   if (std::isnan(value)) {
     return std::vector<Measurement>();
   }
-  return std::vector<Measurement>({{id_->WithStat("gauge"), value}});
+  if (!gauge_id_) {
+    gauge_id_ = Id::WithDefaultStat(id_, "gauge");
+  }
+  return std::vector<Measurement>({{gauge_id_, value}});
 }
 
 void Gauge::Set(double value) noexcept {

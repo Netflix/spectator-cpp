@@ -18,6 +18,7 @@ class MonotonicCounter : public Meter {
 
  private:
   IdPtr id_;
+  mutable IdPtr count_id_;
   mutable std::atomic<double> value_;
   mutable std::atomic<double> prev_value_;
 };

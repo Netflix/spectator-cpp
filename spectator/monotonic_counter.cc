@@ -24,7 +24,10 @@ std::vector<Measurement> MonotonicCounter::Measure() const noexcept {
   prev_value_.store(value_.load(std::memory_order_relaxed),
                     std::memory_order_relaxed);
   if (delta > 0) {
-    return std::vector<Measurement>({{id_->WithStat("count"), delta}});
+    if (!count_id_) {
+      count_id_ = id_->WithStat("count");
+    }
+    return std::vector<Measurement>({{count_id_, delta}});
   }
   return std::vector<Measurement>{};
 }

@@ -18,6 +18,7 @@ class Counter : public Meter {
 
  private:
   IdPtr id_;
+  mutable IdPtr count_id_;
   mutable std::atomic<double> count_;
 };
 

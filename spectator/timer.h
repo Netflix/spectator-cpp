@@ -18,6 +18,10 @@ class Timer : public Meter {
 
  private:
   IdPtr id_;
+  mutable IdPtr count_id_;
+  mutable IdPtr total_id_;
+  mutable IdPtr total_sq_id_;
+  mutable IdPtr max_id_;
   mutable std::atomic<int64_t> count_;
   mutable std::atomic<int64_t> total_;
   mutable std::atomic<double> totalSq_;
