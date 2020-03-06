@@ -25,7 +25,7 @@ int gzip_compress(char* dest, size_t* destLen, const char* source,
   stream.zfree = static_cast<free_func>(nullptr);
   stream.opaque = static_cast<voidpf>(nullptr);
 
-  auto err = deflateInit2(&stream, Z_DEFAULT_COMPRESSION, Z_DEFLATED,
+  auto err = deflateInit2(&stream, Z_BEST_SPEED, Z_DEFLATED,
                           kWindowBits, kMemLevel, Z_DEFAULT_STRATEGY);
   if (err != Z_OK) {
     return err;
