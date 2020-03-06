@@ -47,6 +47,7 @@ class Registry {
 
   std::vector<std::shared_ptr<Meter>> Meters() const noexcept;
   std::vector<Measurement> Measurements() const noexcept;
+  std::size_t Size() const noexcept { return meters_.size(); }
 
   void Start() noexcept;
   void Stop() noexcept;

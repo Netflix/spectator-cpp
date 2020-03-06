@@ -125,4 +125,17 @@ TEST(Registry, Expiration) {
   ASSERT_EQ(r.Meters().size(), 1);
 }
 
+TEST(Registry, Size) {
+  Registry r{GetConfiguration(), DefaultLogger()};
+  EXPECT_EQ(r.Size(), 0);
+
+  r.GetCounter("foo");
+  r.GetTimer("bar");
+  EXPECT_EQ(r.Size(), 2);
+
+  r.GetCounter("foo");
+  r.GetTimer("bar2");
+  EXPECT_EQ(r.Size(), 3);
+}
+
 }  // namespace
