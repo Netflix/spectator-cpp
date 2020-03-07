@@ -17,6 +17,7 @@ class Gauge : public Meter {
 
  private:
   IdPtr id_;
+  mutable IdPtr gauge_id_;
   mutable std::atomic<double> value_;
 };
 

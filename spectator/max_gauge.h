@@ -20,6 +20,7 @@ class MaxGauge : public Meter {
 
  private:
   IdPtr id_;
+  mutable IdPtr max_id_;
   mutable std::atomic<double> value_;
 };
 
