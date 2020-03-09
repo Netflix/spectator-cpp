@@ -76,12 +76,15 @@ TEST(HttpTest, Post) {
   auto timer_for_req = find_timer(&registry, "ipc.client.call", "200");
   ASSERT_TRUE(timer_for_req != nullptr);
   auto expected_tags =
-      Tags{{"owner", "spectator-cpp"}, {"http.status", "200"},
-           {"http.method", "POST"},    {"ipc.status", "success"},
-           {"ipc.result", "success"},  {"ipc.attempt", "initial"},
-           {"ipc.endpoint", "/foo"},   {"ipc.attempt.final", "true"}};
+      Tags{{"owner", "spectator-cpp"},   {"http.status", "200"},
+           {"http.method", "POST"},      {"ipc.status", "success"},
+           {"ipc.result", "success"},    {"ipc.endpoint", "/foo"},
+           {"ipc.attempt.final", "true"}};
 
-  const auto& actual_tags = timer_for_req->MeterId()->GetTags();
+  auto& actual_tags = timer_for_req->MeterId()->GetTags();
+  auto attempt = actual_tags.at("ipc.attempt");
+  expected_tags.add("ipc.attempt", attempt);
+
   EXPECT_EQ(expected_tags, actual_tags);
 
   const auto& requests = server.get_requests();
