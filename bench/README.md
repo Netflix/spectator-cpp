@@ -127,3 +127,17 @@ BM_HopscotchMapWithTag           1971 ns         1970 ns       359683
 BM_HopscotchMapHashWithTag       1313 ns         1312 ns       540011
 ================================================================================
 ```
+
+## Benchmarking the effect of doing/avoiding common tag -> string table ids
+
+```
+bazel test -c opt append_measurements
+
+clang-10 on bionic
+
+--------------------------------------------------------------------
+Benchmark                          Time             CPU   Iterations
+--------------------------------------------------------------------
+BM_append_common_tags           1163 ns         1163 ns       561106
+BM_append_common_tags_ids        706 ns          706 ns      1214936
+```

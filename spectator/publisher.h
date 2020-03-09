@@ -171,13 +171,16 @@ class Publisher {
   }
 
   void append_measurement(rapidjson::Document* payload, const StrTable& strings,
+                          const std::vector<int>& common_ids,
                           const Measurement& m) {
     auto& alloc = payload->GetAllocator();
     auto op = op_from_tags(m.id->GetTags());
-    const auto& common_tags = registry_->GetConfig().common_tags;
-    int64_t total_tags = m.id->GetTags().size() + 1 + common_tags.size();
+    auto common_tags_size = common_ids.size() / 2;
+    int64_t total_tags = m.id->GetTags().size() + 1 + common_tags_size;
     payload->PushBack(total_tags, alloc);
-    add_tags(payload, strings, common_tags);
+    for (auto i : common_ids) {
+      payload->PushBack(i, alloc);
+    }
     add_tags(payload, strings, m.id->GetTags());
     auto name_idx = strings.find("name")->second;
     auto name_value_idx = strings.find(m.id->Name())->second;
@@ -188,6 +191,21 @@ class Publisher {
     payload->PushBack(m.value, alloc);
   }
 
+  std::vector<int> get_common_ids(const StrTable& strings) {
+    auto tags = registry_->GetConfig().common_tags;
+    std::vector<int> ids;
+    ids.reserve(tags.size() * 2);
+    for (const auto& tag : tags) {
+      auto key_pair = strings.find(tag.first);
+      auto val_pair = strings.find(tag.second);
+      assert(key_pair != strings.end());
+      assert(val_pair != strings.end());
+      ids.emplace_back(key_pair->second);
+      ids.emplace_back(val_pair->second);
+    }
+    return ids;
+  }
+
   rapidjson::Document measurements_to_json(
       std::vector<Measurement>::const_iterator first,
       std::vector<Measurement>::const_iterator last) {
@@ -196,8 +214,9 @@ class Publisher {
     Document payload{kArrayType};
 
     auto strings = build_str_table(&payload, first, last);
+    auto common_ids = get_common_ids(strings);
     for (auto it = first; it != last; ++it) {
-      append_measurement(&payload, strings, *it);
+      append_measurement(&payload, strings, common_ids, *it);
     }
     return payload;
   }
