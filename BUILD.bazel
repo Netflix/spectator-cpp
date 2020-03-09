@@ -90,7 +90,6 @@ cc_test(
     deps = [
         ":spectator",
         "@com_google_benchmark//:benchmark",
-        "@com_github_tessil_hopscotch_map//:hopscotch_map",
       ]
     )
 
@@ -100,6 +99,14 @@ cc_test(
     deps = [
         ":spectator",
         "@com_google_benchmark//:benchmark",
-        "@com_github_tessil_hopscotch_map//:hopscotch_map",
+      ]
+    )
+
+cc_test(
+    name = "append_measurements",
+    srcs = ["bench/append_measurements.cc",],
+    deps = [
+        ":spectator",
+        "@com_google_benchmark//:benchmark",
       ]
     )
