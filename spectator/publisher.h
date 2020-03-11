@@ -3,18 +3,38 @@
 #include <atomic>
 #include <mutex>
 #include <thread>
+#include <tsl/hopscotch_set.h>
 #include "config.h"
+#include "counter.h"
 #include "logger.h"
 #include "http_client.h"
 #include "measurement.h"
 
 namespace spectator {
 
+namespace {
+template <typename R>
+std::shared_ptr<Counter> get_counter(R* registry, Tags tags) {
+  static constexpr auto kSpectatorMeasurements = "spectator.measurements";
+  return registry->GetCounter(
+      registry->CreateId(kSpectatorMeasurements, std::move(tags)));
+}
+}  // namespace
+
 template <typename R>
 class Publisher {
  public:
   explicit Publisher(R* registry)
-      : registry_(registry), started_{false}, should_stop_{false} {}
+      : registry_{registry},
+        started_{false},
+        should_stop_{false},
+        sentMetrics_{get_counter(registry, Tags{{"id", "sent"}})},
+        invalidMetrics_{get_counter(
+            registry, Tags{{"id", "dropped"}, {"error", "validation"}})},
+        droppedHttp_{get_counter(
+            registry, Tags{{"id", "dropped"}, {"error", "http-error"}})},
+        droppedOther_{get_counter(
+            registry, Tags{{"id", "dropped"}, {"error", "other"}})} {}
   Publisher(const Publisher&) = delete;
   ~Publisher() {
     if (started_) {
@@ -61,6 +81,10 @@ class Publisher {
   std::mutex cv_mutex_;
   std::condition_variable cv_;
   std::thread sender_thread_;
+  std::shared_ptr<Counter> sentMetrics_;
+  std::shared_ptr<Counter> invalidMetrics_;
+  std::shared_ptr<Counter> droppedHttp_;
+  std::shared_ptr<Counter> droppedOther_;
 
   void sender() noexcept {
     using std::chrono::duration_cast;
@@ -91,7 +115,7 @@ class Publisher {
       }
       auto elapsed = R::clock::now() - start;
       auto millis = duration_cast<milliseconds>(elapsed).count();
-      logger->debug("Sent {} metrics in {} ms ({} errors)", millis, sent, err);
+      logger->debug("Sent {} metrics in {} ms ({} errors)", sent, millis, err);
 
       if (millis < freq_millis) {
         std::unique_lock<std::mutex> lock{cv_mutex_};
@@ -221,18 +245,6 @@ class Publisher {
     return payload;
   }
 
-  void update_sent(int64_t num_sent) {
-    registry_->GetCounter("spectator.measurementsSent")->Add(num_sent);
-  }
-
-  void update_http_err(int status_code, int64_t num_not_sent) {
-    Tags tags{{"error", "httpError"}};
-    tags.add("statusCode", std::to_string(status_code));
-    registry_
-        ->GetCounter(registry_->CreateId("spectator.measurementsErr", tags))
-        ->Add(num_not_sent);
-  }
-
   static HttpClientConfig get_http_config(const Config& cfg) {
     auto read_timeout = cfg.read_timeout;
     auto connect_timeout = cfg.connect_timeout;
@@ -242,44 +254,74 @@ class Publisher {
     if (connect_timeout.count() == 0) {
       connect_timeout = std::chrono::seconds(2);
     }
-    return HttpClientConfig{connect_timeout, read_timeout, true, false, false};
+    return HttpClientConfig{connect_timeout, read_timeout, true, false, true};
   }
 
   std::pair<size_t, size_t> send_metrics() {
     const auto& cfg = registry_->GetConfig();
     auto http_cfg = get_http_config(cfg);
-    HttpClient client{registry_, http_cfg};
+    HttpClient client{registry_, std::move(http_cfg)};
     auto batch_size =
         static_cast<std::vector<Measurement>::difference_type>(cfg.batch_size);
     auto measurements = registry_->Measurements();
     if (!cfg.is_enabled()) {
       return std::make_pair(0, 0);
     }
-    std::vector<rapidjson::Document> batches;
 
     auto from = measurements.begin();
     auto end = measurements.end();
     auto num_err = 0u;
     auto num_sent = 0u;
+    auto logger = registry_->GetLogger();
+    tsl::hopscotch_set<std::string> err_messages;
     while (from != end) {
       auto to_end = std::distance(from, end);
       auto to_advance = std::min(batch_size, to_end);
       auto to = from;
       std::advance(to, to_advance);
-      auto http_code =
-          client.Post(cfg.uri, measurements_to_json(from, to)).status;
-      if (http_code != 200) {
-        registry_->GetLogger()->error(
-            "Unable to send batch of {} measurements to publish: {}",
-            to_advance, http_code);
-
-        update_http_err(http_code, to_advance);
-        num_err += to_advance;
-      } else {
-        update_sent(to_advance);
+      auto http_response = client.Post(cfg.uri, measurements_to_json(from, to));
+      auto http_code = http_response.status;
+      if (http_code == 200) {
         num_sent += to_advance;
+      } else if (http_code > 200 && http_code < 500) {
+        rapidjson::Document body;
+        body.Parse(http_response.raw_body.c_str(),
+                   http_response.raw_body.size());
+        if (body.HasParseError()) {
+          logger->error("Unable to parse JSON response from {} - status {}",
+                        cfg.uri, http_code);
+          num_err += to_advance;
+          droppedOther_->Add(to_advance);
+        } else {
+          if (body.HasMember("errorCount")) {
+            auto err_count = body["errorCount"].GetInt();
+            num_err += err_count;
+            num_sent += to_advance - err_count;
+            logger->debug("Err: {} - Sent: {} / {} - {}", err_count,
+                          to_advance - err_count, num_err, num_sent);
+            invalidMetrics_->Add(err_count);
+            sentMetrics_->Add(to_advance - err_count);
+            auto messages = body["message"].GetArray();
+            for (auto& msg : messages) {
+              err_messages.insert(
+                  std::string(msg.GetString(), msg.GetStringLength()));
+            }
+          } else {
+            logger->error(
+                "Missing errorCount field in JSON response from {}: {}",
+                cfg.uri, http_code);
+            droppedOther_->Add(to_advance);
+            num_err += to_advance;
+          }
+        }
+      } else {
+        droppedHttp_->Add(to_advance);
+        num_err += to_advance;
       }
       from = to;
+    }
+    for (const auto& m : err_messages) {
+      logger->info("Validation error: {}", m);
     }
     return std::make_pair(num_sent, num_err);
   }
