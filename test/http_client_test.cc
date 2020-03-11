@@ -7,12 +7,13 @@
 #include <rapidjson/writer.h>
 #include "../spectator/gzip.h"
 #include "../spectator/http_client.h"
-#include "../spectator/logger.h"
 #include "../spectator/registry.h"
 #include "../spectator/strings.h"
-#include "../spectator/timer.h"
 #include "http_server.h"
+#include "test_utils.h"
 #include "percentile_bucket_tags.inc"
+
+namespace {
 
 using spectator::Config;
 using spectator::DefaultLogger;
@@ -24,9 +25,8 @@ using spectator::HttpResponse;
 using spectator::Registry;
 using spectator::Tags;
 
-static std::shared_ptr<spectator::Meter> find_timer(
-    Registry* registry, const std::string& name,
-    const std::string& status_code) {
+MeterPtr find_timer(Registry* registry, const std::string& name,
+                    const std::string& status_code) {
   auto meters = registry->Meters();
   for (const auto& m : meters) {
     if (m->GetType() == spectator::MeterType::Timer) {
@@ -44,11 +44,11 @@ static std::shared_ptr<spectator::Meter> find_timer(
 
 class TestRegistry : public Registry {
  public:
-  TestRegistry(std::unique_ptr<Config> config)
+  explicit TestRegistry(std::unique_ptr<Config> config)
       : Registry(std::move(config), DefaultLogger()) {}
 };
 
-static HttpClientConfig get_cfg(int read_to, int connect_to) {
+HttpClientConfig get_cfg(int read_to, int connect_to) {
   using millis = std::chrono::milliseconds;
   return HttpClientConfig{millis(connect_to), millis(read_to), true, true,
                           true};
@@ -318,7 +318,7 @@ TEST(HttpTest, Get) {
   EXPECT_EQ(response.status, 200);
   EXPECT_EQ(response.raw_body, "InsightInstanceProfile");
 
-  EXPECT_EQ(registry.Meters().size(), 2);
+  EXPECT_EQ(my_meters(registry).size(), 2);
 
   spectator::Tags timer_tags{
       {"http.status", "200"},    {"ipc.attempt", "initial"},
@@ -349,7 +349,8 @@ TEST(HttpTest, Get503) {
   EXPECT_EQ(response.raw_body, "InsightInstanceProfile");
 
   // 2 percentile timers, one for success, one for error
-  EXPECT_EQ(registry.Meters().size(), 4);
+  auto ipc_meters = my_meters(registry);
+  EXPECT_EQ(ipc_meters.size(), 4);
 
   spectator::Tags err_timer_tags{
       {"http.status", "503"},       {"ipc.attempt", "initial"},
@@ -370,7 +371,7 @@ TEST(HttpTest, Get503) {
   EXPECT_EQ(success_timer->Count(), 1);
 }
 
-static void test_method_header(const std::string& method) {
+void test_method_header(const std::string& method) {
   auto cfg = get_cfg(5000, 5000);
   TestRegistry registry{GetConfiguration()};
   HttpClient client{&registry, cfg};
@@ -391,8 +392,7 @@ static void test_method_header(const std::string& method) {
   server.stop();
   EXPECT_EQ(response.status, 200);
   EXPECT_EQ(response.raw_body, "x-other-header: bar\nx-spectator: foo\n");
-
-  EXPECT_EQ(registry.Meters().size(), 2);
+  EXPECT_EQ(my_meters(registry).size(), 2);
 
   spectator::Tags timer_tags{
       {"http.status", "200"},    {"ipc.attempt", "initial"},
@@ -407,3 +407,4 @@ static void test_method_header(const std::string& method) {
 TEST(HttpTest, GetHeader) { test_method_header("GET"); }
 
 TEST(HttpTest, PutHeader) { test_method_header("PUT"); }
+}  // namespace

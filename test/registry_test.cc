@@ -1,4 +1,5 @@
 #include "../spectator/registry.h"
+#include "test_utils.h"
 #include <fmt/ostream.h>
 #include <gtest/gtest.h>
 
@@ -79,7 +80,7 @@ TEST(Registry, Meters) {
   auto t = r.GetTimer("t");
   auto c = r.GetCounter("c");
   r.GetTimer("t")->Count();
-  auto meters = r.Meters();
+  auto meters = my_meters(r);
   ASSERT_EQ(meters.size(), 2);
 }
 
@@ -116,26 +117,27 @@ TEST(Registry, Expiration) {
   auto d = r.GetDistributionSummary("d");
   auto t = r.GetTimer("t");
   auto m = r.GetMaxGauge("m");
-  ASSERT_EQ(r.Meters().size(), 5);
+  ASSERT_EQ(my_meters(r).size(), 5);
 
   usleep(2000);  // 2ms
   c->Increment();
   r.expire();
 
-  ASSERT_EQ(r.Meters().size(), 1);
+  ASSERT_EQ(my_meters(r).size(), 1);
 }
 
 TEST(Registry, Size) {
   Registry r{GetConfiguration(), DefaultLogger()};
-  EXPECT_EQ(r.Size(), 0);
+  auto base_number = r.Meters().size();
+  EXPECT_EQ(r.Size(), base_number);
 
   r.GetCounter("foo");
   r.GetTimer("bar");
-  EXPECT_EQ(r.Size(), 2);
+  EXPECT_EQ(r.Size(), 2 + base_number);
 
   r.GetCounter("foo");
   r.GetTimer("bar2");
-  EXPECT_EQ(r.Size(), 3);
+  EXPECT_EQ(r.Size(), 3 + base_number);
 }
 
 }  // namespace
