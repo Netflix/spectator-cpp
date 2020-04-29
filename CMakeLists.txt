@@ -80,7 +80,7 @@ file(GLOB TEST_SOURCE_FILES test/*.cc test/*.h)
 add_executable(runtests ${TEST_SOURCE_FILES})
 set_target_properties(runtests PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -Wno-sign-compare")
 
-add_library(gtest 3rd-party/src/gtest/gtest-all.cc)
+add_library(gtest 3rd-party/src/gtest-all.cc)
 
 target_link_libraries(runtests spectator_cpp pthread gtest)
 add_test(runtests runtests)
