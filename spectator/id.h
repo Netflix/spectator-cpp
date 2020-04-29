@@ -32,10 +32,9 @@ class Tags {
     return h;
   }
 
-  void add_all(const Tags& source) {
-    for (const auto& t : source.entries_) {
-      entries_[t.first] = t.second;
-    }
+  void move_all(Tags&& source) {
+    entries_.insert(std::make_move_iterator(source.begin()),
+                    std::make_move_iterator(source.end()));
   }
 
   bool operator==(const Tags& that) const { return that.entries_ == entries_; }
@@ -85,6 +84,8 @@ class Id {
 
   std::unique_ptr<Id> WithTag(const std::string& key,
                               const std::string& value) const;
+
+  std::unique_ptr<Id> WithTags(Tags&& extra_tags) const;
 
   std::unique_ptr<Id> WithStat(const std::string& stat) const {
     return WithTag("statistic", stat);
