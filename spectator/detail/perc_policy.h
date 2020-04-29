@@ -26,20 +26,5 @@ struct lazy_policy {
   }
 };
 
-struct eager_policy {
-  static void init(Registry* r, const Id* id, counters_t& counters,
-                   const std::string* perc_tags) {
-    for (auto i = 0u; i < counters.size(); ++i) {
-      counters.at(i) = r->GetCounter(id->WithTags(
-          {{"statistic", "percentile"}, {"percentile", perc_tags[i]}}));
-    }
-  }
-
-  static std::shared_ptr<Counter> get_counter(
-      Registry* /* r */, const Id* /* id */, counters_t& counters, size_t index,
-      const std::string* /* perc_tags */) {
-    return counters.at(index);
-  }
-};
 }  // namespace detail
 }  // namespace spectator

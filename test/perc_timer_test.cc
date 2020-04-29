@@ -18,7 +18,7 @@ std::unique_ptr<T> getTimer(Registry* r) {
   return std::make_unique<T>(r, id, nanos{0}, secs{100});
 }
 
-using Implementations = testing::Types<PercentileTimer, EagerPercentileTimer>;
+using Implementations = testing::Types<PercentileTimer>;
 
 template <class T>
 class PercentileTimerTest : public ::testing::Test {

@@ -13,11 +13,12 @@ template <typename policy>
 class percentile_distribution_summary {
  public:
   percentile_distribution_summary(Registry* registry, IdPtr id, int64_t min,
-                                int64_t max) noexcept: registry_{registry},
-  id_{std::move(id)},
-  min_{min},
-  max_{max},
-  dist_summary_{registry->GetDistributionSummary(id_)} {
+                                  int64_t max) noexcept
+      : registry_{registry},
+        id_{std::move(id)},
+        min_{min},
+        max_{max},
+        dist_summary_{registry->GetDistributionSummary(id_)} {
     policy::init(registry_, id_.get(), counters_, detail::kDistTags.begin());
   }
 
@@ -29,7 +30,8 @@ class percentile_distribution_summary {
     dist_summary_->Record(amount);
     auto restricted = restrict(amount, min_, max_);
     auto index = PercentileBucketIndexOf(restricted);
-    auto c = policy::get_counter(registry_, id_.get(), counters_, index, detail::kDistTags.begin());
+    auto c = policy::get_counter(registry_, id_.get(), counters_, index,
+                                 detail::kDistTags.begin());
     c->Increment();
   }
 
@@ -56,7 +58,7 @@ class percentile_distribution_summary {
   mutable detail::counters_t counters_{};
 };
 
-using PercentileDistributionSummary = percentile_distribution_summary<detail::lazy_policy>;
-using EagerPercentileDistributionSummary = percentile_distribution_summary<detail::eager_policy>;
+using PercentileDistributionSummary =
+    percentile_distribution_summary<detail::lazy_policy>;
 
 }  // namespace spectator

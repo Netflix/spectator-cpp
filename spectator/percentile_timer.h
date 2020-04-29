@@ -57,6 +57,5 @@ class percentile_timer {
 };
 
 using PercentileTimer = percentile_timer<detail::lazy_policy>;
-using EagerPercentileTimer = percentile_timer<detail::eager_policy>;
 
 }  // namespace spectator

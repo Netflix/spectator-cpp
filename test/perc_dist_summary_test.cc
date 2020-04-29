@@ -14,8 +14,7 @@ std::unique_ptr<T> getDS(Registry* r) {
   return std::make_unique<T>(r, id, 0, 1000 * 1000);
 }
 
-using Implementations = testing::Types<PercentileDistributionSummary,
-                                       EagerPercentileDistributionSummary>;
+using Implementations = testing::Types<PercentileDistributionSummary>;
 
 template <class T>
 class PercentileDistributionSummaryTest : public ::testing::Test {
