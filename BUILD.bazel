@@ -16,7 +16,7 @@ config_setting(
 cc_library(
     name = "spectator",
     srcs = glob(["spectator/*.cc"]),
-    hdrs = glob(["spectator/*.h"]) + [
+    hdrs = glob(["spectator/*.h", "spectator/detail/*.h"]) + [
         "percentile_bucket_tags.inc",
         "percentile_bucket_values.inc",
     ],
@@ -83,6 +83,15 @@ cc_test(
         "@com_google_googletest//:gtest_main",
     ],
 )
+
+cc_test(
+    name = "perc_bench",
+    srcs = ["bench/bench_percentiles.cc",],
+    deps = [
+        ":spectator",
+        "@com_google_benchmark//:benchmark",
+      ]
+    )
 
 cc_test(
     name = "tables_bench",

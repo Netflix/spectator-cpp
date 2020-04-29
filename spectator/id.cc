@@ -20,6 +20,12 @@ std::unique_ptr<spectator::Id> Id::WithTag(const std::string& key,
   return std::make_unique<Id>(Name(), tags);
 }
 
+std::unique_ptr<Id> Id::WithTags(Tags&& extra_tags) const {
+  Tags tags{GetTags()};
+  tags.move_all(std::move(extra_tags));
+  return std::make_unique<Id>(Name(), tags);
+}
+
 std::ostream& operator<<(std::ostream& os, const Id& id) {
   os << "Id(" << id.Name() << ", " << id.GetTags() << ")";
   return os;
