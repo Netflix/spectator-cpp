@@ -7,6 +7,7 @@ namespace {
 using spectator::DefaultLogger;
 using spectator::GetConfiguration;
 using spectator::Registry;
+using spectator::Tags;
 
 TEST(Registry, Counter) {
   Registry r{GetConfiguration(), DefaultLogger()};
@@ -32,31 +33,45 @@ TEST(Registry, DistSummary) {
 TEST(Registry, Gauge) {
   Registry r{GetConfiguration(), DefaultLogger()};
   auto g = r.GetGauge("g");
+  auto g2 = r.GetGauge("g", Tags{{"id", "2"}});
   g->Set(100);
+  g2->Set(101);
   EXPECT_DOUBLE_EQ(r.GetGauge("g")->Get(), 100);
+  EXPECT_DOUBLE_EQ(r.GetGauge("g", Tags{{"id", "2"}})->Get(), 101);
 }
 
 TEST(Registry, MaxGauge) {
   Registry r{GetConfiguration(), DefaultLogger()};
   auto g = r.GetMaxGauge("g");
+  auto g2 = r.GetMaxGauge("g", Tags{{"id", "2"}});
   g->Update(100);
+  g2->Set(101);
   EXPECT_DOUBLE_EQ(r.GetMaxGauge("g")->Get(), 100);
+  EXPECT_DOUBLE_EQ(r.GetMaxGauge("g", Tags{{"id", "2"}})->Get(), 101);
 }
 
 TEST(Registry, MonotonicCounter) {
   Registry r{GetConfiguration(), DefaultLogger()};
   auto c = r.GetMonotonicCounter("m");
+  auto c2 = r.GetMonotonicCounter("m", Tags{{"id", "2"}});
   c->Set(100);
   c->Measure();
   c->Set(200);
+  c2->Set(100);
+  c2->Measure();
+  c2->Set(201);
   EXPECT_DOUBLE_EQ(r.GetMonotonicCounter("m")->Delta(), 100);
+  EXPECT_DOUBLE_EQ(r.GetMonotonicCounter("m", Tags{{"id", "2"}})->Delta(), 101);
 }
 
 TEST(Registry, Timer) {
   Registry r{GetConfiguration(), DefaultLogger()};
   auto t = r.GetTimer("t");
+  auto t2 = r.GetTimer("t", Tags{{"id", "2"}});
   t->Record(std::chrono::microseconds(1));
+  t2->Record(std::chrono::microseconds(2));
   EXPECT_EQ(r.GetTimer("t")->TotalTime(), 1000);
+  EXPECT_EQ(r.GetTimer("t", Tags{{"id", "2"}})->TotalTime(), 2000);
 }
 
 TEST(Registry, WrongType) {

@@ -24,8 +24,9 @@ std::shared_ptr<Counter> Registry::GetCounter(IdPtr id) noexcept {
   return create_and_register_as_needed<Counter>(std::move(id));
 }
 
-std::shared_ptr<Counter> Registry::GetCounter(std::string name) noexcept {
-  return GetCounter(CreateId(std::move(name), Tags{}));
+std::shared_ptr<Counter> Registry::GetCounter(std::string name,
+                                              Tags tags) noexcept {
+  return GetCounter(CreateId(std::move(name), std::move(tags)));
 }
 
 std::shared_ptr<DistributionSummary> Registry::GetDistributionSummary(
@@ -34,24 +35,26 @@ std::shared_ptr<DistributionSummary> Registry::GetDistributionSummary(
 }
 
 std::shared_ptr<DistributionSummary> Registry::GetDistributionSummary(
-    std::string name) noexcept {
-  return GetDistributionSummary(CreateId(std::move(name), Tags{}));
+    std::string name, Tags tags) noexcept {
+  return GetDistributionSummary(CreateId(std::move(name), std::move(tags)));
 }
 
 std::shared_ptr<Gauge> Registry::GetGauge(IdPtr id) noexcept {
   return create_and_register_as_needed<Gauge>(std::move(id));
 }
 
-std::shared_ptr<Gauge> Registry::GetGauge(std::string name) noexcept {
-  return GetGauge(CreateId(std::move(name), Tags{}));
+std::shared_ptr<Gauge> Registry::GetGauge(std::string name,
+                                          Tags tags) noexcept {
+  return GetGauge(CreateId(std::move(name), std::move(tags)));
 }
 
 std::shared_ptr<MaxGauge> Registry::GetMaxGauge(IdPtr id) noexcept {
   return create_and_register_as_needed<MaxGauge>(std::move(id));
 }
 
-std::shared_ptr<MaxGauge> Registry::GetMaxGauge(std::string name) noexcept {
-  return GetMaxGauge(CreateId(std::move(name), Tags{}));
+std::shared_ptr<MaxGauge> Registry::GetMaxGauge(std::string name,
+                                                Tags tags) noexcept {
+  return GetMaxGauge(CreateId(std::move(name), std::move(tags)));
 }
 
 std::shared_ptr<MonotonicCounter> Registry::GetMonotonicCounter(
@@ -60,16 +63,17 @@ std::shared_ptr<MonotonicCounter> Registry::GetMonotonicCounter(
 }
 
 std::shared_ptr<MonotonicCounter> Registry::GetMonotonicCounter(
-    std::string name) noexcept {
-  return GetMonotonicCounter(CreateId(std::move(name), Tags{}));
+    std::string name, Tags tags) noexcept {
+  return GetMonotonicCounter(CreateId(std::move(name), std::move(tags)));
 }
 
 std::shared_ptr<Timer> Registry::GetTimer(IdPtr id) noexcept {
   return create_and_register_as_needed<Timer>(std::move(id));
 }
 
-std::shared_ptr<Timer> Registry::GetTimer(std::string name) noexcept {
-  return GetTimer(CreateId(std::move(name), Tags{}));
+std::shared_ptr<Timer> Registry::GetTimer(std::string name,
+                                          Tags tags) noexcept {
+  return GetTimer(CreateId(std::move(name), std::move(tags)));
 }
 
 // only insert if it doesn't exist, otherwise return the existing meter
