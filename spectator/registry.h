@@ -22,7 +22,7 @@ class Registry {
   const Config& GetConfig() const noexcept;
   logger_ptr GetLogger() const noexcept;
 
-  static IdPtr CreateId(std::string name, Tags tags) const noexcept;
+  IdPtr CreateId(std::string name, Tags tags) const noexcept;
 
   std::shared_ptr<Counter> GetCounter(IdPtr id) noexcept;
   std::shared_ptr<Counter> GetCounter(std::string name,
