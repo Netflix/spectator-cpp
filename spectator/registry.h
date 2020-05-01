@@ -22,34 +22,36 @@ class Registry {
   const Config& GetConfig() const noexcept;
   logger_ptr GetLogger() const noexcept;
 
-  IdPtr CreateId(std::string name, Tags tags) const noexcept;
+  static IdPtr CreateId(std::string name, Tags tags) const noexcept;
 
   std::shared_ptr<Counter> GetCounter(IdPtr id) noexcept;
-  std::shared_ptr<Counter> GetCounter(std::string name) noexcept;
+  std::shared_ptr<Counter> GetCounter(std::string name,
+                                      Tags tags = {}) noexcept;
 
   std::shared_ptr<MonotonicCounter> GetMonotonicCounter(IdPtr id) noexcept;
   std::shared_ptr<MonotonicCounter> GetMonotonicCounter(
-      std::string name) noexcept;
+      std::string name, Tags tags = {}) noexcept;
 
   std::shared_ptr<DistributionSummary> GetDistributionSummary(
       IdPtr id) noexcept;
   std::shared_ptr<DistributionSummary> GetDistributionSummary(
-      std::string name) noexcept;
+      std::string name, Tags tags = {}) noexcept;
 
   std::shared_ptr<Gauge> GetGauge(IdPtr id) noexcept;
-  std::shared_ptr<Gauge> GetGauge(std::string name) noexcept;
+  std::shared_ptr<Gauge> GetGauge(std::string name, Tags tags = {}) noexcept;
 
   std::shared_ptr<MaxGauge> GetMaxGauge(IdPtr id) noexcept;
-  std::shared_ptr<MaxGauge> GetMaxGauge(std::string name) noexcept;
+  std::shared_ptr<MaxGauge> GetMaxGauge(std::string name,
+                                        Tags tags = {}) noexcept;
 
   std::shared_ptr<Timer> GetTimer(IdPtr id) noexcept;
-  std::shared_ptr<Timer> GetTimer(std::string name) noexcept;
+  std::shared_ptr<Timer> GetTimer(std::string name, Tags tags = {}) noexcept;
 
   std::vector<std::shared_ptr<Meter>> Meters() const noexcept;
   std::vector<Measurement> Measurements() const noexcept;
-  std::size_t Size() const noexcept { 
+  std::size_t Size() const noexcept {
     std::lock_guard<std::mutex> lock(meters_mutex);
-    return meters_.size(); 
+    return meters_.size();
   }
 
   void Start() noexcept;
