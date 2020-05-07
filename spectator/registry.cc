@@ -80,7 +80,7 @@ std::shared_ptr<Timer> Registry::GetTimer(std::string name,
 std::shared_ptr<Meter> Registry::insert_if_needed(
     std::shared_ptr<Meter> meter) noexcept {
   std::lock_guard<std::mutex> lock(meters_mutex);
-  auto insert_result = meters_.emplace(meter->MeterId(), meter);
+  auto insert_result = meters_.emplace(meter->MeterId(), std::move(meter));
   auto ret = insert_result.first->second;
   return ret;
 }

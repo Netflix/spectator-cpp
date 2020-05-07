@@ -297,8 +297,6 @@ class Publisher {
             auto err_count = body["errorCount"].GetInt();
             num_err += err_count;
             num_sent += to_advance - err_count;
-            logger->debug("Err: {} - Sent: {} / {} - {}", err_count,
-                          to_advance - err_count, num_err, num_sent);
             invalidMetrics_->Add(err_count);
             sentMetrics_->Add(to_advance - err_count);
             auto messages = body["message"].GetArray();
@@ -319,6 +317,12 @@ class Publisher {
         num_err += to_advance;
       }
       from = to;
+    }
+    if (num_err > 0) {
+      logger->info("Sent {}/{} - Validation failures: {}", num_sent,
+                   measurements.size(), num_err);
+    } else {
+      logger->debug("Sent {} measurements with no errors", measurements.size());
     }
     for (const auto& m : err_messages) {
       logger->info("Validation error: {}", m);
