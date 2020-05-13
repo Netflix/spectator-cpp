@@ -33,9 +33,7 @@ TEST(Gauge, Measure) {
 
   auto v = g->Get();
   // reset behavior
-  EXPECT_TRUE(std::isnan(v)) << "Gauges should reset after being measured";
-  // filter NaNs at the source
-  EXPECT_TRUE(g->Measure().empty()) << "Gauges should not include NaNs";
+  EXPECT_FALSE(std::isnan(v)) << "Gauges should only reset after expiration";
 }
 
 TEST(Gauge, Updated) {
