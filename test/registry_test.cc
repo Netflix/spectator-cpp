@@ -155,4 +155,22 @@ TEST(Registry, Size) {
   EXPECT_EQ(r.Size(), 3 + base_number);
 }
 
+TEST(Registry, OnMeasurements) {
+  Registry r{GetConfiguration(), DefaultLogger()};
+  auto called = false;
+  auto found = false;
+  auto cb = [&](const std::vector<spectator::Measurement>& ms) {
+    called = true;
+    auto id =
+        r.CreateId("some.counter", spectator::Tags{{"statistic", "count"}});
+    auto expected = spectator::Measurement{std::move(id), 1.0};
+    auto it = std::find(ms.begin(), ms.end(), expected);
+    found = it != ms.end();
+  };
+  r.OnMeasurements(cb);
+  r.GetCounter("some.counter")->Increment();
+  r.Measurements();
+  ASSERT_TRUE(called);
+  ASSERT_TRUE(found);
+}
 }  // namespace

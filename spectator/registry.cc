@@ -133,6 +133,9 @@ std::vector<Measurement> Registry::Measurements() const noexcept {
       std::move(ms.begin(), ms.end(), std::back_inserter(res));
     }
   }
+  for (const auto& callback : ms_callbacks_) {
+    callback(res);
+  }
   return res;
 }
 
@@ -195,6 +198,9 @@ void Registry::expirer() noexcept {
       cv_.wait_for(lock, sleep);
     }
   }
+}
+void Registry::OnMeasurements(Registry::measurements_callback fn) noexcept {
+  ms_callbacks_.emplace_back(std::move(fn));
 }
 
 }  // namespace spectator
