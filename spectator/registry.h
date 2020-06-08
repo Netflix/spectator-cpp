@@ -16,11 +16,15 @@ class Registry {
  public:
   using clock = std::chrono::steady_clock;
   using logger_ptr = std::shared_ptr<spdlog::logger>;
+  using measurements_callback =
+      std::function<void(const std::vector<Measurement>&)>;
 
   Registry(std::unique_ptr<Config> config, logger_ptr logger) noexcept;
   ~Registry() noexcept { Stop(); }
   const Config& GetConfig() const noexcept;
   logger_ptr GetLogger() const noexcept;
+
+  void OnMeasurements(measurements_callback fn) noexcept;
 
   IdPtr CreateId(std::string name, Tags tags) const noexcept;
 
@@ -71,6 +75,7 @@ class Registry {
       IdPtr, std::shared_ptr<Meter>, std::hash<IdPtr>, std::equal_to<IdPtr>,
       std::allocator<std::pair<IdPtr, std::shared_ptr<Meter>>>, 30, true>;
   table_t meters_;
+  std::vector<measurements_callback> ms_callbacks_{};
 
   std::shared_ptr<Meter> insert_if_needed(
       std::shared_ptr<Meter> meter) noexcept;
