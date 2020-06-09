@@ -76,6 +76,7 @@ class Registry {
       std::allocator<std::pair<IdPtr, std::shared_ptr<Meter>>>, 30, true>;
   table_t meters_;
   std::vector<measurements_callback> ms_callbacks_{};
+  std::shared_ptr<DistributionSummary> registry_size_;
 
   std::shared_ptr<Meter> insert_if_needed(
       std::shared_ptr<Meter> meter) noexcept;
