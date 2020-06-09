@@ -173,4 +173,15 @@ TEST(Registry, OnMeasurements) {
   ASSERT_TRUE(called);
   ASSERT_TRUE(found);
 }
+
+TEST(Registry, DistSummary_Size) {
+  Registry r{GetConfiguration(), DefaultLogger()};
+  r.GetTimer("foo")->Record(std::chrono::seconds{42});
+  r.GetCounter("bar")->Increment();
+  // we have 4 measurements from the timer + 1 from the counter
+  r.Measurements();
+  EXPECT_DOUBLE_EQ(
+      r.GetDistributionSummary("spectator.registrySize")->TotalAmount(), 5.0);
+}
+
 }  // namespace

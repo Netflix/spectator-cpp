@@ -10,6 +10,7 @@ Registry::Registry(std::unique_ptr<Config> config,
       meter_ttl_{config->meter_ttl},
       config_{std::move(config)},
       logger_{std::move(logger)},
+      registry_size_{GetDistributionSummary("spectator.registrySize")},
       publisher_(this) {}
 
 const Config& Registry::GetConfig() const noexcept { return *config_; }
@@ -133,6 +134,7 @@ std::vector<Measurement> Registry::Measurements() const noexcept {
       std::move(ms.begin(), ms.end(), std::back_inserter(res));
     }
   }
+  registry_size_->Record(res.size());
   for (const auto& callback : ms_callbacks_) {
     callback(res);
   }
