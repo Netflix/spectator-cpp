@@ -183,7 +183,7 @@ HttpResponse HttpClient::method_header(
 }
 
 inline bool is_retryable_error(int http_code) {
-  return http_code == 429 || http_code == 503;
+  return http_code == 429 || (http_code / 100) == 5;
 }
 
 HttpResponse HttpClient::perform(const char* method, const std::string& url,
