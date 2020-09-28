@@ -1,24 +1,18 @@
 #pragma once
 
+#include <utility>
+
 #include "meter.h"
-#include <atomic>
 
 namespace spectator {
 
 class Gauge : public Meter {
  public:
-  explicit Gauge(IdPtr id) noexcept;
-  IdPtr MeterId() const noexcept override;
-  std::vector<Measurement> Measure() const noexcept override;
-  MeterType GetType() const noexcept override { return MeterType::Gauge; };
+  Gauge(IdPtr id, Publisher* publisher) : Meter(std::move(id), publisher) {}
+  void Set(double value) noexcept { send(value); }
 
-  void Set(double value) noexcept;
-  double Get() const noexcept;
-
- private:
-  IdPtr id_;
-  mutable IdPtr gauge_id_;
-  mutable std::atomic<double> value_;
+ protected:
+  std::string_view Type() override { return "g"; }
 };
 
 }  // namespace spectator

@@ -1,25 +1,17 @@
 #pragma once
 
 #include "meter.h"
-#include <atomic>
 
 namespace spectator {
 
 class Counter : public Meter {
  public:
-  explicit Counter(IdPtr id) noexcept;
-  IdPtr MeterId() const noexcept override;
-  std::vector<Measurement> Measure() const noexcept override;
-  MeterType GetType() const noexcept override { return MeterType::Counter; }
+  Counter(IdPtr id, Publisher* publisher) : Meter(std::move(id), publisher) {}
+  void Increment() noexcept { send(1); };
+  void Add(double delta) noexcept { send(delta); }
 
-  void Increment() noexcept;
-  void Add(double delta) noexcept;
-  double Count() const noexcept;
-
- private:
-  IdPtr id_;
-  mutable IdPtr count_id_;
-  mutable std::atomic<double> count_;
+ protected:
+  std::string_view Type() override { return "c"; }
 };
 
 }  // namespace spectator

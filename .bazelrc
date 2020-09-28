@@ -1,3 +1,5 @@
+build --cxxopt='-std=c++17' --cxxopt='-Wall' --cxxopt='-fno-omit-frame-pointer'
+
 # Address sanitizer
 # To use it: bazel build --config asan
 build:asan --strip=never

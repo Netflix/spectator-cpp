@@ -4,27 +4,21 @@
 #include "counter.h"
 #include "dist_summary.h"
 #include "gauge.h"
+#include "logger.h"
 #include "max_gauge.h"
 #include "monotonic_counter.h"
 #include "publisher.h"
 #include "timer.h"
-#include <mutex>
-#include <tsl/hopscotch_map.h>
+#include "percentile_timer.h"
+#include "percentile_distribution_summary.h"
 
 namespace spectator {
 class Registry {
  public:
-  using clock = std::chrono::steady_clock;
   using logger_ptr = std::shared_ptr<spdlog::logger>;
-  using measurements_callback =
-      std::function<void(const std::vector<Measurement>&)>;
-
-  Registry(std::unique_ptr<Config> config, logger_ptr logger) noexcept;
-  ~Registry() noexcept { Stop(); }
+  Registry(Config config, logger_ptr logger) noexcept;
   const Config& GetConfig() const noexcept;
   logger_ptr GetLogger() const noexcept;
-
-  void OnMeasurements(measurements_callback fn) noexcept;
 
   IdPtr CreateId(std::string name, Tags tags) const noexcept;
 
@@ -51,59 +45,28 @@ class Registry {
   std::shared_ptr<Timer> GetTimer(IdPtr id) noexcept;
   std::shared_ptr<Timer> GetTimer(std::string name, Tags tags = {}) noexcept;
 
-  std::vector<std::shared_ptr<Meter>> Meters() const noexcept;
-  std::vector<Measurement> Measurements() const noexcept;
-  std::size_t Size() const noexcept {
-    std::lock_guard<std::mutex> lock(meters_mutex);
-    return meters_.size();
-  }
+  std::shared_ptr<PercentileDistributionSummary>
+  GetPercentileDistributionSummary(IdPtr id, int64_t min, int64_t max) noexcept;
 
-  void Start() noexcept;
-  void Stop() noexcept;
+  std::shared_ptr<PercentileTimer> GetPercentileTimer(
+      IdPtr id, absl::Duration min, absl::Duration max) noexcept;
+
+  std::shared_ptr<PercentileTimer> GetPercentileTimer(
+      IdPtr id, std::chrono::nanoseconds min,
+      std::chrono::nanoseconds max) noexcept;
 
  private:
-  std::atomic<bool> should_stop_;
-  std::mutex cv_mutex_;
-  std::condition_variable cv_;
-  std::thread expirer_thread_;
-  std::chrono::milliseconds meter_ttl_;
-
-  std::unique_ptr<Config> config_;
+  Config config_;
   logger_ptr logger_;
-  mutable std::mutex meters_mutex{};
-  using table_t = tsl::hopscotch_map<
-      IdPtr, std::shared_ptr<Meter>, std::hash<IdPtr>, std::equal_to<IdPtr>,
-      std::allocator<std::pair<IdPtr, std::shared_ptr<Meter>>>, 30, true>;
-  table_t meters_;
-  std::vector<measurements_callback> ms_callbacks_{};
-  std::shared_ptr<DistributionSummary> registry_size_;
-
-  std::shared_ptr<Meter> insert_if_needed(
-      std::shared_ptr<Meter> meter) noexcept;
-  void log_type_error(const Id& id, MeterType prev_type,
-                      MeterType attempted_type) const noexcept;
-
-  template <typename M, typename... Args>
-  std::shared_ptr<M> create_and_register_as_needed(IdPtr id,
-                                                   Args&&... args) noexcept {
-    std::shared_ptr<M> new_meter_ptr{
-        std::make_shared<M>(std::move(id), std::forward<Args>(args)...)};
-    auto meter_ptr = insert_if_needed(new_meter_ptr);
-    if (meter_ptr->GetType() != new_meter_ptr->GetType()) {
-      log_type_error(*meter_ptr->MeterId(), meter_ptr->GetType(),
-                     new_meter_ptr->GetType());
-      return new_meter_ptr;
-    }
-    return std::static_pointer_cast<M>(meter_ptr);
-  }
-
-  void expirer() noexcept;
-
-  Publisher<Registry> publisher_;
 
  protected:
   // for testing
-  void removed_expired_meters() noexcept;
+  Registry(Config config, logger_ptr logger,
+           std::unique_ptr<Publisher> publisher)
+      : config_(std::move(config)),
+        logger_(std::move(logger)),
+        publisher_(std::move(publisher)) {}
+  std::unique_ptr<Publisher> publisher_;
 };
 
 }  // namespace spectator

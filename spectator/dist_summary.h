@@ -1,32 +1,18 @@
 #pragma once
+#include <utility>
+
 #include "meter.h"
-#include <atomic>
 
 namespace spectator {
 
 class DistributionSummary : public Meter {
  public:
-  explicit DistributionSummary(IdPtr id) noexcept;
-  IdPtr MeterId() const noexcept override;
-  std::vector<Measurement> Measure() const noexcept override;
-  MeterType GetType() const noexcept override {
-    return MeterType::DistributionSummary;
-  }
+  DistributionSummary(IdPtr id, Publisher* publisher)
+      : Meter(std::move(id), publisher) {}
+  void Record(double amount) noexcept { send(amount); }
 
-  void Record(double amount) noexcept;
-  int64_t Count() const noexcept;
-  double TotalAmount() const noexcept;
-
- private:
-  IdPtr id_;
-  mutable IdPtr count_id_;
-  mutable IdPtr total_id_;
-  mutable IdPtr total_sq_id_;
-  mutable IdPtr max_id_;
-  mutable std::atomic<int64_t> count_;
-  mutable std::atomic<double> total_;
-  mutable std::atomic<double> totalSq_;
-  mutable std::atomic<double> max_;
+ protected:
+  std::string_view Type() override { return "d"; }
 };
 
 }  // namespace spectator

@@ -1,16 +1,17 @@
 [![Build Status](https://travis-ci.org/Netflix/spectator-cpp.svg?branch=master)](https://travis-ci.org/Netflix/spectator-cpp)
-[![codecov](https://codecov.io/gh/Netflix/spectator-cpp/branch/master/graph/badge.svg)](https://codecov.io/gh/Netflix/spectator-cpp)
 
 # Spectator-cpp
 
 > :warning: Experimental
 
-Simple library for instructing code to record dimensional time series.
+Simple library for instructing code to record dimensional time series.  It
+sends all activity to a
+[spectatord](https://github.com/Netflix-Skunkworks/spectatord) sidecar.
 
 ## Description
 
 This implements a basic [Spectator](https://github.com/Netflix/spectator) library
-for instrumenting C++ applications, sending metrics to an Atlas aggregator service.
+for instrumenting C++ applications, sending all metric activity to a sidecar. 
 
 ## Instrumenting Code
 
@@ -38,8 +39,7 @@ class Server {
         response_size_{registry->GetDistributionSummary("server.responseSizes")} {}
 
   Response Handle(const Request& request) {
-    using spectator::Registry;
-    auto start = Registry::clock::now();
+    auto start = std::chrono::steady_clock::now();
 
     // do some work and obtain a response...
     Response res{200, 64};
@@ -52,7 +52,7 @@ class Server {
     auto cnt_id = request_count_id_->WithTag("country", request.country)
                       ->WithTag("status", std::to_string(res.status));
     registry_->GetCounter(std::move(cnt_id))->Increment();
-    request_latency_->Record(Registry::clock::now() - start);
+    request_latency_->Record(std::chrono::steady_clock::now() - start);
     response_size_->Record(res.size);
     return res;
   }
@@ -70,9 +70,10 @@ Request get_next_request() {
 }
 
 int main() {
-  spectator::Registry registry{spectator::GetConfiguration()};
-
-  registry.Start();
+  auto logger = spdlog::stdout_color_mt("console"); 
+  std::unordered_map<std::string, std::string> common_tags{{"xatlas.process", "some-sidecar"}};
+  spectator::Config cfg{"unix:/run/spectatord/spectatord.unix", common_tags};
+  spectator::Registry registry{std::move(cfg), logger);
 
   Server server{&registry};
 
@@ -82,6 +83,5 @@ int main() {
     server.Handle(req);
   }
 
-  registry.Stop();
 }
 ```

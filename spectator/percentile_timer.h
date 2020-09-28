@@ -1,61 +1,38 @@
-
 #pragma once
 
-#include <chrono>
-#include "id.h"
-#include "percentile_buckets.h"
-#include "registry.h"
+#include "meter.h"
 #include "util.h"
-#include "detail/perc_policy.h"
+#include "absl/time/time.h"
+#include <chrono>
 
 namespace spectator {
 
-template <typename policy>
-class percentile_timer {
+class PercentileTimer : public Meter {
  public:
-  percentile_timer(Registry* registry, IdPtr id, std::chrono::nanoseconds min,
-                   std::chrono::nanoseconds max) noexcept
-      : registry_{registry},
-        id_{std::move(id)},
-        min_{min},
-        max_{max},
-        timer_{registry->GetTimer(id_)} {
-    policy::init(registry_, id_.get(), counters_, detail::kTimerTags.begin());
-  }
+  PercentileTimer(IdPtr id, Publisher* publisher, absl::Duration min,
+                  absl::Duration max)
+      : Meter(std::move(id), publisher), min_(min), max_(max) {}
+
+  PercentileTimer(IdPtr id, Publisher* publisher, std::chrono::nanoseconds min,
+                  std::chrono::nanoseconds max)
+      : PercentileTimer(std::move(id), publisher, absl::FromChrono(min),
+                        absl::FromChrono(max)) {}
 
   void Record(std::chrono::nanoseconds amount) noexcept {
-    timer_->Record(amount);
-    auto restricted = restrict(amount, min_, max_);
-    auto index = PercentileBucketIndexOf(restricted.count());
-    auto c = policy::get_counter(registry_, id_.get(), counters_, index,
-                                 detail::kTimerTags.begin());
-    c->Increment();
+    Record(absl::FromChrono(amount));
   }
 
-  IdPtr MeterId() const noexcept { return id_; }
-  int64_t Count() const noexcept { return timer_->Count(); }
-  int64_t TotalTime() const noexcept { return timer_->TotalTime(); }
-  double Percentile(double p) const noexcept {
-    std::array<int64_t, PercentileBucketsLength()> counts{};
-    for (size_t i = 0; i < PercentileBucketsLength(); ++i) {
-      auto& c = counters_.at(i);
-      if (c) {
-        counts.at(i) = c->Count();
-      }
-    }
-    auto v = spectator::Percentile(counts, p);
-    return v / 1e9;
-  };
+  void Record(absl::Duration amount) noexcept {
+    auto duration = restrict(amount, min_, max_);
+    send(absl::ToDoubleSeconds(duration));
+  }
+
+ protected:
+  std::string_view Type() override { return "T"; }
 
  private:
-  Registry* registry_;
-  IdPtr id_;
-  std::chrono::nanoseconds min_;
-  std::chrono::nanoseconds max_;
-  std::shared_ptr<Timer> timer_;
-  mutable detail::counters_t counters_{};
+  absl::Duration min_;
+  absl::Duration max_;
 };
-
-using PercentileTimer = percentile_timer<detail::lazy_policy>;
 
 }  // namespace spectator
