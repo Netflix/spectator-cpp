@@ -23,7 +23,7 @@ class TestServer {
     if (runner.joinable()) {
       spectator::DefaultLogger()->info(
           "Test server runner was not stopped properly");
-      runner.join();
+      Stop();
     }
   }
 
