@@ -9,21 +9,20 @@ class LogEntry {
  public:
   LogEntry(Registry* registry, std::string method, const std::string& url)
       : registry_{registry},
-        start_{Registry::clock::now()},
+        start_{absl::Now()},
         id_{registry_->CreateId("ipc.client.call",
                                 Tags{{"owner", "spectator-cpp"},
                                      {"ipc.endpoint", PathFromUrl(url)},
                                      {"http.method", std::move(method)},
                                      {"http.status", "-1"}})} {}
 
-  Registry::clock::time_point start() const { return start_; }
+  absl::Time start() const { return start_; }
 
   void log() {
     using millis = std::chrono::milliseconds;
     using std::chrono::seconds;
-    PercentileTimer timer{registry_, std::move(id_), millis(1), seconds(5)};
-
-    timer.Record(Registry::clock::now() - start_);
+    registry_->GetPercentileTimer(id_, millis(1), seconds(5))
+        ->Record(absl::Now() - start_);
   }
 
   void set_status_code(int code) {
@@ -47,7 +46,7 @@ class LogEntry {
 
  private:
   Registry* registry_;
-  Registry::clock::time_point start_;
+  absl::Time start_;
   IdPtr id_;
 
   std::string attempt(int attempt_number) {

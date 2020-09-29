@@ -1,27 +1,18 @@
 #pragma once
 
 #include "meter.h"
-#include <atomic>
 
 namespace spectator {
 
 class MaxGauge : public Meter {
  public:
-  explicit MaxGauge(IdPtr id) noexcept;
-  IdPtr MeterId() const noexcept override;
-  std::vector<Measurement> Measure() const noexcept override;
-  MeterType GetType() const noexcept override { return MeterType::MaxGauge; };
-
-  void Update(double value) noexcept;
-
+  MaxGauge(IdPtr id, Publisher* publisher) : Meter(std::move(id), publisher) {}
+  void Update(double value) noexcept { send(value); }
   // synonym for Update for consistency with the Gauge interface
-  void Set(double value) noexcept { Update(value); }
-  double Get() const noexcept;
+  void Set(double value) noexcept { send(value); }
 
- private:
-  IdPtr id_;
-  mutable IdPtr max_id_;
-  mutable std::atomic<double> value_;
+ protected:
+  std::string_view Type() override { return "m"; }
 };
 
 }  // namespace spectator

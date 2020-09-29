@@ -1,121 +1,46 @@
-config_setting(
-    name = "curl_via_cmake",
-    values = {"define": "curl_via_cmake=enabled"},
-)
-
-config_setting(
-    name = "c_ares_via_cmake",
-    values = {"define": "c_ares_via_cmake=enabled"},
-)
-
-config_setting(
-    name = "zlib_via_cmake",
-    values = {"define": "zlib_via_cmake=enabled"},
-)
-
 cc_library(
     name = "spectator",
-    srcs = glob(["spectator/*.cc"]),
-    hdrs = glob(["spectator/*.h", "spectator/detail/*.h"]) + [
-        "percentile_bucket_tags.inc",
-        "percentile_bucket_values.inc",
-    ],
+    srcs = ["spectator/id.cc", "spectator/logger.cc", "spectator/meter.cc", 
+            "spectator/publisher.cc", "spectator/registry.cc" ],
+    hdrs = ["spectator/config.h", "spectator/counter.h", "spectator/dist_summary.h", 
+            "spectator/gauge.h", "spectator/id.h",
+            "spectator/log_entry.h", "spectator/logger.h", 
+            "spectator/max_gauge.h", "spectator/meter.h", 
+            "spectator/monotonic_counter.h", 
+            "spectator/percentile_distribution_summary.h", "spectator/percentile_timer.h",
+            "spectator/publisher.h", "spectator/registry.h", "spectator/timer.h", 
+            "spectator/util.h"],
     visibility = ["//visibility:public"],
     deps = [
-               "@com_github_fmtlib_fmt//:fmtlib",
-               "@com_github_gabime_spdlog//:spdlog",
-               "@com_github_tessil_hopscotch_map//:hopscotch_map",
-               "@com_github_skarupke_flat_hash_map//:flat_hash_map",
-               "@com_github_tencent_rapidjson//:rapidjson",
-           ] + select({
-               "//conditions:default": [
-                   "@curl",
-               ],
-               "@spectator//:curl_via_cmake": [
-                   "//external:curl",
-               ],
-           }) +
-           select({
-               "//conditions:default": [
-                   "@net_zlib//:zlib",
-               ],
-               "@spectator//:zlib_via_cmake": [
-                   "//external:zlib",
-               ],
-           }),
-)
-
-cc_binary(
-    name = "gen_perc_bucket_tags",
-    srcs = ["gen_perc_bucket_tags.cc"],
-    linkopts = ["-pthread"],
-)
-
-cc_binary(
-    name = "gen_perc_bucket_values",
-    srcs = ["gen_perc_bucket_values.cc"],
-    linkopts = ["-pthread"],
-)
-
-genrule(
-    name = "gen_perc_bucket_tags_rule",
-    outs = ["percentile_bucket_tags.inc"],
-    cmd = "$(location gen_perc_bucket_tags) > $@",
-    tools = [
-        "gen_perc_bucket_tags",
-    ],
-)
-
-genrule(
-    name = "gen_perc_bucket_values_rule",
-    outs = ["percentile_bucket_values.inc"],
-    cmd = "$(location gen_perc_bucket_values) > $@",
-    tools = [
-        "gen_perc_bucket_values",
-    ],
+        "@com_github_fmtlib_fmt//:fmtlib",
+        "@com_github_gabime_spdlog//:spdlog",
+        "@asio//:asio",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/container:flat_hash_map",
+    ]
 )
 
 cc_test(
     name = "spectator_test",
-    srcs = glob(["test/*.cc", "test/*.h"]),
+    srcs = ["spectator/counter_test.cc", "spectator/dist_summary_test.cc",
+            "spectator/gauge_test.cc", "spectator/id_test.cc", "spectator/max_gauge_test.cc",
+            "spectator/monotonic_counter_test.cc", 
+            "spectator/perc_dist_summary_test.cc", "spectator/perc_timer_test.cc",
+            "spectator/publisher_test.cc", "spectator/registry_test.cc",
+            "spectator/test_server.cc", "spectator/test_server.h",
+            "spectator/test_publisher.h", "spectator/timer_test.cc", "spectator/test_main.cc"],
+    local_defines = select({
+        "@bazel_tools//src/conditions:linux_x86_64": ["BACKWARD_HAS_BFD=1"],
+        "//conditions:default": [],
+        }),
     deps = [
         ":spectator",
-        "@com_google_googletest//:gtest_main",
+        "@com_github_bombela_backward//:backward",
+        "@com_google_googletest//:gtest",
     ],
+    linkopts = select({
+        "@bazel_tools//src/conditions:linux_x86_64": ["-lbfd", "-ldl"],
+        "//conditions:default": [],
+        }),
 )
 
-cc_test(
-    name = "perc_bench",
-    srcs = ["bench/bench_percentiles.cc",],
-    deps = [
-        ":spectator",
-        "@com_google_benchmark//:benchmark",
-      ]
-    )
-
-cc_test(
-    name = "tables_bench",
-    srcs = ["bench/bench_tables.cc",],
-    deps = [
-        ":spectator",
-        "@com_google_benchmark//:benchmark",
-      ]
-    )
-
-cc_test(
-    name = "tags_bench",
-    srcs = ["bench/bench_tags.cc",],
-    deps = [
-        ":spectator",
-        "@com_google_benchmark//:benchmark",
-      ]
-    )
-
-cc_test(
-    name = "append_measurements",
-    srcs = ["bench/append_measurements.cc",],
-    deps = [
-        ":spectator",
-        "@com_google_benchmark//:benchmark",
-      ]
-    )

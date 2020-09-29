@@ -1,31 +1,24 @@
 #pragma once
 #include "meter.h"
-#include <atomic>
+#include "absl/time/time.h"
 #include <chrono>
 
 namespace spectator {
 
 class Timer : public Meter {
  public:
-  explicit Timer(IdPtr id) noexcept;
-  IdPtr MeterId() const noexcept override;
-  std::vector<Measurement> Measure() const noexcept override;
-  MeterType GetType() const noexcept override { return MeterType::Timer; }
+  Timer(IdPtr id, Publisher* publisher) : Meter(std::move(id), publisher) {}
+  void Record(std::chrono::nanoseconds amount) noexcept {
+    Record(absl::FromChrono(amount));
+  }
 
-  void Record(std::chrono::nanoseconds amount) noexcept;
-  int64_t Count() const noexcept;
-  int64_t TotalTime() const noexcept;
+  void Record(absl::Duration amount) noexcept {
+    auto secs = absl::ToDoubleSeconds(amount);
+    send(secs);
+  }
 
- private:
-  IdPtr id_;
-  mutable IdPtr count_id_;
-  mutable IdPtr total_id_;
-  mutable IdPtr total_sq_id_;
-  mutable IdPtr max_id_;
-  mutable std::atomic<int64_t> count_;
-  mutable std::atomic<int64_t> total_;
-  mutable std::atomic<double> totalSq_;
-  mutable std::atomic<int64_t> max_;
+ protected:
+  std::string_view Type() override { return "t"; }
 };
 
 }  // namespace spectator

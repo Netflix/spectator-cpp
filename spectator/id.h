@@ -1,33 +1,39 @@
 #pragma once
 
+#include "absl/container/flat_hash_map.h"
+#include "absl/strings/string_view.h"
 #include <memory>
 #include <ostream>
 #include <string>
-#include <ska/flat_hash_map.hpp>
 
 namespace spectator {
 
 class Tags {
   using K = std::string;
   using V = std::string;
-  using table_t = ska::flat_hash_map<K, V>;
+  using table_t = absl::flat_hash_map<K, V>;
   table_t entries_;
 
  public:
   Tags() = default;
 
-  Tags(std::initializer_list<std::pair<std::string, std::string>> vs) {
+  Tags(
+      std::initializer_list<std::pair<std::string_view, std::string_view>> vs) {
     for (auto& pair : vs) {
-      add(std::move(pair.first), std::move(pair.second));
+      add(pair.first, pair.second);
     }
+  }
+
+  void add(std::string_view k, std::string_view v) {
+    entries_[k] = std::string(v);
   }
 
   void add(K k, V v) { entries_[std::move(k)] = std::move(v); }
 
-  size_t hash() const {
+  [[nodiscard]] size_t hash() const {
     size_t h = 0;
     for (const auto& entry : entries_) {
-      h += (std::hash<K>()(entry.first) << 1) ^ std::hash<V>()(entry.second);
+      h += (std::hash<K>()(entry.first) << 1U) ^ std::hash<V>()(entry.second);
     }
     return h;
   }
@@ -39,7 +45,7 @@ class Tags {
 
   bool operator==(const Tags& that) const { return that.entries_ == entries_; }
 
-  bool has(const K& key) const { return entries_.find(key) != entries_.end(); }
+  [[nodiscard]] bool has(const K& key) const { return entries_.find(key) != entries_.end(); }
 
   K at(const K& key) const {
     auto entry = entries_.find(key);
@@ -49,11 +55,11 @@ class Tags {
     return {};
   }
 
-  size_t size() const { return entries_.size(); }
+  [[nodiscard]] size_t size() const { return entries_.size(); }
 
-  table_t::const_iterator begin() const { return entries_.begin(); }
+  [[nodiscard]] table_t::const_iterator begin() const { return entries_.begin(); }
 
-  table_t::const_iterator end() const { return entries_.end(); }
+  [[nodiscard]] table_t::const_iterator end() const { return entries_.end(); }
 };
 
 inline std::ostream& operator<<(std::ostream& os, const Tags& tags) {
@@ -73,8 +79,8 @@ inline std::ostream& operator<<(std::ostream& os, const Tags& tags) {
 
 class Id {
  public:
-  Id(std::string name, Tags tags) noexcept
-      : name_(std::move(name)), tags_(std::move(tags)), hash_(0u) {}
+  Id(std::string_view name, Tags tags) noexcept
+      : name_(name), tags_(std::move(tags)), hash_(0u) {}
 
   bool operator==(const Id& rhs) const noexcept;
 
@@ -86,6 +92,8 @@ class Id {
                               const std::string& value) const;
 
   std::unique_ptr<Id> WithTags(Tags&& extra_tags) const;
+
+  std::unique_ptr<Id> WithTags(const Tags& extra_tags) const;
 
   std::unique_ptr<Id> WithStat(const std::string& stat) const {
     return WithTag("statistic", stat);
