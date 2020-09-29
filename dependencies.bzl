@@ -47,3 +47,11 @@ def spectator_dependencies():
        strip_prefix = "abseil-cpp-518f17501e6156f7921fbb9b68a1e420bcb10bc5",
        sha256 = "0baec77dcf13da93038ad6045c87e048a6cc1f5a8ad126091c804acab4a2671a",
     )
+
+    http_archive(
+        name = "com_github_bombela_backward",
+        urls = [ "https://github.com/bombela/backward-cpp/archive/1efdd145b5fa84f457fb6727677ce0bc9f2c7b5b.zip" ],
+        strip_prefix = "backward-cpp-1efdd145b5fa84f457fb6727677ce0bc9f2c7b5b",
+        build_file = "@spectator//third_party:backward.BUILD",
+        sha256 = "97ddc265cc42afadf870ccfa9b079382766eb9e46e8fc1994a61a92ff547c851",
+    )

@@ -28,10 +28,11 @@ cc_test(
             "spectator/perc_dist_summary_test.cc", "spectator/perc_timer_test.cc",
             "spectator/publisher_test.cc", "spectator/registry_test.cc",
             "spectator/test_server.cc", "spectator/test_server.h",
-            "spectator/test_publisher.h", "spectator/timer_test.cc"],
+            "spectator/test_publisher.h", "spectator/timer_test.cc", "spectator/test_main.cc"],
     deps = [
         ":spectator",
-        "@com_google_googletest//:gtest_main",
+        "@com_github_bombela_backward//:backward",
+        "@com_google_googletest//:gtest",
     ],
 )
 
