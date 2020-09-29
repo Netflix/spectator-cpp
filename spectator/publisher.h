@@ -10,6 +10,8 @@ class Publisher {
  public:
   explicit Publisher(std::string_view endpoint);
   Publisher(const Publisher&) = delete;
+  virtual ~Publisher() = default;
+
   void send(std::string_view measurement) { sender_(measurement); };
 
  protected:
