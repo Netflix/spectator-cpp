@@ -29,10 +29,18 @@ cc_test(
             "spectator/publisher_test.cc", "spectator/registry_test.cc",
             "spectator/test_server.cc", "spectator/test_server.h",
             "spectator/test_publisher.h", "spectator/timer_test.cc", "spectator/test_main.cc"],
+    local_defines = select({
+        "@bazel_tools//src/conditions:linux_x86_64": ["BACKWARD_HAS_BFD=1"],
+        "//conditions:default": [],
+        }),
     deps = [
         ":spectator",
         "@com_github_bombela_backward//:backward",
         "@com_google_googletest//:gtest",
     ],
+    linkopts = select({
+        "@bazel_tools//src/conditions:linux_x86_64": ["-lbfd", "-ldl"],
+        "//conditions:default": [],
+        }),
 )
 
