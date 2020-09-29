@@ -14,8 +14,17 @@ class TestServer {
   }
 
   void Stop() {
+    spectator::DefaultLogger()->info("Stopping test server");
     context_.stop();
     runner.join();
+  }
+
+  ~TestServer() {
+    if (runner.joinable()) {
+      spectator::DefaultLogger()->info(
+          "Test server runner was not stopped properly");
+      runner.join();
+    }
   }
 
   void Reset() { msgs.clear(); }

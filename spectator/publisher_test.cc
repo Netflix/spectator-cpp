@@ -23,7 +23,7 @@ TEST(Publisher, Udp) {
   Counter c{std::make_shared<Id>("counter", Tags{}), &publisher};
   c.Increment();
   c.Add(2);
-  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
   auto msgs = server.GetMessages();
   server.Stop();
   std::vector<std::string> expected{"1:c:counter:1", "1:c:counter:2"};
@@ -46,7 +46,7 @@ TEST(Publisher, Unix) {
   Counter c{std::make_shared<Id>("counter", Tags{}), &publisher};
   c.Increment();
   c.Add(2);
-  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
   auto msgs = server.GetMessages();
   server.Stop();
   unlink(path.c_str());
