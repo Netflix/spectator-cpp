@@ -14,20 +14,23 @@ using spectator::Publisher;
 using spectator::Tags;
 
 TEST(Publisher, Udp) {
-  TestUdpServer server;
-  server.Start();
-  auto logger = spectator::DefaultLogger();
-  logger->info("Udp Server started on port {}", server.GetPort());
+  // travis does not support udp on its container
+  if (std::getenv("TRAVIS_COMPILER") == nullptr) {
+    TestUdpServer server;
+    server.Start();
+    auto logger = spectator::DefaultLogger();
+    logger->info("Udp Server started on port {}", server.GetPort());
 
-  Publisher publisher{fmt::format("udp:localhost:{}", server.GetPort())};
-  Counter c{std::make_shared<Id>("counter", Tags{}), &publisher};
-  c.Increment();
-  c.Add(2);
-  std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  auto msgs = server.GetMessages();
-  server.Stop();
-  std::vector<std::string> expected{"1:c:counter:1", "1:c:counter:2"};
-  EXPECT_EQ(server.GetMessages(), expected);
+    Publisher publisher{fmt::format("udp:localhost:{}", server.GetPort())};
+    Counter c{std::make_shared<Id>("counter", Tags{}), &publisher};
+    c.Increment();
+    c.Add(2);
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    auto msgs = server.GetMessages();
+    server.Stop();
+    std::vector<std::string> expected{"1:c:counter:1", "1:c:counter:2"};
+    EXPECT_EQ(server.GetMessages(), expected);
+  }
 }
 
 const char* first_not_null(char* a, const char* b) {
@@ -46,7 +49,7 @@ TEST(Publisher, Unix) {
   Counter c{std::make_shared<Id>("counter", Tags{}), &publisher};
   c.Increment();
   c.Add(2);
-  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
   auto msgs = server.GetMessages();
   server.Stop();
   unlink(path.c_str());
