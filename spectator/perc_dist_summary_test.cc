@@ -1,4 +1,4 @@
-#include "percentile_distribution_summary.h"
+#include "stateless_meters.h"
 #include "test_publisher.h"
 #include <gtest/gtest.h>
 
@@ -11,13 +11,13 @@ using spectator::TestPublisher;
 TEST(PercDistSum, Record) {
   TestPublisher publisher;
   auto id = std::make_shared<Id>("pds", Tags{});
-  PercentileDistributionSummary c{id, &publisher, 0, 1000};
+  PercentileDistributionSummary<TestPublisher> c{id, &publisher, 0, 1000};
   c.Record(50);
   c.Record(5000);
   c.Record(-5000);
   std::vector<std::string> expected = {"1:D:pds:50", "1:D:pds:1000",
                                        "1:D:pds:0"};
-  EXPECT_EQ(publisher.Measurements(), expected);
+  EXPECT_EQ(publisher.SentMessages(), expected);
 }
 
 }  // namespace

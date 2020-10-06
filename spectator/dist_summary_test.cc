@@ -1,4 +1,4 @@
-#include "dist_summary.h"
+#include "stateless_meters.h"
 #include "test_publisher.h"
 #include <gtest/gtest.h>
 
@@ -19,7 +19,7 @@ TEST(DistributionSummary, Record) {
   d.Record(0.1);
   std::vector<std::string> expected = {"1:d:ds.name:10", "1:d:ds2:#key=val:1.2",
                                        "1:d:ds.name:0.1"};
-  EXPECT_EQ(publisher.Measurements(), expected);
+  EXPECT_EQ(publisher.SentMessages(), expected);
 }
 
 }  // namespace

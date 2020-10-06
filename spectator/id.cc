@@ -26,7 +26,7 @@ std::unique_ptr<Id> Id::WithTags(Tags&& extra_tags) const {
 }
 
 std::ostream& operator<<(std::ostream& os, const Id& id) {
-  os << "Id(" << id.Name() << ", " << id.GetTags() << ")";
+  os << fmt::format("{}", id);
   return os;
 }
 

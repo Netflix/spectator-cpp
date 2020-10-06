@@ -4,12 +4,18 @@
 
 namespace spectator {
 
-Publisher::Publisher(std::string_view endpoint)
+SpectatordPublisher::SpectatordPublisher(std::string_view endpoint)
     : udp_socket_(io_context_), local_socket_(io_context_) {
   if (absl::StartsWith(endpoint, "unix:")) {
     setup_unix_domain(endpoint.substr(5));
   } else if (absl::StartsWith(endpoint, "udp:")) {
-    setup_udp(endpoint.substr(4));
+    auto pos = 4;
+    // if the user used udp://foo:1234 instead of udp:foo:1234
+    // adjust accordingly
+    if (endpoint.substr(pos, 2) == "//") {
+      pos += 2;
+    }
+    setup_udp(endpoint.substr(pos));
   } else if (endpoint != "disabled") {
     DefaultLogger()->warn(
         "Unknown endpoint: {}. Expecting: 'unix:/path/to/socket'"
@@ -18,7 +24,7 @@ Publisher::Publisher(std::string_view endpoint)
   }
 }
 
-void Publisher::setup_unix_domain(std::string_view path) {
+void SpectatordPublisher::setup_unix_domain(std::string_view path) {
   using endpoint_t = asio::local::datagram_protocol::endpoint;
   local_socket_.connect(endpoint_t(std::string(path)));
   sender_ = [this](std::string_view msg) {
@@ -26,7 +32,7 @@ void Publisher::setup_unix_domain(std::string_view path) {
   };
 }
 
-void Publisher::setup_udp(std::string_view host_port) {
+void SpectatordPublisher::setup_udp(std::string_view host_port) {
   using asio::ip::udp;
   udp::resolver resolver{io_context_};
 
