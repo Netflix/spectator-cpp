@@ -1,4 +1,4 @@
-#include "counter.h"
+#include "stateless_meters.h"
 #include "test_publisher.h"
 #include <gtest/gtest.h>
 
@@ -13,18 +13,20 @@ TEST(Counter, Activity) {
   TestPublisher publisher;
   auto id = std::make_shared<Id>("ctr.name", Tags{});
   auto id2 = std::make_shared<Id>("c2", Tags{{"key", "val"}});
-  Counter c{id, &publisher};
-  Counter c2{id2, &publisher};
+  Counter<TestPublisher> c{id, &publisher};
+  Counter<TestPublisher> c2{id2, &publisher};
   c.Increment();
   c2.Add(1.2);
   c.Add(0.1);
   std::vector<std::string> expected = {"1:c:ctr.name:1", "1:c:c2:#key=val:1.2",
                                        "1:c:ctr.name:0.1"};
-  EXPECT_EQ(publisher.Measurements(), expected);
+  EXPECT_EQ(publisher.SentMessages(), expected);
 }
 
 TEST(Counter, Id) {
-  Counter c{std::make_shared<Id>("foo", Tags{{"key", "val"}}), nullptr};
+  TestPublisher publisher;
+  Counter<TestPublisher> c{std::make_shared<Id>("foo", Tags{{"key", "val"}}),
+                           &publisher};
   auto id = std::make_shared<Id>("foo", Tags{{"key", "val"}});
   EXPECT_EQ(*(c.MeterId()), *id);
 }

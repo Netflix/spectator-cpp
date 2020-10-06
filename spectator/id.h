@@ -2,6 +2,8 @@
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/strings/string_view.h"
+#include <fmt/format.h>
+#include <fmt/ranges.h>
 #include <memory>
 #include <ostream>
 #include <string>
@@ -9,9 +11,7 @@
 namespace spectator {
 
 class Tags {
-  using K = std::string;
-  using V = std::string;
-  using table_t = absl::flat_hash_map<K, V>;
+  using table_t = absl::flat_hash_map<std::string, std::string>;
   table_t entries_;
 
  public:
@@ -28,12 +28,11 @@ class Tags {
     entries_[k] = std::string(v);
   }
 
-  void add(K k, V v) { entries_[std::move(k)] = std::move(v); }
-
   [[nodiscard]] size_t hash() const {
+    using hs = std::hash<std::string>;
     size_t h = 0;
     for (const auto& entry : entries_) {
-      h += (std::hash<K>()(entry.first) << 1U) ^ std::hash<V>()(entry.second);
+      h += (hs()(entry.first) << 1U) ^ hs()(entry.second);
     }
     return h;
   }
@@ -45,9 +44,11 @@ class Tags {
 
   bool operator==(const Tags& that) const { return that.entries_ == entries_; }
 
-  [[nodiscard]] bool has(const K& key) const { return entries_.find(key) != entries_.end(); }
+  [[nodiscard]] bool has(std::string_view key) const {
+    return entries_.find(key) != entries_.end();
+  }
 
-  K at(const K& key) const {
+  [[nodiscard]] std::string at(std::string_view key) const {
     auto entry = entries_.find(key);
     if (entry != entries_.end()) {
       return entry->second;
@@ -57,23 +58,15 @@ class Tags {
 
   [[nodiscard]] size_t size() const { return entries_.size(); }
 
-  [[nodiscard]] table_t::const_iterator begin() const { return entries_.begin(); }
+  [[nodiscard]] table_t::const_iterator begin() const {
+    return entries_.begin();
+  }
 
   [[nodiscard]] table_t::const_iterator end() const { return entries_.end(); }
 };
 
 inline std::ostream& operator<<(std::ostream& os, const Tags& tags) {
-  bool first = true;
-  os << '[';
-  for (const auto& tag : tags) {
-    if (first) {
-      first = false;
-    } else {
-      os << ", ";
-    }
-    os << tag.first << "->" << tag.second;
-  }
-  os << ']';
+  os << fmt::format("{}", tags);
   return os;
 }
 
@@ -81,6 +74,10 @@ class Id {
  public:
   Id(std::string_view name, Tags tags) noexcept
       : name_(name), tags_(std::move(tags)), hash_(0u) {}
+
+  static std::shared_ptr<Id> of(std::string_view name, Tags tags = {}) {
+    return std::make_shared<Id>(name, std::move(tags));
+  }
 
   bool operator==(const Id& rhs) const noexcept;
 
@@ -157,4 +154,19 @@ struct equal_to<shared_ptr<spectator::Id>> {
     return *lhs == *rhs;
   }
 };
+
 }  // namespace std
+
+template <>
+struct fmt::formatter<spectator::Id> {
+  constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin()) {
+    return ctx.begin();
+  }
+
+  // formatter for Ids
+  template <typename FormatContext>
+  auto format(const spectator::Id& id, FormatContext& context) {
+    return fmt::format_to(context.out(), "Id(name={}, tags={})", id.Name(),
+                          id.GetTags());
+  }
+};

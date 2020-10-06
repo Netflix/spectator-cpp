@@ -1,4 +1,4 @@
-#include "gauge.h"
+#include "stateless_meters.h"
 #include "test_publisher.h"
 #include <gtest/gtest.h>
 
@@ -21,7 +21,7 @@ TEST(Gauge, Set) {
   g.Set(1);
   std::vector<std::string> expected = {"1:g:gauge:42", "1:g:gauge2:#key=val:2",
                                        "1:g:gauge:1"};
-  EXPECT_EQ(publisher.Measurements(), expected);
+  EXPECT_EQ(publisher.SentMessages(), expected);
 }
 
 }  // namespace

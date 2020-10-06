@@ -5,17 +5,13 @@
 #include <vector>
 
 namespace spectator {
-class TestPublisher : public Publisher {
+class TestPublisher {
  public:
-  TestPublisher() : Publisher("disabled") {
-    sender_ = [this](std::string_view m) { measurements_.emplace_back(m); };
-  }
-
-  void Reset() { measurements_.clear(); }
-
-  std::vector<std::string> Measurements() { return measurements_; }
+  void send(std::string_view msg) { messages.emplace_back(msg); }
+  std::vector<std::string> SentMessages() { return messages; }
+  void Reset() { messages.clear(); }
 
  private:
-  std::vector<std::string> measurements_;
+  std::vector<std::string> messages;
 };
 }  // namespace spectator

@@ -13,3 +13,4 @@ logs/
 .idea/
 .vscode/
 .clwb
+compile_commands.json
