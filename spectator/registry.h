@@ -126,7 +126,7 @@ class base_registry {
   using timer_t = typename Types::timer_t;
   using timer_ptr = std::shared_ptr<time_t>;
 
-  base_registry() = default;
+  explicit base_registry(logger_ptr logger = DefaultLogger()) : logger_(std::move(logger)) {}
 
   auto GetCounter(IdPtr id) { return state_.get_counter(std::move(id)); }
   auto GetCounter(std::string_view name, Tags tags = {}) {
@@ -210,6 +210,7 @@ class base_registry {
   auto Measurements() { return state_.measurements(); }
 
  protected:
+  logger_ptr logger_;
   State state_;
 };
 
@@ -280,8 +281,8 @@ class SpectatordRegistry
     : public base_registry<stateless<stateless_types<SpectatordPublisher>>> {
  public:
   using types = stateless_types<SpectatordPublisher>;
-  explicit SpectatordRegistry(Config config)
-      : base_registry<stateless<stateless_types<SpectatordPublisher>>>(),
+  explicit SpectatordRegistry(Config config, logger_ptr logger)
+      : base_registry<stateless<stateless_types<SpectatordPublisher>>>(std::move(logger)),
         config_(std::move(config)) {
     state_.publisher = std::make_unique<SpectatordPublisher>(config_.endpoint);
   }
