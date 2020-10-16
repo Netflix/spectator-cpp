@@ -18,8 +18,8 @@ TEST(Counter, Activity) {
   c.Increment();
   c2.Add(1.2);
   c.Add(0.1);
-  std::vector<std::string> expected = {"1:c:ctr.name:1", "1:c:c2:#key=val:1.2",
-                                       "1:c:ctr.name:0.1"};
+  std::vector<std::string> expected = {"c:ctr.name:1", "c:c2,key=val:1.2",
+                                       "c:ctr.name:0.1"};
   EXPECT_EQ(publisher.SentMessages(), expected);
 }
 

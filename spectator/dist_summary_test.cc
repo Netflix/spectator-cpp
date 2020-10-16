@@ -17,8 +17,8 @@ TEST(DistributionSummary, Record) {
   d.Record(10);
   d2.Record(1.2);
   d.Record(0.1);
-  std::vector<std::string> expected = {"1:d:ds.name:10", "1:d:ds2:#key=val:1.2",
-                                       "1:d:ds.name:0.1"};
+  std::vector<std::string> expected = {"d:ds.name:10", "d:ds2,key=val:1.2",
+                                       "d:ds.name:0.1"};
   EXPECT_EQ(publisher.SentMessages(), expected);
 }
 

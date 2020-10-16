@@ -19,8 +19,8 @@ TEST(Gauge, Set) {
   g.Set(42);
   g2.Set(2);
   g.Set(1);
-  std::vector<std::string> expected = {"1:g:gauge:42", "1:g:gauge2:#key=val:2",
-                                       "1:g:gauge:1"};
+  std::vector<std::string> expected = {"g:gauge:42", "g:gauge2,key=val:2",
+                                       "g:gauge:1"};
   EXPECT_EQ(publisher.SentMessages(), expected);
 }
 

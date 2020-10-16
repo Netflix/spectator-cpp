@@ -19,8 +19,8 @@ TEST(MaxGauge, Set) {
   g.Set(42);
   g2.Update(2);
   g.Update(1);
-  std::vector<std::string> expected = {"1:m:gauge:42", "1:m:gauge2:#key=val:2",
-                                       "1:m:gauge:1"};
+  std::vector<std::string> expected = {"m:gauge:42", "m:gauge2,key=val:2",
+                                       "m:gauge:1"};
   EXPECT_EQ(publisher.SentMessages(), expected);
 }
 

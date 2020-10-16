@@ -15,8 +15,8 @@ TEST(PercDistSum, Record) {
   c.Record(50);
   c.Record(5000);
   c.Record(-5000);
-  std::vector<std::string> expected = {"1:D:pds:50", "1:D:pds:1000",
-                                       "1:D:pds:0"};
+  std::vector<std::string> expected = {"D:pds:50", "D:pds:1000",
+                                       "D:pds:0"};
   EXPECT_EQ(publisher.SentMessages(), expected);
 }
 

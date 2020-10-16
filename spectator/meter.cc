@@ -6,15 +6,10 @@ namespace spectator {
 namespace {
 
 std::string create_prefix(const Id& id, std::string_view type_name) {
-  std::string res = absl::StrCat("1:", type_name, ":", id.Name());
+  std::string res = absl::StrCat(type_name, ":", id.Name());
   auto first = true;
   for (const auto& tags : id.GetTags()) {
-    if (first) {
-      absl::StrAppend(&res, ":#", tags.first, "=", tags.second);
-      first = false;
-    } else {
-      absl::StrAppend(&res, ",", tags.first, "=", tags.second);
-    }
+    absl::StrAppend(&res, ",", tags.first, "=", tags.second);
   }
   absl::StrAppend(&res, ":");
   return res;

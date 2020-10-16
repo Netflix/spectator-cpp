@@ -29,7 +29,7 @@ TEST(Publisher, Udp) {
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
     auto msgs = server.GetMessages();
     server.Stop();
-    std::vector<std::string> expected{"1:c:counter:1", "1:c:counter:2"};
+    std::vector<std::string> expected{"c:counter:1", "c:counter:2"};
     EXPECT_EQ(server.GetMessages(), expected);
   }
 }
@@ -54,7 +54,7 @@ TEST(Publisher, Unix) {
   auto msgs = server.GetMessages();
   server.Stop();
   unlink(path.c_str());
-  std::vector<std::string> expected{"1:c:counter:1", "1:c:counter:2"};
+  std::vector<std::string> expected{"c:counter:1", "c:counter:2"};
   EXPECT_EQ(server.GetMessages(), expected);
 }
 
