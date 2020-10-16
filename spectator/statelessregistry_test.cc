@@ -24,22 +24,22 @@ TEST(StatelessRegistry, Counter) {
   TestStatelessRegistry r;
   auto c = r.GetCounter("foo");
   c->Increment();
-  EXPECT_EQ(r.SentMessages().front(), "1:c:foo:1");
+  EXPECT_EQ(r.SentMessages().front(), "c:foo:1");
   r.Reset();
   auto c2 = r.GetCounter("foo", {{"k1", "v1"}});
   c2->Add(2);
-  EXPECT_EQ(r.SentMessages().front(), "1:c:foo:#k1=v1:2");
+  EXPECT_EQ(r.SentMessages().front(), "c:foo,k1=v1:2");
 }
 
 TEST(StatelessRegistry, DistSummary) {
   TestStatelessRegistry r;
   auto ds = r.GetDistributionSummary("ds");
   ds->Record(100);
-  EXPECT_EQ(r.SentMessages().front(), "1:d:ds:100");
+  EXPECT_EQ(r.SentMessages().front(), "d:ds:100");
   r.Reset();
   auto c2 = r.GetDistributionSummary("ds", {{"k1", "v1"}});
   c2->Record(2);
-  EXPECT_EQ(r.SentMessages().front(), "1:d:ds:#k1=v1:2");
+  EXPECT_EQ(r.SentMessages().front(), "d:ds,k1=v1:2");
 }
 
 TEST(StatelessRegistry, Gauge) {
@@ -48,7 +48,7 @@ TEST(StatelessRegistry, Gauge) {
   auto g2 = r.GetGauge("g", {{"id", "2"}});
   g->Set(100);
   g2->Set(101);
-  std::vector<std::string> expected = {"1:g:g:100", "1:g:g:#id=2:101"};
+  std::vector<std::string> expected = {"g:g:100", "g:g,id=2:101"};
   EXPECT_EQ(r.SentMessages(), expected);
 }
 
@@ -91,9 +91,9 @@ TEST(StatelessRegistry, PercentileTimer) {
   t->Record(std::chrono::milliseconds(100));
   t2->Record(std::chrono::milliseconds(100));
 
-  std::vector<std::string> expected = {"1:T:name:0.0001", "1:T:name2:0.001",
-                                       "1:T:name:5",      "1:T:name2:1",
-                                       "1:T:name:0.1",    "1:T:name2:0.1"};
+  std::vector<std::string> expected = {"T:name:0.0001", "T:name2:0.001",
+                                       "T:name:5",      "T:name2:1",
+                                       "T:name:0.1",    "T:name2:0.1"};
   EXPECT_EQ(r.SentMessages(), expected);
 }
 
@@ -111,9 +111,9 @@ TEST(StatelessRegistry, PercentileDistributionSummary) {
   t->Record(50);
   t2->Record(50);
 
-  std::vector<std::string> expected = {"1:D:name:5",   "1:D:name2:10",
-                                       "1:D:name:500", "1:D:name2:100",
-                                       "1:D:name:50",  "1:D:name2:50"};
+  std::vector<std::string> expected = {"D:name:5",   "D:name2:10",
+                                       "D:name:500", "D:name2:100",
+                                       "D:name:50",  "D:name2:50"};
   EXPECT_EQ(r.SentMessages(), expected);
 }
 
