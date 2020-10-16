@@ -55,6 +55,7 @@ cc_test(
 
 compilation_database(
     name = "spectator_compdb",
+    testonly = True,
     targets = [
         ":spectator",
         ":spectator_test",
