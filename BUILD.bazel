@@ -3,7 +3,6 @@ load("@com_grail_bazel_compdb//:aspects.bzl", "compilation_database")
 cc_library(
     name = "spectator",
     srcs = [
-        "spectator/id.cc",
         "spectator/logger.cc",
         "spectator/publisher.cc",
     ],

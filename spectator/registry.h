@@ -129,83 +129,90 @@ class base_registry {
   explicit base_registry(logger_ptr logger = DefaultLogger())
       : logger_(std::move(logger)) {}
 
-  auto GetCounter(IdPtr id) { return state_.get_counter(std::move(id)); }
+  auto GetCounter(const IdPtr& id) { return state_.get_counter(final_id(id)); }
   auto GetCounter(std::string_view name, Tags tags = {}) {
     return GetCounter(Id::of(name, std::move(tags)));
   }
 
-  auto GetDistributionSummary(IdPtr id) { return state_.get_ds(std::move(id)); }
+  auto GetDistributionSummary(const IdPtr& id) {
+    return state_.get_ds(final_id(id));
+  }
   auto GetDistributionSummary(std::string_view name, Tags tags = {}) {
     return GetDistributionSummary(Id::of(name, std::move(tags)));
   }
 
-  auto GetGauge(IdPtr id) { return state_.get_gauge(std::move(id)); }
+  auto GetGauge(const IdPtr& id) { return state_.get_gauge(final_id(id)); }
   auto GetGauge(std::string_view name, Tags tags = {}) {
     return GetGauge(Id::of(name, std::move(tags)));
   }
 
-  auto GetMaxGauge(IdPtr id) { return state_.get_max_gauge(std::move(id)); }
+  auto GetMaxGauge(const IdPtr& id) {
+    return state_.get_max_gauge(final_id(id));
+  }
   auto GetMaxGauge(std::string_view name, Tags tags = {}) {
     return GetMaxGauge(Id::of(name, std::move(tags)));
   }
 
-  auto GetMonotonicCounter(IdPtr id) {
-    return state_.get_monotonic_counter(std::move(id));
+  auto GetMonotonicCounter(const IdPtr& id) {
+    return state_.get_monotonic_counter(final_id(id));
   }
   auto GetMonotonicCounter(std::string_view name, Tags tags = {}) {
     return GetMonotonicCounter(Id::of(name, std::move(tags)));
   }
 
-  auto GetTimer(IdPtr id) { return state_.get_timer(std::move(id)); }
+  auto GetTimer(const IdPtr& id) { return state_.get_timer(final_id(id)); }
   auto GetTimer(std::string_view name, Tags tags = {}) {
     return GetTimer(Id::of(name, std::move(tags)));
   }
 
-  auto GetPercentileDistributionSummary(IdPtr id, int64_t min, int64_t max) {
-    return state_.get_perc_ds(std::move(id), min, max);
+  auto GetPercentileDistributionSummary(const IdPtr& id, int64_t min,
+                                        int64_t max) {
+    return state_.get_perc_ds(final_id(id), min, max);
   }
 
   auto GetPercentileDistributionSummary(std::string_view name, int64_t min,
                                         int64_t max) {
-    return state_.get_perc_ds(Id::of(name), min, max);
+    return GetPercentileDistributionSummary(Id::of(name), min, max);
   }
 
   auto GetPercentileDistributionSummary(std::string_view name, Tags tags,
                                         int64_t min, int64_t max) {
-    return state_.get_perc_ds(Id::of(name, std::move(tags)), min, max);
+    return GetPercentileDistributionSummary(Id::of(name, std::move(tags)), min,
+                                            max);
   }
 
-  auto GetPercentileTimer(IdPtr id, absl::Duration min, absl::Duration max) {
-    return state_.get_perc_timer(std::move(id), min, max);
+  auto GetPercentileTimer(const IdPtr& id, absl::Duration min,
+                          absl::Duration max) {
+    return state_.get_perc_timer(final_id(id), min, max);
   }
 
-  auto GetPercentileTimer(IdPtr id, std::chrono::nanoseconds min,
+  auto GetPercentileTimer(const IdPtr& id, std::chrono::nanoseconds min,
                           std::chrono::nanoseconds max) {
-    return state_.get_perc_timer(std::move(id), absl::FromChrono(min),
+    return state_.get_perc_timer(final_id(id), absl::FromChrono(min),
                                  absl::FromChrono(max));
   }
 
   auto GetPercentileTimer(std::string_view name, absl::Duration min,
                           absl::Duration max) {
-    return state_.get_perc_timer(Id::of(name), min, max);
+    return GetPercentileTimer(Id::of(name), min, max);
   }
 
   auto GetPercentileTimer(std::string_view name, Tags tags, absl::Duration min,
                           absl::Duration max) {
-    return state_.get_perc_timer(Id::of(name, std::move(tags)), min, max);
+    return GetPercentileTimer(Id::of(name, std::move(tags)), min, max);
   }
 
   auto GetPercentileTimer(std::string_view name, std::chrono::nanoseconds min,
                           std::chrono::nanoseconds max) {
-    return state_.get_perc_timer(Id::of(name), absl::FromChrono(min),
-                                 absl::FromChrono(max));
+    return GetPercentileTimer(Id::of(name), absl::FromChrono(min),
+                              absl::FromChrono(max));
   }
 
   auto GetPercentileTimer(std::string_view name, Tags tags,
                           std::chrono::nanoseconds min,
                           std::chrono::nanoseconds max) {
-    return state_.get_perc_timer(Id::of(name, std::move(tags)),
-                                 absl::FromChrono(min), absl::FromChrono(max));
+    return GetPercentileTimer(Id::of(name, std::move(tags)),
+                              absl::FromChrono(min), absl::FromChrono(max));
   }
 
   auto Measurements() { return state_.measurements(); }
@@ -213,6 +220,15 @@ class base_registry {
  protected:
   logger_ptr logger_;
   State state_;
+  Tags extra_tags_;
+
+  // final Id after adding extra_tags_ if any
+  IdPtr final_id(const IdPtr& id) {
+    if (extra_tags_.size() > 0) {
+      return id->WithTags(extra_tags_);
+    }
+    return id;
+  }
 };
 
 template <typename Pub>
@@ -282,16 +298,13 @@ class SpectatordRegistry
     : public base_registry<stateless<stateless_types<SpectatordPublisher>>> {
  public:
   using types = stateless_types<SpectatordPublisher>;
-  explicit SpectatordRegistry(Config config, logger_ptr logger)
+  explicit SpectatordRegistry(const Config& config, logger_ptr logger)
       : base_registry<stateless<stateless_types<SpectatordPublisher>>>(
-            std::move(logger)),
-        config_(std::move(config)) {
+            std::move(logger)) {
+    extra_tags_ = Tags::from(config.common_tags);
     state_.publisher =
-        std::make_unique<SpectatordPublisher>(config_.endpoint, logger_);
+        std::make_unique<SpectatordPublisher>(config.endpoint, logger_);
   }
-
- private:
-  Config config_;
 };
 
 /// A Registry that can be used for tests. It keeps state about which meters
