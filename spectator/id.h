@@ -24,6 +24,16 @@ class Tags {
     }
   }
 
+  template <typename Cont>
+  static Tags from(Cont&& cont) {
+    Tags tags;
+    tags.entries_.reserve(cont.size());
+    for (auto&& kv : cont) {
+      tags.add(kv.first, kv.second);
+    }
+    return tags;
+  }
+
   void add(std::string_view k, std::string_view v) {
     entries_[k] = std::string(v);
   }
@@ -79,18 +89,35 @@ class Id {
     return std::make_shared<Id>(name, std::move(tags));
   }
 
-  bool operator==(const Id& rhs) const noexcept;
+  bool operator==(const Id& rhs) const noexcept {
+    return name_ == rhs.name_ && tags_ == rhs.tags_;
+  }
 
-  const std::string& Name() const noexcept;
+  const std::string& Name() const noexcept { return name_; }
 
-  const Tags& GetTags() const noexcept;
+  const Tags& GetTags() const noexcept { return tags_; }
 
   std::unique_ptr<Id> WithTag(const std::string& key,
-                              const std::string& value) const;
+                              const std::string& value) const {
+    // Create a copy
+    Tags tags{GetTags()};
+    tags.add(key, value);
+    return std::make_unique<Id>(Name(), tags);
+  }
 
-  std::unique_ptr<Id> WithTags(Tags&& extra_tags) const;
+  std::unique_ptr<Id> WithTags(Tags&& extra_tags) const {
+    Tags tags{GetTags()};
+    tags.move_all(std::move(extra_tags));
+    return std::make_unique<Id>(Name(), tags);
+  }
 
-  std::unique_ptr<Id> WithTags(const Tags& extra_tags) const;
+  std::unique_ptr<Id> WithTags(const Tags& extra_tags) const {
+    Tags tags{GetTags()};
+    for (const auto& t : extra_tags) {
+      tags.add(t.first, t.second);
+    }
+    return std::make_unique<Id>(Name(), tags);
+  }
 
   std::unique_ptr<Id> WithStat(const std::string& stat) const {
     return WithTag("statistic", stat);
@@ -105,7 +132,10 @@ class Id {
     }
   }
 
-  friend std::ostream& operator<<(std::ostream& os, const Id& id);
+  friend std::ostream& operator<<(std::ostream& os, const Id& id) {
+    os << fmt::format("{}", id);
+    return os;
+  }
 
   friend struct std::hash<Id>;
 
