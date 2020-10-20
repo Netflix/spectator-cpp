@@ -42,9 +42,9 @@ void SpectatordPublisher::local_reconnect(std::string_view path) {
 
 void SpectatordPublisher::setup_unix_domain(std::string_view path) {
   local_reconnect(path);
-  sender_ = [path, this](std::string_view msg) {
-    // get a copy of the file path
-    std::string local_path{path};
+  // get a copy of the file path
+  std::string local_path{path};
+  sender_ = [local_path, this](std::string_view msg) {
     for (auto i = 0; i < 3; ++i) {
       try {
         local_socket_.send(asio::buffer(msg));
