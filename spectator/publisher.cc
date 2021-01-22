@@ -24,7 +24,12 @@ SpectatordPublisher::SpectatordPublisher(std::string_view endpoint,
         "Unknown endpoint: {}. Expecting: 'unix:/path/to/socket'"
         " or 'udp:hostname:port' - Will not send metrics",
         endpoint);
+    setup_nop_sender();
   }
+}
+
+void SpectatordPublisher::setup_nop_sender() {
+  sender_ = [this](std::string_view msg) { logger_->trace("{}", msg); };
 }
 
 void SpectatordPublisher::local_reconnect(std::string_view path) {
