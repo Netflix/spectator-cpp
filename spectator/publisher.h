@@ -21,6 +21,7 @@ class SpectatordPublisher {
   sender_fun sender_;
 
  private:
+  void setup_nop_sender();
   void setup_unix_domain(std::string_view path);
   void setup_udp(std::string_view host_port);
   void local_reconnect(std::string_view path);
