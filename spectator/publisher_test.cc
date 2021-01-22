@@ -58,4 +58,11 @@ TEST(Publisher, Unix) {
   EXPECT_EQ(server.GetMessages(), expected);
 }
 
+TEST(Publisher, Nop) {
+  SpectatordPublisher publisher{""};
+  Counter c{std::make_shared<Id>("counter", Tags{}), &publisher};
+  c.Increment();
+  c.Add(2);
+}
+
 }  // namespace
