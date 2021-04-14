@@ -3,14 +3,21 @@
 
 # Spectator-cpp
 
-> :warning: Experimental
+> :warning: Experimental, Telemetry Team Only
 
-Simple library for instructing code to record dimensional time series.
+This project implements a basic [Spectator] library for instrumenting C++ applications and sending
+metrics to an Atlas Aggregator service.
 
-## Description
+**This library should only be used by the Telemetry Team** as a component for other projects, such
+as [SpectatorD] or [Atlas System Agent]. Any uses of this library outside of these two projects
+predate the release of the [SpectatorD] project and should **not** be used for reference purposes.
 
-This implements a basic [Spectator](https://github.com/Netflix/spectator) library
-for instrumenting C++ applications, sending metrics to an Atlas aggregator service.
+If you need to publish metrics from C++ projects, then you should use the [SpectatorD] service
+directly, which is considered the primary metrics publishing interface.
+
+[Spectator]: https://github.com/Netflix/spectator
+[SpectatorD]: https://github.com/Netflix-Skunkworks/spectatord
+[Atlas System Agent]: https://github.com/Netflix-Skunkworks/atlas-system-agent
 
 ## Instrumenting Code
 
