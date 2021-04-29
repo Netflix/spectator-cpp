@@ -1,5 +1,4 @@
 [![Build Status](https://travis-ci.org/Netflix/spectator-cpp.svg?branch=master)](https://travis-ci.org/Netflix/spectator-cpp)
-[![codecov](https://codecov.io/gh/Netflix/spectator-cpp/branch/master/graph/badge.svg)](https://codecov.io/gh/Netflix/spectator-cpp)
 
 # Spectator-cpp
 
