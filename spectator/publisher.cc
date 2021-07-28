@@ -4,7 +4,7 @@
 
 namespace spectator {
 
-SpectatordPublisher::SpectatordPublisher(std::string_view endpoint,
+SpectatordPublisher::SpectatordPublisher(absl::string_view endpoint,
                                          std::shared_ptr<spdlog::logger> logger)
     : logger_(std::move(logger)),
       udp_socket_(io_context_),
