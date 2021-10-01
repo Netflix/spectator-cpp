@@ -41,9 +41,11 @@ def spectator_dependencies():
 
     http_archive(
         name = "com_google_absl",
-        urls = ["https://github.com/abseil/abseil-cpp/archive/518f17501e6156f7921fbb9b68a1e420bcb10bc5.zip"],
-        strip_prefix = "abseil-cpp-518f17501e6156f7921fbb9b68a1e420bcb10bc5",
-        sha256 = "0baec77dcf13da93038ad6045c87e048a6cc1f5a8ad126091c804acab4a2671a",
+        urls = ["https://github.com/abseil/abseil-cpp/archive/17c954d90d5661e27db8fc5f086085690a8372d9.zip"],
+        strip_prefix = "abseil-cpp-17c954d90d5661e27db8fc5f086085690a8372d9",
+        sha256 = "aee7688bb669402c1322d9512d7992a6f361a70444e54d98a8709a8ad4dd60c3",
+        patches = ["@//bazel:abseil.patch"],
+        patch_args = ["-p1"],
     )
 
     http_archive(

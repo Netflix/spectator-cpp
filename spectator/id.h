@@ -18,7 +18,7 @@ class Tags {
   Tags() = default;
 
   Tags(
-      std::initializer_list<std::pair<std::string_view, std::string_view>> vs) {
+      std::initializer_list<std::pair<absl::string_view, absl::string_view>> vs) {
     for (auto& pair : vs) {
       add(pair.first, pair.second);
     }
@@ -34,7 +34,7 @@ class Tags {
     return tags;
   }
 
-  void add(std::string_view k, std::string_view v) {
+  void add(absl::string_view k, absl::string_view v) {
     entries_[k] = std::string(v);
   }
 
@@ -54,11 +54,11 @@ class Tags {
 
   bool operator==(const Tags& that) const { return that.entries_ == entries_; }
 
-  [[nodiscard]] bool has(std::string_view key) const {
+  [[nodiscard]] bool has(absl::string_view key) const {
     return entries_.find(key) != entries_.end();
   }
 
-  [[nodiscard]] std::string at(std::string_view key) const {
+  [[nodiscard]] std::string at(absl::string_view key) const {
     auto entry = entries_.find(key);
     if (entry != entries_.end()) {
       return entry->second;
@@ -82,10 +82,10 @@ inline std::ostream& operator<<(std::ostream& os, const Tags& tags) {
 
 class Id {
  public:
-  Id(std::string_view name, Tags tags) noexcept
+  Id(absl::string_view name, Tags tags) noexcept
       : name_(name), tags_(std::move(tags)), hash_(0u) {}
 
-  static std::shared_ptr<Id> of(std::string_view name, Tags tags = {}) {
+  static std::shared_ptr<Id> of(absl::string_view name, Tags tags = {}) {
     return std::make_shared<Id>(name, std::move(tags));
   }
 

@@ -18,7 +18,7 @@ class TestStatelessRegistry
   }
   auto SentMessages() { return state_.publisher->SentMessages(); }
   void Reset() { return state_.publisher->Reset(); }
-  void AddExtraTag(std::string_view k, std::string_view v) {
+  void AddExtraTag(absl::string_view k, absl::string_view v) {
     extra_tags_.add(k, v);
   }
 };
