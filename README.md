@@ -91,3 +91,11 @@ int main() {
   registry.Stop();
 }
 ```
+
+## Branches
+
+The `spectatord` branch is used by the [atlas-system-agent](https://github.com/Netflix-Skunkworks/atlas-system-agent)
+project, because the main branch is used by a proxyd project. The difference between these two
+branches is whether publishing is direct to the Atlas backends, or if it is sent to
+[spectatord](https://github.com/Netflix-Skunkworks/spectatord). We will need to flip this around,
+so that mainline development can proceed until the proxyd project can migrate to spectatord.
