@@ -8,6 +8,7 @@ CTestTestfile.cmake
 Makefile
 bazel-*
 build-*
+cmake-build/
 cmake-build-*
 cmake_install.cmake
 logs/

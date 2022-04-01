@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/Netflix/spectator-cpp.svg?branch=master)](https://travis-ci.org/Netflix/spectator-cpp)
+[![Snapshot](https://github.com/Netflix/spectator-cpp/actions/workflows/snapshot.yml/badge.svg)](https://github.com/Netflix/spectator-cpp/actions/workflows/snapshot.yml) [![Release](https://github.com/Netflix/spectator-cpp/actions/workflows/release.yml/badge.svg)](https://github.com/Netflix/spectator-cpp/actions/workflows/release.yml)
 
 # Spectator-cpp
 
@@ -91,6 +91,31 @@ int main() {
   registry.Stop();
 }
 ```
+
+## Updating Dependencies
+
+As an example, updating to the latest [spdlog](https://github.com/gabime/spdlog), which has a
+dependency on [fmt](https://fmt.dev/latest/index.html):
+
+* Download the latest fmt release. Unzip.
+
+* Replace the fmt files in the 3rd-party tree.
+
+      rm 3rd-party/fmt/*.h
+      rm 3rd-party/fmt/*.cc
+      cp $FMT_HOME/include/fmt/*.h 3rd-party/fmt
+      cp $FMT_HOME/src/*.cc 3rd-party/fmt
+
+* Commit with a message indicating the version.
+
+* Clone the spdlog source. Check out the latest tagged release.
+
+* Replace the spdlog files in the 3rd-party tree.
+
+      rm -rf 3rd-party/spdlog/*
+      cp -R $SPDLOG_HOME/include/spdlog/*  3rd-party/spdlog
+
+* Commit with a message indicating the version.
 
 ## Branches
 
