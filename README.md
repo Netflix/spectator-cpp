@@ -1,17 +1,14 @@
-[![Build Status](https://travis-ci.org/Netflix/spectator-cpp.svg?branch=master)](https://travis-ci.org/Netflix/spectator-cpp)
+[![Build](https://github.com/Netflix/spectator-cpp/actions/workflows/build.yml/badge.svg)](https://github.com/Netflix/spectator-cpp/actions/workflows/build.yml)
 
 # Spectator-cpp
 
-> :warning: Experimental
-
-Simple library for instructing code to record dimensional time series.  It
-sends all activity to a
-[spectatord](https://github.com/Netflix-Skunkworks/spectatord) sidecar.
+Simple library for instructing code to record dimensional time series.  It sends all activity to
+a [spectatord](https://github.com/Netflix-Skunkworks/spectatord) sidecar.
 
 ## Description
 
-This implements a basic [Spectator](https://github.com/Netflix/spectator) library
-for instrumenting C++ applications, sending all metric activity to a sidecar. 
+This implements a basic [Spectator](https://github.com/Netflix/spectator) library for instrumenting
+C++ applications, sending all metric activity to a sidecar. 
 
 ## Instrumenting Code
 
@@ -44,13 +41,13 @@ class Server {
     // do some work and obtain a response...
     Response res{200, 64};
 
-    // Update the counter id with dimensions based on the request. The
-    // counter will then be looked up in the registry which should be
-    // fairly cheap, such as lookup of id object in a map
-    // However, it is more expensive than having a local variable set
-    // to the counter.
-    auto cnt_id = request_count_id_->WithTag("country", request.country)
-                      ->WithTag("status", std::to_string(res.status));
+    // Update the Counter id with dimensions, based on information in the request. The Counter
+    // will be looked up in the Registry, which is a fairly cheap operation, about the same as
+    // the lookup of an id object in a map. However, it is more expensive than having a local
+    // variable set to the Counter.
+    auto cnt_id = request_count_id_
+        ->WithTag("country", request.country)
+        ->WithTag("status", std::to_string(res.status));
     registry_->GetCounter(std::move(cnt_id))->Increment();
     request_latency_->Record(std::chrono::steady_clock::now() - start);
     response_size_->Record(res.size);
@@ -65,7 +62,6 @@ class Server {
 };
 
 Request get_next_request() {
-  //...
   return Request{"US"};
 }
 
@@ -82,6 +78,5 @@ int main() {
     auto req = get_next_request();
     server.Handle(req);
   }
-
 }
 ```

@@ -21,7 +21,7 @@ SpectatordPublisher::SpectatordPublisher(absl::string_view endpoint,
     setup_udp(endpoint.substr(pos));
   } else if (endpoint != "disabled") {
     logger_->warn(
-        "Unknown endpoint: {}. Expecting: 'unix:/path/to/socket'"
+        "Unknown endpoint: '{}'. Expecting: 'unix:/path/to/socket'"
         " or 'udp:hostname:port' - Will not send metrics",
         std::string(endpoint));
     setup_nop_sender();
