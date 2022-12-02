@@ -4,17 +4,17 @@ def spectator_dependencies():
     http_archive(
         name = "com_github_fmtlib_fmt",
         build_file = "@spectator//third_party:fmtlib.BUILD",
-        strip_prefix = "fmt-7.0.3",
-        sha256 = "decfdf9ad274070fa85f26407b816f5a4d82205ae86bac1990be658d0795ea4d",
-        urls = ["https://github.com/fmtlib/fmt/releases/download/7.0.3/fmt-7.0.3.zip"],
+        strip_prefix = "fmt-8.0.1",
+        sha256 = "a627a56eab9554fc1e5dd9a623d0768583b3a383ff70a4312ba68f94c9d415bf",
+        urls = ["https://github.com/fmtlib/fmt/releases/download/8.0.1/fmt-8.0.1.zip"],
     )
 
     http_archive(
         name = "com_github_gabime_spdlog",
         build_file = "@spectator//third_party:spdlog.BUILD",
-        strip_prefix = "spdlog-1.8.0",
-        sha256 = "1e68e9b40cf63bb022a4b18cdc1c9d88eb5d97e4fd64fa981950a9cacf57a4bf",
-        urls = ["https://github.com/gabime/spdlog/archive/v1.8.0.tar.gz"],
+        strip_prefix = "spdlog-1.9.1",
+        sha256 = "9a452cfa24408baccc9b2bc2d421d68172a7630c99e9504a14754be840d31a62",
+        urls = ["https://github.com/gabime/spdlog/archive/v1.9.1.tar.gz"],
     )
 
     http_archive(
@@ -41,9 +41,11 @@ def spectator_dependencies():
 
     http_archive(
         name = "com_google_absl",
-        urls = ["https://github.com/abseil/abseil-cpp/archive/518f17501e6156f7921fbb9b68a1e420bcb10bc5.zip"],
-        strip_prefix = "abseil-cpp-518f17501e6156f7921fbb9b68a1e420bcb10bc5",
-        sha256 = "0baec77dcf13da93038ad6045c87e048a6cc1f5a8ad126091c804acab4a2671a",
+        urls = ["https://github.com/abseil/abseil-cpp/archive/17c954d90d5661e27db8fc5f086085690a8372d9.zip"],
+        strip_prefix = "abseil-cpp-17c954d90d5661e27db8fc5f086085690a8372d9",
+        sha256 = "aee7688bb669402c1322d9512d7992a6f361a70444e54d98a8709a8ad4dd60c3",
+        patches = ["@//bazel:abseil.patch"],
+        patch_args = ["-p1"],
     )
 
     http_archive(

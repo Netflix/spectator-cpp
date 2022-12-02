@@ -130,38 +130,38 @@ class base_registry {
       : logger_(std::move(logger)) {}
 
   auto GetCounter(const IdPtr& id) { return state_.get_counter(final_id(id)); }
-  auto GetCounter(std::string_view name, Tags tags = {}) {
+  auto GetCounter(absl::string_view name, Tags tags = {}) {
     return GetCounter(Id::of(name, std::move(tags)));
   }
 
   auto GetDistributionSummary(const IdPtr& id) {
     return state_.get_ds(final_id(id));
   }
-  auto GetDistributionSummary(std::string_view name, Tags tags = {}) {
+  auto GetDistributionSummary(absl::string_view name, Tags tags = {}) {
     return GetDistributionSummary(Id::of(name, std::move(tags)));
   }
 
   auto GetGauge(const IdPtr& id) { return state_.get_gauge(final_id(id)); }
-  auto GetGauge(std::string_view name, Tags tags = {}) {
+  auto GetGauge(absl::string_view name, Tags tags = {}) {
     return GetGauge(Id::of(name, std::move(tags)));
   }
 
   auto GetMaxGauge(const IdPtr& id) {
     return state_.get_max_gauge(final_id(id));
   }
-  auto GetMaxGauge(std::string_view name, Tags tags = {}) {
+  auto GetMaxGauge(absl::string_view name, Tags tags = {}) {
     return GetMaxGauge(Id::of(name, std::move(tags)));
   }
 
   auto GetMonotonicCounter(const IdPtr& id) {
     return state_.get_monotonic_counter(final_id(id));
   }
-  auto GetMonotonicCounter(std::string_view name, Tags tags = {}) {
+  auto GetMonotonicCounter(absl::string_view name, Tags tags = {}) {
     return GetMonotonicCounter(Id::of(name, std::move(tags)));
   }
 
   auto GetTimer(const IdPtr& id) { return state_.get_timer(final_id(id)); }
-  auto GetTimer(std::string_view name, Tags tags = {}) {
+  auto GetTimer(absl::string_view name, Tags tags = {}) {
     return GetTimer(Id::of(name, std::move(tags)));
   }
 
@@ -170,12 +170,12 @@ class base_registry {
     return state_.get_perc_ds(final_id(id), min, max);
   }
 
-  auto GetPercentileDistributionSummary(std::string_view name, int64_t min,
+  auto GetPercentileDistributionSummary(absl::string_view name, int64_t min,
                                         int64_t max) {
     return GetPercentileDistributionSummary(Id::of(name), min, max);
   }
 
-  auto GetPercentileDistributionSummary(std::string_view name, Tags tags,
+  auto GetPercentileDistributionSummary(absl::string_view name, Tags tags,
                                         int64_t min, int64_t max) {
     return GetPercentileDistributionSummary(Id::of(name, std::move(tags)), min,
                                             max);
@@ -192,23 +192,23 @@ class base_registry {
                                  absl::FromChrono(max));
   }
 
-  auto GetPercentileTimer(std::string_view name, absl::Duration min,
+  auto GetPercentileTimer(absl::string_view name, absl::Duration min,
                           absl::Duration max) {
     return GetPercentileTimer(Id::of(name), min, max);
   }
 
-  auto GetPercentileTimer(std::string_view name, Tags tags, absl::Duration min,
+  auto GetPercentileTimer(absl::string_view name, Tags tags, absl::Duration min,
                           absl::Duration max) {
     return GetPercentileTimer(Id::of(name, std::move(tags)), min, max);
   }
 
-  auto GetPercentileTimer(std::string_view name, std::chrono::nanoseconds min,
+  auto GetPercentileTimer(absl::string_view name, std::chrono::nanoseconds min,
                           std::chrono::nanoseconds max) {
     return GetPercentileTimer(Id::of(name), absl::FromChrono(min),
                               absl::FromChrono(max));
   }
 
-  auto GetPercentileTimer(std::string_view name, Tags tags,
+  auto GetPercentileTimer(absl::string_view name, Tags tags,
                           std::chrono::nanoseconds min,
                           std::chrono::nanoseconds max) {
     return GetPercentileTimer(Id::of(name, std::move(tags)),

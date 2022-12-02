@@ -10,7 +10,7 @@ namespace spectator {
 class SpectatordPublisher {
  public:
   explicit SpectatordPublisher(
-      std::string_view endpoint,
+      absl::string_view endpoint,
       std::shared_ptr<spdlog::logger> logger = DefaultLogger());
   SpectatordPublisher(const SpectatordPublisher&) = delete;
 
@@ -22,9 +22,9 @@ class SpectatordPublisher {
 
  private:
   void setup_nop_sender();
-  void setup_unix_domain(std::string_view path);
-  void setup_udp(std::string_view host_port);
-  void local_reconnect(std::string_view path);
+  void setup_unix_domain(absl::string_view path);
+  void setup_udp(absl::string_view host_port);
+  void local_reconnect(absl::string_view path);
   void udp_reconnect(const asio::ip::udp::endpoint& endpoint);
 
   std::shared_ptr<spdlog::logger> logger_;
