@@ -172,6 +172,25 @@ class StatefulMaxGauge : public StatefulMeter {
   std::atomic<double> value_ = kMinValue;
 };
 
+class StatefulAgeGauge : public StatefulMeter {
+ public:
+  explicit StatefulAgeGauge(IdPtr id) : StatefulMeter(std::move(id)) {}
+  [[nodiscard]] double Get() const { return value_; }
+  MeterType GetType() const override { return MeterType::AgeGauge; }
+  void Set(double amount) { value_ = amount; }
+  void Measure(std::vector<Measurement>* measurements) override {
+    auto v = value_.exchange(kNaN);
+    if (std::isnan(v)) {
+      return;
+    }
+    measurements->emplace_back(Id::WithDefaultStat(id_, "gauge"), v);
+  }
+
+ private:
+  static constexpr auto kNaN = std::numeric_limits<double>::quiet_NaN();
+  std::atomic<double> value_ = kNaN;
+};
+
 class StatefulMonoCounter : public StatefulMeter {
  public:
   explicit StatefulMonoCounter(IdPtr id) : StatefulMeter(std::move(id)) {}
@@ -197,7 +216,7 @@ class StatefulPercTimer : public StatefulMeter {
   StatefulPercTimer(IdPtr id, std::chrono::nanoseconds,
                     std::chrono::nanoseconds)
       : StatefulMeter(std::move(id)) {}
-  MeterType GetType() const override { return MeterType::PercentileTimer; }
+  [[nodiscard]] MeterType GetType() const override { return MeterType::PercentileTimer; }
   void Measure(std::vector<Measurement>*) override {}
 
  private:
@@ -207,7 +226,7 @@ class StatefulPercDistSum : public StatefulMeter {
  public:
   StatefulPercDistSum(IdPtr id, int64_t, int64_t)
       : StatefulMeter(std::move(id)) {}
-  MeterType GetType() const override {
+  [[nodiscard]] MeterType GetType() const override {
     return MeterType::PercentileDistSummary;
   }
   void Measure(std::vector<Measurement>*) override {}
@@ -218,6 +237,7 @@ struct stateful_meters {
   using ds_t = StatefulDistSum;
   using gauge_t = StatefulGauge;
   using max_gauge_t = StatefulMaxGauge;
+  using age_gauge_t = StatefulAgeGauge;
   using monotonic_counter_t = StatefulMonoCounter;
   using perc_timer_t = StatefulPercTimer;
   using perc_ds_t = StatefulPercDistSum;
