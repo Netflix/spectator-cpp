@@ -61,6 +61,10 @@ struct single_table_state {
     return get_or_create<typename types::gauge_t>(std::move(id));
   }
 
+  auto get_age_gauge(IdPtr id) {
+    return get_or_create<typename types::age_gauge_t>(std::move(id));
+  }
+
   auto get_max_gauge(IdPtr id) {
     return get_or_create<typename types::max_gauge_t>(std::move(id));
   }
@@ -117,6 +121,8 @@ class base_registry {
   using gauge_ptr = std::shared_ptr<gauge_t>;
   using max_gauge_t = typename Types::max_gauge_t;
   using max_gauge_ptr = std::shared_ptr<max_gauge_t>;
+  using age_gauge_t = typename Types::age_gauge_t;
+  using age_gauge_ptr = std::shared_ptr<age_gauge_t>;
   using monotonic_counter_t = typename Types::monotonic_counter_t;
   using monotonic_counter_ptr = std::shared_ptr<monotonic_counter_t>;
   using perc_dist_summary_t = typename Types::perc_ds_t;
@@ -151,6 +157,13 @@ class base_registry {
   }
   auto GetMaxGauge(absl::string_view name, Tags tags = {}) {
     return GetMaxGauge(Id::of(name, std::move(tags)));
+  }
+
+  auto GetAgeGauge(const IdPtr& id) {
+    return state_.get_age_gauge(final_id(id));
+  }
+  auto GetAgeGauge(absl::string_view name, Tags tags = {}) {
+    return GetAgeGauge(Id::of(name, std::move(tags)));
   }
 
   auto GetMonotonicCounter(const IdPtr& id) {
@@ -237,6 +250,7 @@ struct stateless_types {
   using ds_t = DistributionSummary<Pub>;
   using gauge_t = Gauge<Pub>;
   using max_gauge_t = MaxGauge<Pub>;
+  using age_gauge_t = AgeGauge<Pub>;
   using monotonic_counter_t = MonotonicCounter<Pub>;
   using perc_timer_t = PercentileTimer<Pub>;
   using perc_ds_t = PercentileDistributionSummary<Pub>;
@@ -261,6 +275,11 @@ struct stateless {
 
   auto get_max_gauge(IdPtr id) {
     return std::make_shared<typename types::max_gauge_t>(std::move(id),
+                                                         publisher.get());
+  }
+
+  auto get_age_gauge(IdPtr id) {
+    return std::make_shared<typename types::age_gauge_t>(std::move(id),
                                                          publisher.get());
   }
 

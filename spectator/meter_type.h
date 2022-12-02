@@ -8,6 +8,7 @@ enum class MeterType {
   DistSummary,
   Gauge,
   MaxGauge,
+  AgeGauge,
   MonotonicCounter,
   Timer,
   PercentileTimer,
@@ -35,6 +36,9 @@ struct fmt::formatter<spectator::MeterType> : fmt::formatter<std::string_view> {
         break;
       case MeterType::MaxGauge:
         s = "max-gauge";
+        break;
+      case MeterType::AgeGauge:
+        s = "age-gauge";
         break;
       case MeterType::MonotonicCounter:
         s = "monotonic-counter";

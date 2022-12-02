@@ -104,6 +104,17 @@ class MaxGauge : public StatelessMeter<Pub> {
 };
 
 template <typename Pub>
+class AgeGauge : public StatelessMeter<Pub> {
+ public:
+  AgeGauge(IdPtr id, Pub* publisher)
+      : StatelessMeter<Pub>(std::move(id), publisher) {}
+  void Set(double value) noexcept { this->send(value); }
+
+ protected:
+  std::string_view Type() override { return "A"; }
+};
+
+template <typename Pub>
 class MonotonicCounter : public StatelessMeter<Pub> {
  public:
   MonotonicCounter(IdPtr id, Pub* publisher)
