@@ -1,7 +1,7 @@
 #pragma once
 
 #include "id.h"
-#include <ostream>
+#include <fmt/format.h>
 
 namespace spectator {
 
@@ -12,11 +12,22 @@ struct Measurement {
   bool operator==(const Measurement& other) const {
     return std::abs(value - other.value) < 1e-9 && *id == *(other.id);
   }
+
+  Measurement(IdPtr idPtr, double v) : id(std::move(idPtr)), value(v) {}
 };
 
-inline std::ostream& operator<<(std::ostream& os, const Measurement& m) {
-  os << "Measurement{" << *(m.id) << "," << m.value << "}";
-  return os;
-}
-
 }  // namespace spectator
+
+template <>
+struct fmt::formatter<spectator::Measurement> {
+  constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin()) {
+    return ctx.begin();
+  }
+
+  // formatter for Ids
+  template <typename FormatContext>
+  auto format(const spectator::Measurement& m, FormatContext& context) {
+    return fmt::format_to(context.out(), "Measurement({}, {})", *(m.id),
+                          m.value);
+  }
+};

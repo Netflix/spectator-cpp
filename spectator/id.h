@@ -1,33 +1,48 @@
 #pragma once
 
+#include "absl/container/flat_hash_map.h"
+#include "absl/strings/string_view.h"
+#include <fmt/format.h>
+#include <fmt/ranges.h>
 #include <memory>
 #include <ostream>
 #include <string>
-#include <ska/flat_hash_map.hpp>
 
 namespace spectator {
 
 class Tags {
-  using K = std::string;
-  using V = std::string;
-  using table_t = ska::flat_hash_map<K, V>;
+  using table_t = absl::flat_hash_map<std::string, std::string>;
   table_t entries_;
 
  public:
   Tags() = default;
 
-  Tags(std::initializer_list<std::pair<std::string, std::string>> vs) {
+  Tags(
+      std::initializer_list<std::pair<std::string_view, std::string_view>> vs) {
     for (auto& pair : vs) {
-      add(std::move(pair.first), std::move(pair.second));
+      add(pair.first, pair.second);
     }
   }
 
-  void add(K k, V v) { entries_[std::move(k)] = std::move(v); }
+  template <typename Cont>
+  static Tags from(Cont&& cont) {
+    Tags tags;
+    tags.entries_.reserve(cont.size());
+    for (auto&& kv : cont) {
+      tags.add(kv.first, kv.second);
+    }
+    return tags;
+  }
 
-  size_t hash() const {
+  void add(std::string_view k, std::string_view v) {
+    entries_[k] = std::string(v);
+  }
+
+  [[nodiscard]] size_t hash() const {
+    using hs = std::hash<std::string>;
     size_t h = 0;
     for (const auto& entry : entries_) {
-      h += (std::hash<K>()(entry.first) << 1) ^ std::hash<V>()(entry.second);
+      h += (hs()(entry.first) << 1U) ^ hs()(entry.second);
     }
     return h;
   }
@@ -39,9 +54,11 @@ class Tags {
 
   bool operator==(const Tags& that) const { return that.entries_ == entries_; }
 
-  bool has(const K& key) const { return entries_.find(key) != entries_.end(); }
+  [[nodiscard]] bool has(std::string_view key) const {
+    return entries_.find(key) != entries_.end();
+  }
 
-  K at(const K& key) const {
+  [[nodiscard]] std::string at(std::string_view key) const {
     auto entry = entries_.find(key);
     if (entry != entries_.end()) {
       return entry->second;
@@ -49,43 +66,58 @@ class Tags {
     return {};
   }
 
-  size_t size() const { return entries_.size(); }
+  [[nodiscard]] size_t size() const { return entries_.size(); }
 
-  table_t::const_iterator begin() const { return entries_.begin(); }
+  [[nodiscard]] table_t::const_iterator begin() const {
+    return entries_.begin();
+  }
 
-  table_t::const_iterator end() const { return entries_.end(); }
+  [[nodiscard]] table_t::const_iterator end() const { return entries_.end(); }
 };
 
 inline std::ostream& operator<<(std::ostream& os, const Tags& tags) {
-  bool first = true;
-  os << '[';
-  for (const auto& tag : tags) {
-    if (first) {
-      first = false;
-    } else {
-      os << ", ";
-    }
-    os << tag.first << "->" << tag.second;
-  }
-  os << ']';
+  os << fmt::format("{}", tags);
   return os;
 }
 
 class Id {
  public:
-  Id(std::string name, Tags tags) noexcept
-      : name_(std::move(name)), tags_(std::move(tags)), hash_(0u) {}
+  Id(std::string_view name, Tags tags) noexcept
+      : name_(name), tags_(std::move(tags)), hash_(0u) {}
 
-  bool operator==(const Id& rhs) const noexcept;
+  static std::shared_ptr<Id> of(std::string_view name, Tags tags = {}) {
+    return std::make_shared<Id>(name, std::move(tags));
+  }
 
-  const std::string& Name() const noexcept;
+  bool operator==(const Id& rhs) const noexcept {
+    return name_ == rhs.name_ && tags_ == rhs.tags_;
+  }
 
-  const Tags& GetTags() const noexcept;
+  const std::string& Name() const noexcept { return name_; }
+
+  const Tags& GetTags() const noexcept { return tags_; }
 
   std::unique_ptr<Id> WithTag(const std::string& key,
-                              const std::string& value) const;
+                              const std::string& value) const {
+    // Create a copy
+    Tags tags{GetTags()};
+    tags.add(key, value);
+    return std::make_unique<Id>(Name(), tags);
+  }
 
-  std::unique_ptr<Id> WithTags(Tags&& extra_tags) const;
+  std::unique_ptr<Id> WithTags(Tags&& extra_tags) const {
+    Tags tags{GetTags()};
+    tags.move_all(std::move(extra_tags));
+    return std::make_unique<Id>(Name(), tags);
+  }
+
+  std::unique_ptr<Id> WithTags(const Tags& extra_tags) const {
+    Tags tags{GetTags()};
+    for (const auto& t : extra_tags) {
+      tags.add(t.first, t.second);
+    }
+    return std::make_unique<Id>(Name(), tags);
+  }
 
   std::unique_ptr<Id> WithStat(const std::string& stat) const {
     return WithTag("statistic", stat);
@@ -100,7 +132,10 @@ class Id {
     }
   }
 
-  friend std::ostream& operator<<(std::ostream& os, const Id& id);
+  friend std::ostream& operator<<(std::ostream& os, const Id& id) {
+    os << fmt::format("{}", id);
+    return os;
+  }
 
   friend struct std::hash<Id>;
 
@@ -149,4 +184,19 @@ struct equal_to<shared_ptr<spectator::Id>> {
     return *lhs == *rhs;
   }
 };
+
 }  // namespace std
+
+template <>
+struct fmt::formatter<spectator::Id> {
+  constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin()) {
+    return ctx.begin();
+  }
+
+  // formatter for Ids
+  template <typename FormatContext>
+  auto format(const spectator::Id& id, FormatContext& context) {
+    return fmt::format_to(context.out(), "Id(name={}, tags={})", id.Name(),
+                          id.GetTags());
+  }
+};

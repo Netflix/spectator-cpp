@@ -1,109 +1,320 @@
 #pragma once
 
+#include "absl/container/flat_hash_map.h"
+#include "absl/synchronization/mutex.h"
 #include "config.h"
-#include "counter.h"
-#include "dist_summary.h"
-#include "gauge.h"
-#include "max_gauge.h"
-#include "monotonic_counter.h"
+#include "logger.h"
+#include "stateful_meters.h"
+#include "stateless_meters.h"
 #include "publisher.h"
-#include "timer.h"
-#include <mutex>
-#include <tsl/hopscotch_map.h>
 
 namespace spectator {
-class Registry {
- public:
-  using clock = std::chrono::steady_clock;
-  using logger_ptr = std::shared_ptr<spdlog::logger>;
-  using measurements_callback =
-      std::function<void(const std::vector<Measurement>&)>;
 
-  Registry(std::unique_ptr<Config> config, logger_ptr logger) noexcept;
-  ~Registry() noexcept { Stop(); }
-  const Config& GetConfig() const noexcept;
-  logger_ptr GetLogger() const noexcept;
+// A registry for tests
+// This is a stateful registry that will keep references to all registered
+// meters and allows users to fetch the measurements at a later point
 
-  void OnMeasurements(measurements_callback fn) noexcept;
+namespace detail {
+inline void log_type_error(MeterType old_type, MeterType new_type,
+                           const Id& id) {
+  DefaultLogger()->warn(
+      "Attempting to register {} as a {} but was previously registered as a {}",
+      id, new_type, old_type);
+}
+}  // namespace detail
 
-  IdPtr CreateId(std::string name, Tags tags) const noexcept;
-
-  std::shared_ptr<Counter> GetCounter(IdPtr id) noexcept;
-  std::shared_ptr<Counter> GetCounter(std::string name,
-                                      Tags tags = {}) noexcept;
-
-  std::shared_ptr<MonotonicCounter> GetMonotonicCounter(IdPtr id) noexcept;
-  std::shared_ptr<MonotonicCounter> GetMonotonicCounter(
-      std::string name, Tags tags = {}) noexcept;
-
-  std::shared_ptr<DistributionSummary> GetDistributionSummary(
-      IdPtr id) noexcept;
-  std::shared_ptr<DistributionSummary> GetDistributionSummary(
-      std::string name, Tags tags = {}) noexcept;
-
-  std::shared_ptr<Gauge> GetGauge(IdPtr id) noexcept;
-  std::shared_ptr<Gauge> GetGauge(std::string name, Tags tags = {}) noexcept;
-
-  std::shared_ptr<MaxGauge> GetMaxGauge(IdPtr id) noexcept;
-  std::shared_ptr<MaxGauge> GetMaxGauge(std::string name,
-                                        Tags tags = {}) noexcept;
-
-  std::shared_ptr<Timer> GetTimer(IdPtr id) noexcept;
-  std::shared_ptr<Timer> GetTimer(std::string name, Tags tags = {}) noexcept;
-
-  std::vector<std::shared_ptr<Meter>> Meters() const noexcept;
-  std::vector<Measurement> Measurements() const noexcept;
-  std::size_t Size() const noexcept {
-    std::lock_guard<std::mutex> lock(meters_mutex);
-    return meters_.size();
-  }
-
-  void Start() noexcept;
-  void Stop() noexcept;
-
- private:
-  std::atomic<bool> should_stop_;
-  std::mutex cv_mutex_;
-  std::condition_variable cv_;
-  std::thread expirer_thread_;
-  std::chrono::milliseconds meter_ttl_;
-
-  std::unique_ptr<Config> config_;
-  logger_ptr logger_;
-  mutable std::mutex meters_mutex{};
-  using table_t = tsl::hopscotch_map<
-      IdPtr, std::shared_ptr<Meter>, std::hash<IdPtr>, std::equal_to<IdPtr>,
-      std::allocator<std::pair<IdPtr, std::shared_ptr<Meter>>>, 30, true>;
-  table_t meters_;
-  std::vector<measurements_callback> ms_callbacks_{};
-  std::shared_ptr<DistributionSummary> registry_size_;
-
-  std::shared_ptr<Meter> insert_if_needed(
-      std::shared_ptr<Meter> meter) noexcept;
-  void log_type_error(const Id& id, MeterType prev_type,
-                      MeterType attempted_type) const noexcept;
+template <typename Types>
+struct single_table_state {
+  using types = Types;
 
   template <typename M, typename... Args>
-  std::shared_ptr<M> create_and_register_as_needed(IdPtr id,
-                                                   Args&&... args) noexcept {
-    std::shared_ptr<M> new_meter_ptr{
-        std::make_shared<M>(std::move(id), std::forward<Args>(args)...)};
-    auto meter_ptr = insert_if_needed(new_meter_ptr);
-    if (meter_ptr->GetType() != new_meter_ptr->GetType()) {
-      log_type_error(*meter_ptr->MeterId(), meter_ptr->GetType(),
-                     new_meter_ptr->GetType());
-      return new_meter_ptr;
+  std::shared_ptr<M> get_or_create(IdPtr id, Args&&... args) {
+    auto new_meter =
+        std::make_shared<M>(std::move(id), std::forward<Args>(args)...);
+    absl::MutexLock lock(&mutex_);
+    auto it = meters_.find(new_meter->MeterId());
+    if (it != meters_.end()) {
+      // already exists, we need to ensure the existing type
+      // matches the new meter type, otherwise we need to notify the user
+      // of the error
+      auto& old_meter = it->second;
+      if (old_meter->GetType() != new_meter->GetType()) {
+        detail::log_type_error(old_meter->GetType(), new_meter->GetType(),
+                               *new_meter->MeterId());
+        // this is not registered therefore no measurements
+        // will be reported
+        return new_meter;
+      } else {
+        return std::static_pointer_cast<M>(old_meter);
+      }
     }
-    return std::static_pointer_cast<M>(meter_ptr);
+
+    meters_.emplace(new_meter->MeterId(), new_meter);
+    return new_meter;
   }
 
-  void expirer() noexcept;
+  auto get_counter(IdPtr id) {
+    return get_or_create<typename types::counter_t>(std::move(id));
+  }
 
-  Publisher<Registry> publisher_;
+  auto get_gauge(IdPtr id) {
+    return get_or_create<typename types::gauge_t>(std::move(id));
+  }
+
+  auto get_max_gauge(IdPtr id) {
+    return get_or_create<typename types::max_gauge_t>(std::move(id));
+  }
+
+  auto get_monotonic_counter(IdPtr id) {
+    return get_or_create<typename types::monotonic_counter_t>(std::move(id));
+  }
+
+  auto get_timer(IdPtr id) {
+    return get_or_create<typename types::timer_t>(std::move(id));
+  }
+
+  auto get_ds(IdPtr id) {
+    return get_or_create<typename types::ds_t>(std::move(id));
+  }
+
+  auto get_perc_ds(IdPtr id, int64_t min, int64_t max) {
+    return get_or_create<typename types::perc_ds_t>(std::move(id), min, max);
+  }
+
+  auto get_perc_timer(IdPtr id, std::chrono::nanoseconds min,
+                      std::chrono::nanoseconds max) {
+    return get_or_create<typename types::perc_timer_t>(std::move(id), min, max);
+  }
+
+  auto measurements() {
+    std::vector<Measurement> result;
+
+    absl::MutexLock lock(&mutex_);
+    result.reserve(meters_.size() * 2);
+    for (auto& m : meters_) {
+      m.second->Measure(&result);
+    }
+    return result;
+  }
+
+  absl::Mutex mutex_;
+  // use a single table so we can easily check whether a meter
+  // was previously registered as a different type
+  absl::flat_hash_map<IdPtr, std::shared_ptr<StatefulMeter>, std::hash<IdPtr>,
+                      std::equal_to<IdPtr>>
+      meters_ GUARDED_BY(mutex_);
+};
+
+template <typename State, typename Types = typename State::types>
+class base_registry {
+ public:
+  using logger_ptr = std::shared_ptr<spdlog::logger>;
+  using counter_t = typename Types::counter_t;
+  using counter_ptr = std::shared_ptr<counter_t>;
+  using dist_summary_t = typename Types::ds_t;
+  using dist_summary_ptr = std::shared_ptr<dist_summary_t>;
+  using gauge_t = typename Types::gauge_t;
+  using gauge_ptr = std::shared_ptr<gauge_t>;
+  using max_gauge_t = typename Types::max_gauge_t;
+  using max_gauge_ptr = std::shared_ptr<max_gauge_t>;
+  using monotonic_counter_t = typename Types::monotonic_counter_t;
+  using monotonic_counter_ptr = std::shared_ptr<monotonic_counter_t>;
+  using perc_dist_summary_t = typename Types::perc_ds_t;
+  using perc_dist_summary_ptr = std::shared_ptr<perc_dist_summary_t>;
+  using perc_timer_t = typename Types::perc_timer_t;
+  using perc_timer_ptr = std::shared_ptr<perc_timer_t>;
+  using timer_t = typename Types::timer_t;
+  using timer_ptr = std::shared_ptr<time_t>;
+
+  explicit base_registry(logger_ptr logger = DefaultLogger())
+      : logger_(std::move(logger)) {}
+
+  auto GetCounter(const IdPtr& id) { return state_.get_counter(final_id(id)); }
+  auto GetCounter(std::string_view name, Tags tags = {}) {
+    return GetCounter(Id::of(name, std::move(tags)));
+  }
+
+  auto GetDistributionSummary(const IdPtr& id) {
+    return state_.get_ds(final_id(id));
+  }
+  auto GetDistributionSummary(std::string_view name, Tags tags = {}) {
+    return GetDistributionSummary(Id::of(name, std::move(tags)));
+  }
+
+  auto GetGauge(const IdPtr& id) { return state_.get_gauge(final_id(id)); }
+  auto GetGauge(std::string_view name, Tags tags = {}) {
+    return GetGauge(Id::of(name, std::move(tags)));
+  }
+
+  auto GetMaxGauge(const IdPtr& id) {
+    return state_.get_max_gauge(final_id(id));
+  }
+  auto GetMaxGauge(std::string_view name, Tags tags = {}) {
+    return GetMaxGauge(Id::of(name, std::move(tags)));
+  }
+
+  auto GetMonotonicCounter(const IdPtr& id) {
+    return state_.get_monotonic_counter(final_id(id));
+  }
+  auto GetMonotonicCounter(std::string_view name, Tags tags = {}) {
+    return GetMonotonicCounter(Id::of(name, std::move(tags)));
+  }
+
+  auto GetTimer(const IdPtr& id) { return state_.get_timer(final_id(id)); }
+  auto GetTimer(std::string_view name, Tags tags = {}) {
+    return GetTimer(Id::of(name, std::move(tags)));
+  }
+
+  auto GetPercentileDistributionSummary(const IdPtr& id, int64_t min,
+                                        int64_t max) {
+    return state_.get_perc_ds(final_id(id), min, max);
+  }
+
+  auto GetPercentileDistributionSummary(std::string_view name, int64_t min,
+                                        int64_t max) {
+    return GetPercentileDistributionSummary(Id::of(name), min, max);
+  }
+
+  auto GetPercentileDistributionSummary(std::string_view name, Tags tags,
+                                        int64_t min, int64_t max) {
+    return GetPercentileDistributionSummary(Id::of(name, std::move(tags)), min,
+                                            max);
+  }
+
+  auto GetPercentileTimer(const IdPtr& id, absl::Duration min,
+                          absl::Duration max) {
+    return state_.get_perc_timer(final_id(id), min, max);
+  }
+
+  auto GetPercentileTimer(const IdPtr& id, std::chrono::nanoseconds min,
+                          std::chrono::nanoseconds max) {
+    return state_.get_perc_timer(final_id(id), absl::FromChrono(min),
+                                 absl::FromChrono(max));
+  }
+
+  auto GetPercentileTimer(std::string_view name, absl::Duration min,
+                          absl::Duration max) {
+    return GetPercentileTimer(Id::of(name), min, max);
+  }
+
+  auto GetPercentileTimer(std::string_view name, Tags tags, absl::Duration min,
+                          absl::Duration max) {
+    return GetPercentileTimer(Id::of(name, std::move(tags)), min, max);
+  }
+
+  auto GetPercentileTimer(std::string_view name, std::chrono::nanoseconds min,
+                          std::chrono::nanoseconds max) {
+    return GetPercentileTimer(Id::of(name), absl::FromChrono(min),
+                              absl::FromChrono(max));
+  }
+
+  auto GetPercentileTimer(std::string_view name, Tags tags,
+                          std::chrono::nanoseconds min,
+                          std::chrono::nanoseconds max) {
+    return GetPercentileTimer(Id::of(name, std::move(tags)),
+                              absl::FromChrono(min), absl::FromChrono(max));
+  }
+
+  auto Measurements() { return state_.measurements(); }
 
  protected:
-  // for testing
-  void removed_expired_meters() noexcept;
+  logger_ptr logger_;
+  State state_;
+  Tags extra_tags_;
+
+  // final Id after adding extra_tags_ if any
+  IdPtr final_id(const IdPtr& id) {
+    if (extra_tags_.size() > 0) {
+      return id->WithTags(extra_tags_);
+    }
+    return id;
+  }
 };
+
+template <typename Pub>
+struct stateless_types {
+  using counter_t = Counter<Pub>;
+  using ds_t = DistributionSummary<Pub>;
+  using gauge_t = Gauge<Pub>;
+  using max_gauge_t = MaxGauge<Pub>;
+  using monotonic_counter_t = MonotonicCounter<Pub>;
+  using perc_timer_t = PercentileTimer<Pub>;
+  using perc_ds_t = PercentileDistributionSummary<Pub>;
+  using timer_t = Timer<Pub>;
+  using publisher_t = Pub;
+};
+
+template <typename Types>
+struct stateless {
+  using types = Types;
+  std::unique_ptr<typename types::publisher_t> publisher;
+
+  auto get_counter(IdPtr id) {
+    return std::make_shared<typename types::counter_t>(std::move(id),
+                                                       publisher.get());
+  }
+
+  auto get_gauge(IdPtr id) {
+    return std::make_shared<typename types::gauge_t>(std::move(id),
+                                                     publisher.get());
+  }
+
+  auto get_max_gauge(IdPtr id) {
+    return std::make_shared<typename types::max_gauge_t>(std::move(id),
+                                                         publisher.get());
+  }
+
+  auto get_monotonic_counter(IdPtr id) {
+    return std::make_shared<typename types::monotonic_counter_t>(
+        std::move(id), publisher.get());
+  }
+
+  auto get_timer(IdPtr id) {
+    return std::make_shared<typename types::timer_t>(std::move(id),
+                                                     publisher.get());
+  }
+
+  auto get_ds(IdPtr id) {
+    return std::make_shared<typename types::ds_t>(std::move(id),
+                                                  publisher.get());
+  }
+
+  auto get_perc_ds(IdPtr id, int64_t min, int64_t max) {
+    return std::make_shared<typename types::perc_ds_t>(
+        std::move(id), publisher.get(), min, max);
+  }
+
+  auto get_perc_timer(IdPtr id, absl::Duration min, absl::Duration max) {
+    return std::make_shared<typename types::perc_timer_t>(
+        std::move(id), publisher.get(), min, max);
+  }
+
+  auto measurements() { return std::vector<Measurement>{}; }
+};
+
+/// A stateless registry that sends all meter activity immediately
+/// to a spectatord agent
+class SpectatordRegistry
+    : public base_registry<stateless<stateless_types<SpectatordPublisher>>> {
+ public:
+  using types = stateless_types<SpectatordPublisher>;
+  explicit SpectatordRegistry(const Config& config, logger_ptr logger)
+      : base_registry<stateless<stateless_types<SpectatordPublisher>>>(
+            std::move(logger)) {
+    extra_tags_ = Tags::from(config.common_tags);
+    state_.publisher =
+        std::make_unique<SpectatordPublisher>(config.endpoint, logger_);
+  }
+};
+
+/// A Registry that can be used for tests. It keeps state about which meters
+/// have been registered, and can report the measurements from all the
+/// registered meters
+struct TestRegistry : base_registry<single_table_state<stateful_meters>> {
+  using types = stateful_meters;
+};
+
+/// The default registry
+using Registry = SpectatordRegistry;
 
 }  // namespace spectator
