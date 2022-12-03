@@ -1,0 +1,40 @@
+name: Build
+
+on:
+  pull_request:
+  push:
+     branches:
+       - main
+
+jobs:
+  build:
+    if: ${{ github.repository == 'Netflix/spectator-cpp' }}
+    runs-on: ubuntu-latest
+    env:
+      CC: "gcc-11"
+      CXX: "g++-11"
+      LANG: "en_US.UTF-8"
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Bazel Cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/bazel
+          key: ${{ runner.os }}-bazel
+
+      - name: Install System Dependencies
+        run: |
+          curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > bazel.gpg
+          sudo mv bazel.gpg /etc/apt/trusted.gpg.d/
+          echo "deb [arch=amd64] https://storage.googleapis.com/bazel-apt stable jdk1.8" | sudo tee /etc/apt/sources.list.d/bazel.list
+          sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+          sudo apt-get update && sudo apt-get install -y bazel binutils-dev g++-11
+
+      - name: Build spectator-cpp
+        run: |
+          bazel --output_user_root=~/.cache/bazel --batch build --config asan spectator_test spectator
+
+      - name: Test spectator-cpp
+        run: |
+          GTEST_COLOR=1 ./bazel-bin/spectator_test
