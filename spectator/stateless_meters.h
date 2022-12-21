@@ -1,6 +1,6 @@
 #pragma once
 #include "id.h"
-#include "absl/strings/str_cat.h"
+#include "absl/strings/str_format.h"
 #include "absl/time/time.h"
 
 namespace spectator {
@@ -46,7 +46,10 @@ class StatelessMeter {
     if (value_prefix_.empty()) {
       value_prefix_ = detail::create_prefix(*id_, Type());
     }
-    auto msg = absl::StrCat(value_prefix_, value);
+    auto msg = absl::StrFormat("%s%f", value_prefix_, value);
+    // remove trailing zeros and decimal points
+    msg.erase(msg.find_last_not_of('0') + 1, std::string::npos);
+    msg.erase(msg.find_last_not_of('.') + 1, std::string::npos);
     publisher_->send(msg);
   }
 
