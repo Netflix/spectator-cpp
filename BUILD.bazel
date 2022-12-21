@@ -1,5 +1,3 @@
-load("@com_grail_bazel_compdb//:aspects.bzl", "compilation_database")
-
 cc_library(
     name = "spectator",
     srcs = [
@@ -49,14 +47,5 @@ cc_test(
         ":spectator",
         "@com_github_bombela_backward//:backward",
         "@com_google_googletest//:gtest",
-    ],
-)
-
-compilation_database(
-    name = "spectator_compdb",
-    testonly = True,
-    targets = [
-        ":spectator",
-        ":spectator_test",
     ],
 )
