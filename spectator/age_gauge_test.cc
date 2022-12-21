@@ -16,11 +16,12 @@ TEST(AgeGauge, Set) {
   AgeGauge g{id, &publisher};
   AgeGauge g2{id2, &publisher};
 
-  g.Set(42);
-  g2.Set(2);
-  g.Set(1);
-  std::vector<std::string> expected = {"A:gauge:42", "A:gauge2,key=val:2",
-                                       "A:gauge:1"};
+  g.Set(1671641328);
+  g2.Set(1671641028.3);
+  g.Set(0);
+  std::vector<std::string> expected = {"A:gauge:1671641328",
+                                       "A:gauge2,key=val:1671641028.3",
+                                       "A:gauge:0"};
   EXPECT_EQ(publisher.SentMessages(), expected);
 }
 
