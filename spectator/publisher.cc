@@ -7,10 +7,11 @@ namespace spectator {
 static const std::string NEW_LINE = "\n";
 
 SpectatordPublisher::SpectatordPublisher(absl::string_view endpoint,
+                                         uint32_t max_buffer_size,
                                          std::shared_ptr<spdlog::logger> logger)
     : logger_(std::move(logger)),
       udp_socket_(io_context_),
-      local_socket_(io_context_) {
+      local_socket_(io_context_), max_buffer_size_(max_buffer_size) {
   buffer_.reserve(MAX_BUFFER_SIZE + 1024);     
   if (absl::StartsWith(endpoint, "unix:")) {
     setup_unix_domain(endpoint.substr(5));
@@ -55,7 +56,7 @@ void SpectatordPublisher::setup_unix_domain(absl::string_view path) {
   sender_ = [local_path, this](std::string_view msg) {
     buffer_.append(msg);
     buffer_.append(NEW_LINE);
-    if (buffer_.length() >= MAX_BUFFER_SIZE) {
+    if (buffer_.length() >= max_buffer_size_) {
       for (auto i = 0; i < 3; ++i) {
         try {
           local_socket_.send(asio::buffer(buffer_));
