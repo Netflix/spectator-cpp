@@ -22,7 +22,7 @@ TEST(Publisher, Udp) {
     logger->info("Udp Server started on port {}", server.GetPort());
 
     SpectatordPublisher publisher{
-        fmt::format("udp:localhost:{}", server.GetPort())};
+        fmt::format("udp:localhost:{}", server.GetPort()), 0};
     Counter c{std::make_shared<Id>("counter", Tags{}), &publisher};
     c.Increment();
     c.Add(2);
@@ -46,7 +46,7 @@ TEST(Publisher, Unix) {
   TestUnixServer server{path};
   server.Start();
   logger->info("Unix Server started on path {}", path);
-  SpectatordPublisher publisher{fmt::format("unix:{}", path)};
+  SpectatordPublisher publisher{fmt::format("unix:{}", 0, path)};
   Counter c{std::make_shared<Id>("counter", Tags{}), &publisher};
   c.Increment();
   c.Add(2);
@@ -59,7 +59,7 @@ TEST(Publisher, Unix) {
 }
 
 TEST(Publisher, Nop) {
-  SpectatordPublisher publisher{""};
+  SpectatordPublisher publisher{"", 0};
   Counter c{std::make_shared<Id>("counter", Tags{}), &publisher};
   c.Increment();
   c.Add(2);
