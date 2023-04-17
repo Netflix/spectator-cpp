@@ -55,7 +55,6 @@ void SpectatordPublisher::setup_unix_domain(absl::string_view path) {
   std::string local_path{path};
   sender_ = [local_path, this](std::string_view msg) {
     buffer_.append(msg);
-    buffer_.append(NEW_LINE);
     if (buffer_.length() >= max_buffer_size_) {
       for (auto i = 0; i < 3; ++i) {
         try {
@@ -69,7 +68,9 @@ void SpectatordPublisher::setup_unix_domain(absl::string_view path) {
                         e.what());
         }
       }
-    }       
+    } else {
+      buffer_.append(NEW_LINE);
+    }   
   };
 }
 
