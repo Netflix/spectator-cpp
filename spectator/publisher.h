@@ -13,7 +13,7 @@ class SpectatordPublisher {
  public:
   explicit SpectatordPublisher(
       absl::string_view endpoint,
-      uint32_t maxBufferSize = MAX_BUFFER_SIZE,
+      uint32_t max_buffer_size = MAX_BUFFER_SIZE,
       std::shared_ptr<spdlog::logger> logger = DefaultLogger());
   SpectatordPublisher(const SpectatordPublisher&) = delete;
 
