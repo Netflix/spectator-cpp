@@ -7,6 +7,8 @@
 
 namespace spectator {
 
+static const uint32_t MAX_BUFFER_SIZE = 16 * 1024;
+
 class SpectatordPublisher {
  public:
   explicit SpectatordPublisher(
@@ -31,6 +33,7 @@ class SpectatordPublisher {
   asio::io_context io_context_;
   asio::ip::udp::socket udp_socket_;
   asio::local::datagram_protocol::socket local_socket_;
+  std::string buffer_;
 };
 
 }  // namespace spectator
