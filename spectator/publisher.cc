@@ -66,8 +66,8 @@ void SpectatordPublisher::setup_unix_domain(absl::string_view path) {
           logger_->warn("Unable to send {} - attempt {}/3 ({})", msg, i,
                         e.what());
         }
-        buffer_.clear();
       }
+      buffer_.clear();
     } else {
       buffer_.append(NEW_LINE);
     }   
