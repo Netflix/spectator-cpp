@@ -60,13 +60,13 @@ void SpectatordPublisher::setup_unix_domain(absl::string_view path) {
         try {
           local_socket_.send(asio::buffer(buffer_));
           logger_->trace("Sent (local): {}", msg);
-          buffer_.clear();
           break;
         } catch (std::exception& e) {
           local_reconnect(local_path);
           logger_->warn("Unable to send {} - attempt {}/3 ({})", msg, i,
                         e.what());
         }
+        buffer_.clear();
       }
     } else {
       buffer_.append(NEW_LINE);
