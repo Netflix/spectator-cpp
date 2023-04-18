@@ -58,8 +58,8 @@ void SpectatordPublisher::setup_unix_domain(absl::string_view path) {
     if (buffer_.length() >= max_buffer_size_) {
       for (auto i = 0; i < 3; ++i) {
         try {
-          local_socket_.send(asio::buffer(buffer_));
-          logger_->trace("Sent (local): {}", buffer_);
+          auto sent_bytes = local_socket_.send(asio::buffer(buffer_));
+          logger_->trace("Sent (local): {} bytes, in total had {}", sent_bytes, buffer_.length());
           break;
         } catch (std::exception& e) {
           local_reconnect(local_path);
