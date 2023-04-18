@@ -60,6 +60,9 @@ void SpectatordPublisher::setup_unix_domain(absl::string_view path) {
         try {
           auto sent_bytes = local_socket_.send(asio::buffer(buffer_));
           logger_->trace("Sent (local): {} bytes, in total had {}", sent_bytes, buffer_.length());
+          if (buffer_.length() == 0) {
+            logger_->trace("Buffer {}", buffer_);
+          }
           break;
         } catch (std::exception& e) {
           local_reconnect(local_path);
