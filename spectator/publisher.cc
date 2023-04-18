@@ -12,7 +12,7 @@ SpectatordPublisher::SpectatordPublisher(absl::string_view endpoint,
     : logger_(std::move(logger)),
       udp_socket_(io_context_),
       local_socket_(io_context_), max_buffer_size_(max_buffer_size) {
-  buffer_.reserve(MAX_BUFFER_SIZE + 1024);     
+  buffer_.reserve(max_buffer_size + 1024);     
   if (absl::StartsWith(endpoint, "unix:")) {
     setup_unix_domain(endpoint.substr(5));
   } else if (absl::StartsWith(endpoint, "udp:")) {
@@ -59,11 +59,11 @@ void SpectatordPublisher::setup_unix_domain(absl::string_view path) {
       for (auto i = 0; i < 3; ++i) {
         try {
           local_socket_.send(asio::buffer(buffer_));
-          logger_->trace("Sent (local): {}", msg);
+          logger_->trace("Sent (local): {}", buffer_);
           break;
         } catch (std::exception& e) {
           local_reconnect(local_path);
-          logger_->warn("Unable to send {} - attempt {}/3 ({})", msg, i,
+          logger_->warn("Unable to send {} - attempt {}/3 ({})", buffer_, i,
                         e.what());
         }
       }
