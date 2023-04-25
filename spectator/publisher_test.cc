@@ -39,14 +39,14 @@ const char* first_not_null(char* a, const char* b) {
   return b;
 }
 
-TEST(Publisher, Unix) {
+TEST(Publisher, UnixNoBuffer) {
   auto logger = spectator::DefaultLogger();
   const auto* dir = first_not_null(std::getenv("TMPDIR"), "/tmp");
   auto path = fmt::format("{}/testserver.{}", dir, getpid());
   TestUnixServer server{path};
   server.Start();
   logger->info("Unix Server started on path {}", path);
-  SpectatordPublisher publisher{fmt::format("unix:{}", 0, path)};
+  SpectatordPublisher publisher{fmt::format("unix:{}", path), 0};
   Counter c{std::make_shared<Id>("counter", Tags{}), &publisher};
   c.Increment();
   c.Add(2);
@@ -55,7 +55,32 @@ TEST(Publisher, Unix) {
   server.Stop();
   unlink(path.c_str());
   std::vector<std::string> expected{"c:counter:1", "c:counter:2"};
-  EXPECT_EQ(server.GetMessages(), expected);
+  EXPECT_EQ(msgs, expected);
+}
+
+TEST(Publisher, UnixBuffer) {
+  auto logger = spectator::DefaultLogger();
+  const auto* dir = first_not_null(std::getenv("TMPDIR"), "/tmp");
+  auto path = fmt::format("{}/testserver.{}", dir, getpid());
+  TestUnixServer server{path};
+  server.Start();
+  logger->info("Unix Server started on path {}", path);
+  // Do not send until we buffer 32 bytes of data.
+  SpectatordPublisher publisher{fmt::format("unix:{}", path), 32};
+  Counter c{std::make_shared<Id>("counter", Tags{}), &publisher};
+  c.Increment();
+  c.Increment();
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  auto msgs = server.GetMessages();
+  std::vector<std::string> emptyVector {};
+  EXPECT_EQ(msgs, emptyVector);
+  c.Increment();
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  msgs = server.GetMessages();
+  std::vector<std::string> expected{"c:counter:1\nc:counter:1\nc:counter:1"};
+  EXPECT_EQ(msgs, expected);
+  server.Stop();
+  unlink(path.c_str());
 }
 
 TEST(Publisher, Nop) {

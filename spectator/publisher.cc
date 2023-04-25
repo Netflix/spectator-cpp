@@ -7,12 +7,12 @@ namespace spectator {
 static const std::string NEW_LINE = "\n";
 
 SpectatordPublisher::SpectatordPublisher(absl::string_view endpoint,
-                                         uint32_t max_buffer_size,
+                                         uint32_t bytes_to_buffer,
                                          std::shared_ptr<spdlog::logger> logger)
     : logger_(std::move(logger)),
       udp_socket_(io_context_),
-      local_socket_(io_context_), max_buffer_size_(max_buffer_size) {
-  buffer_.reserve(max_buffer_size + 1024);     
+      local_socket_(io_context_), bytes_to_buffer_(bytes_to_buffer) {
+  buffer_.reserve(bytes_to_buffer_ + 1024);     
   if (absl::StartsWith(endpoint, "unix:")) {
     setup_unix_domain(endpoint.substr(5));
   } else if (absl::StartsWith(endpoint, "udp:")) {
@@ -55,14 +55,11 @@ void SpectatordPublisher::setup_unix_domain(absl::string_view path) {
   std::string local_path{path};
   sender_ = [local_path, this](std::string_view msg) {
     buffer_.append(msg);
-    if (buffer_.length() >= max_buffer_size_) {
+    if (buffer_.length() >= bytes_to_buffer_) {
       for (auto i = 0; i < 3; ++i) {
         try {
           auto sent_bytes = local_socket_.send(asio::buffer(buffer_));
           logger_->trace("Sent (local): {} bytes, in total had {}", sent_bytes, buffer_.length());
-          if (buffer_.length() == 0) {
-            logger_->trace("Buffer {}", buffer_);
-          }
           break;
         } catch (std::exception& e) {
           local_reconnect(local_path);
