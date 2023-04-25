@@ -11,6 +11,7 @@ class SpectatordPublisher {
  public:
   explicit SpectatordPublisher(
       absl::string_view endpoint,
+      uint32_t bytes_to_buffer = 0,
       std::shared_ptr<spdlog::logger> logger = DefaultLogger());
   SpectatordPublisher(const SpectatordPublisher&) = delete;
 
@@ -31,6 +32,8 @@ class SpectatordPublisher {
   asio::io_context io_context_;
   asio::ip::udp::socket udp_socket_;
   asio::local::datagram_protocol::socket local_socket_;
+  std::string buffer_;
+  uint32_t bytes_to_buffer_;
 };
 
 }  // namespace spectator
