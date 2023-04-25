@@ -4,7 +4,7 @@
 
 namespace spectator {
 
-static const std::string NEW_LINE = "\n";
+static const char NEW_LINE = '\n';
 
 SpectatordPublisher::SpectatordPublisher(absl::string_view endpoint,
                                          uint32_t bytes_to_buffer,
@@ -69,7 +69,7 @@ void SpectatordPublisher::setup_unix_domain(absl::string_view path) {
       }
       buffer_.clear();
     } else {
-      buffer_.append(NEW_LINE);
+      buffer_.push_back(NEW_LINE);
     }   
   };
 }
