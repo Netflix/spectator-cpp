@@ -1,5 +1,6 @@
 #pragma once
 
+#include "absl/base/thread_annotations.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/synchronization/mutex.h"
 #include "config.h"
@@ -106,7 +107,7 @@ struct single_table_state {
   // was previously registered as a different type
   absl::flat_hash_map<IdPtr, std::shared_ptr<StatefulMeter>, std::hash<IdPtr>,
                       std::equal_to<IdPtr>>
-      meters_ GUARDED_BY(mutex_);
+      meters_ ABSL_GUARDED_BY(mutex_);
 };
 
 template <typename State, typename Types = typename State::types>
