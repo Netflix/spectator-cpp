@@ -21,7 +21,7 @@ BinPackArguments: true
 BinPackParameters: true
 BraceWrapping:   
   AfterClass:      false
-  AfterControlStatement: false
+  AfterControlStatement: Never
   AfterEnum:       false
   AfterFunction:   false
   AfterNamespace:  false
@@ -86,4 +86,3 @@ Standard:        Auto
 TabWidth:        8
 UseTab:          Never
 ...
-

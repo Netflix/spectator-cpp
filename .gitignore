@@ -1,5 +1,5 @@
-.clwb/
+.DS_Store
 .idea/
-.vscode/
-bazel-*
-build-*
+cmake-build-debug/
+cmake-build/
+venv/
