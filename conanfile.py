@@ -1,7 +1,7 @@
 from conans import ConanFile
 
 
-class SpectatorDConan(ConanFile):
+class SpectatorCppConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     requires = (
         "abseil/20230125.3",
