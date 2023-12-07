@@ -102,11 +102,11 @@ struct single_table_state {
   }
 
   absl::Mutex mutex_;
-  // use a single table so we can easily check whether a meter
+  // use a single table, so we can easily check whether a meter
   // was previously registered as a different type
   absl::flat_hash_map<IdPtr, std::shared_ptr<StatefulMeter>, std::hash<IdPtr>,
                       std::equal_to<IdPtr>>
-      meters_ GUARDED_BY(mutex_);
+      meters_ ABSL_GUARDED_BY(mutex_);
 };
 
 template <typename State, typename Types = typename State::types>

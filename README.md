@@ -84,3 +84,15 @@ int main() {
 
 By default, the library sends every meter change to the spectatord sidecar immediately. This involves a blocking `send` call and underlying system calls, and may not be the most efficient way to publish metrics in high-volume use cases.
 For this purpose a simple buffering functionality in `Publisher` is implemented, and it can be turned on by passing a buffer size to the `spectator::Config` constructor. It is important to note that, until this buffer fills up, the `Publisher` will not send nay meters to the sidecar. Therefore, if your application doesn't emit meters at a high rate, you should either keep the buffer very small, or do not configure a buffer size at all, which will fall back to the "publish immediately" mode of operation.
+
+## Local Development
+
+```shell
+./setup-venv.sh
+source venv/bin/activate
+./build.sh  # [clean|skiptest]
+```
+
+* CLion > Preferences > Plugins > Marketplace > Conan > Install
+* CLion > Preferences > Build, Execution, Deploy > Conan > Conan Executable: $PROJECT_HOME/venv/bin/conan
+* CLion > Bottom Bar: Conan > Left Button: Match Profile > CMake Profile: Debug, Conan Profile: default
