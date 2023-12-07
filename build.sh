@@ -2,7 +2,7 @@
 
 BUILD_DIR=cmake-build
 # Choose: Debug, Release, RelWithDebInfo and MinSizeRel
-BUILD_TYPE=Release
+BUILD_TYPE=Debug
 
 BLUE="\033[0;34m"
 NC="\033[0m"
