@@ -28,10 +28,11 @@ if [[ ! -d $BUILD_DIR ]]; then
 
   echo -e "${BLUE}==== install required dependencies ====${NC}"
   if [[ "$BUILD_TYPE" == "Debug" ]]; then
-    conan install . --build=missing --install-folder $BUILD_DIR --profile ./sanitized
+    PROFILE="--profile ./sanitized"
   else
-    conan install . --build=missing --install-folder $BUILD_DIR
+    PROFILE=""
   fi
+  conan install . --build=missing --install-folder $BUILD_DIR $PROFILE
 fi
 
 pushd $BUILD_DIR || exit 1
