@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.13)
 
-project(spectator)
+project(spectator-cpp)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)

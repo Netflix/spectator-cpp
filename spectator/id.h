@@ -17,8 +17,7 @@ class Tags {
  public:
   Tags() = default;
 
-  Tags(
-      std::initializer_list<std::pair<absl::string_view, absl::string_view>> vs) {
+  Tags(std::initializer_list<std::pair<absl::string_view, absl::string_view>> vs) {
     for (auto& pair : vs) {
       add(pair.first, pair.second);
     }
