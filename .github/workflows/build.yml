@@ -12,6 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       BUILD_DIR: "cmake-build"
+      BUILD_TYPE: "Debug"
       CC: "gcc-11"
       CXX: "g++-11"
       LANG: "en_US.UTF-8"
@@ -38,19 +39,23 @@ jobs:
           python3 -V
 
           echo "==== conan ===="
-          pip install "conan==1.62.0"
+          pip install -r requirements.txt
           conan --version
           if [[ ! -f ~/.conan/profiles/default ]]; then conan profile new default --detect; fi
           conan profile update settings.compiler.libcxx=libstdc++11 default
 
       - name: Install Project Dependencies
         run: |
-          conan install . --build --install-folder $BUILD_DIR --profile ./sanitized
+          if [[ "$BUILD_TYPE" == "Debug" ]]; then
+            conan install . --build --install-folder $BUILD_DIR --profile ./sanitized
+          else
+            conan install . --build=missing --install-folder $BUILD_DIR
+          fi
 
       - name: Build spectator-cpp
         run: |
           cd $BUILD_DIR
-          cmake .. -DCMAKE_BUILD_TYPE=Debug
+          cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE ..
           cmake --build .
 
       - name: Test spectator-cpp
