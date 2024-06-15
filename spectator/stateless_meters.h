@@ -60,6 +60,18 @@ class StatelessMeter {
 };
 
 template <typename Pub>
+class AgeGauge : public StatelessMeter<Pub> {
+ public:
+  AgeGauge(IdPtr id, Pub* publisher)
+      : StatelessMeter<Pub>(std::move(id), publisher) {}
+  void Now() noexcept { this->send(0); }
+  void Set(double value) noexcept { this->send(value); }
+
+ protected:
+  std::string_view Type() override { return "A"; }
+};
+
+template <typename Pub>
 class Counter : public StatelessMeter<Pub> {
  public:
   Counter(IdPtr id, Pub* publisher)
@@ -107,17 +119,6 @@ class MaxGauge : public StatelessMeter<Pub> {
 };
 
 template <typename Pub>
-class AgeGauge : public StatelessMeter<Pub> {
- public:
-  AgeGauge(IdPtr id, Pub* publisher)
-      : StatelessMeter<Pub>(std::move(id), publisher) {}
-  void Set(double value) noexcept { this->send(value); }
-
- protected:
-  std::string_view Type() override { return "A"; }
-};
-
-template <typename Pub>
 class MonotonicCounter : public StatelessMeter<Pub> {
  public:
   MonotonicCounter(IdPtr id, Pub* publisher)
@@ -126,6 +127,17 @@ class MonotonicCounter : public StatelessMeter<Pub> {
 
  protected:
   std::string_view Type() override { return "C"; }
+};
+
+template <typename Pub>
+class MonotonicCounterUint : public StatelessMeter<Pub> {
+ public:
+  MonotonicCounterUint(IdPtr id, Pub* publisher)
+      : StatelessMeter<Pub>(std::move(id), publisher) {}
+  void Set(uint64_t amount) noexcept { this->send(amount); }
+
+ protected:
+  std::string_view Type() override { return "U"; }
 };
 
 template <typename Pub>

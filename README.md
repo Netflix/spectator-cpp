@@ -2,13 +2,8 @@
 
 # Spectator-cpp
 
-Simple library for instructing code to record dimensional time series.  It sends all activity to
-a [spectatord](https://github.com/Netflix-Skunkworks/spectatord) sidecar.
-
-## Description
-
-This implements a basic [Spectator](https://github.com/Netflix/spectator) library for instrumenting
-C++ applications, sending all metric activity to a sidecar. 
+This implements a basic [Spectator](https://github.com/Netflix/spectator) library for instrumenting Go applications. It
+consists of a thin client designed to send metrics through [spectatord](https://github.com/Netflix-Skunkworks/spectatord).
 
 ## Instrumenting Code
 
@@ -80,19 +75,29 @@ int main() {
   }
 }
 ```
+
 ## High-Volume Publishing
 
-By default, the library sends every meter change to the spectatord sidecar immediately. This involves a blocking `send` call and underlying system calls, and may not be the most efficient way to publish metrics in high-volume use cases.
-For this purpose a simple buffering functionality in `Publisher` is implemented, and it can be turned on by passing a buffer size to the `spectator::Config` constructor. It is important to note that, until this buffer fills up, the `Publisher` will not send nay meters to the sidecar. Therefore, if your application doesn't emit meters at a high rate, you should either keep the buffer very small, or do not configure a buffer size at all, which will fall back to the "publish immediately" mode of operation.
+By default, the library sends every meter change to the spectatord sidecar immediately. This involves a blocking
+`send` call and underlying system calls, and may not be the most efficient way to publish metrics in high-volume
+use cases. For this purpose a simple buffering functionality in `Publisher` is implemented, and it can be turned
+on by passing a buffer size to the `spectator::Config` constructor. It is important to note that, until this buffer
+fills up, the `Publisher` will not send nay meters to the sidecar. Therefore, if your application doesn't emit
+meters at a high rate, you should either keep the buffer very small, or do not configure a buffer size at all,
+which will fall back to the "publish immediately" mode of operation.
 
 ## Local Development
 
 ```shell
+# setup python venv and activate, to gain access to conan cli
 ./setup-venv.sh
 source venv/bin/activate
-./build.sh  # [clean|skiptest]
+
+# link clion default build directory to our build directory
+ln -s cmake-build cmake-build-debug
+
+./build.sh  # [clean|clean --force|skiptest]
 ```
 
 * CLion > Preferences > Plugins > Marketplace > Conan > Install
 * CLion > Preferences > Build, Execution, Deploy > Conan > Conan Executable: $PROJECT_HOME/venv/bin/conan
-* CLion > Bottom Bar: Conan > Left Button: Match Profile > CMake Profile: Debug, Conan Profile: default
