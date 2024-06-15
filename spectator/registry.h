@@ -54,16 +54,20 @@ struct single_table_state {
     return new_meter;
   }
 
+  auto get_age_gauge(IdPtr id) {
+    return get_or_create<typename types::age_gauge_t>(std::move(id));
+  }
+
   auto get_counter(IdPtr id) {
     return get_or_create<typename types::counter_t>(std::move(id));
   }
 
-  auto get_gauge(IdPtr id) {
-    return get_or_create<typename types::gauge_t>(std::move(id));
+  auto get_ds(IdPtr id) {
+    return get_or_create<typename types::ds_t>(std::move(id));
   }
 
-  auto get_age_gauge(IdPtr id) {
-    return get_or_create<typename types::age_gauge_t>(std::move(id));
+  auto get_gauge(IdPtr id) {
+    return get_or_create<typename types::gauge_t>(std::move(id));
   }
 
   auto get_max_gauge(IdPtr id) {
@@ -74,12 +78,8 @@ struct single_table_state {
     return get_or_create<typename types::monotonic_counter_t>(std::move(id));
   }
 
-  auto get_timer(IdPtr id) {
-    return get_or_create<typename types::timer_t>(std::move(id));
-  }
-
-  auto get_ds(IdPtr id) {
-    return get_or_create<typename types::ds_t>(std::move(id));
+  auto get_monotonic_counter_uint(IdPtr id) {
+    return get_or_create<typename types::monotonic_counter_uint_t>(std::move(id));
   }
 
   auto get_perc_ds(IdPtr id, int64_t min, int64_t max) {
@@ -89,6 +89,10 @@ struct single_table_state {
   auto get_perc_timer(IdPtr id, std::chrono::nanoseconds min,
                       std::chrono::nanoseconds max) {
     return get_or_create<typename types::perc_timer_t>(std::move(id), min, max);
+  }
+
+  auto get_timer(IdPtr id) {
+    return get_or_create<typename types::timer_t>(std::move(id));
   }
 
   auto measurements() {
@@ -114,6 +118,8 @@ template <typename State, typename Types = typename State::types>
 class base_registry {
  public:
   using logger_ptr = std::shared_ptr<spdlog::logger>;
+  using age_gauge_t = typename Types::age_gauge_t;
+  using age_gauge_ptr = std::shared_ptr<age_gauge_t>;
   using counter_t = typename Types::counter_t;
   using counter_ptr = std::shared_ptr<counter_t>;
   using dist_summary_t = typename Types::ds_t;
@@ -122,10 +128,10 @@ class base_registry {
   using gauge_ptr = std::shared_ptr<gauge_t>;
   using max_gauge_t = typename Types::max_gauge_t;
   using max_gauge_ptr = std::shared_ptr<max_gauge_t>;
-  using age_gauge_t = typename Types::age_gauge_t;
-  using age_gauge_ptr = std::shared_ptr<age_gauge_t>;
   using monotonic_counter_t = typename Types::monotonic_counter_t;
   using monotonic_counter_ptr = std::shared_ptr<monotonic_counter_t>;
+  using monotonic_counter_uint_t = typename Types::monotonic_counter_uint_t;
+  using monotonic_counter_uint_ptr = std::shared_ptr<monotonic_counter_uint_t>;
   using perc_dist_summary_t = typename Types::perc_ds_t;
   using perc_dist_summary_ptr = std::shared_ptr<perc_dist_summary_t>;
   using perc_timer_t = typename Types::perc_timer_t;
@@ -136,7 +142,16 @@ class base_registry {
   explicit base_registry(logger_ptr logger = DefaultLogger())
       : logger_(std::move(logger)) {}
 
-  auto GetCounter(const IdPtr& id) { return state_.get_counter(final_id(id)); }
+  auto GetAgeGauge(const IdPtr& id) {
+    return state_.get_age_gauge(final_id(id));
+  }
+  auto GetAgeGauge(absl::string_view name, Tags tags = {}) {
+    return GetAgeGauge(Id::of(name, std::move(tags)));
+  }
+
+  auto GetCounter(const IdPtr& id) {
+    return state_.get_counter(final_id(id));
+  }
   auto GetCounter(absl::string_view name, Tags tags = {}) {
     return GetCounter(Id::of(name, std::move(tags)));
   }
@@ -148,7 +163,9 @@ class base_registry {
     return GetDistributionSummary(Id::of(name, std::move(tags)));
   }
 
-  auto GetGauge(const IdPtr& id) { return state_.get_gauge(final_id(id)); }
+  auto GetGauge(const IdPtr& id) {
+    return state_.get_gauge(final_id(id));
+  }
   auto GetGauge(absl::string_view name, Tags tags = {}) {
     return GetGauge(Id::of(name, std::move(tags)));
   }
@@ -160,13 +177,6 @@ class base_registry {
     return GetMaxGauge(Id::of(name, std::move(tags)));
   }
 
-  auto GetAgeGauge(const IdPtr& id) {
-    return state_.get_age_gauge(final_id(id));
-  }
-  auto GetAgeGauge(absl::string_view name, Tags tags = {}) {
-    return GetAgeGauge(Id::of(name, std::move(tags)));
-  }
-
   auto GetMonotonicCounter(const IdPtr& id) {
     return state_.get_monotonic_counter(final_id(id));
   }
@@ -174,59 +184,53 @@ class base_registry {
     return GetMonotonicCounter(Id::of(name, std::move(tags)));
   }
 
-  auto GetTimer(const IdPtr& id) { return state_.get_timer(final_id(id)); }
-  auto GetTimer(absl::string_view name, Tags tags = {}) {
-    return GetTimer(Id::of(name, std::move(tags)));
+  auto GetMonotonicCounterUint(const IdPtr& id) {
+    return state_.get_monotonic_counter_uint(final_id(id));
+  }
+  auto GetMonotonicCounterUint(absl::string_view name, Tags tags = {}) {
+    return GetMonotonicCounterUint(Id::of(name, std::move(tags)));
   }
 
-  auto GetPercentileDistributionSummary(const IdPtr& id, int64_t min,
-                                        int64_t max) {
+  auto GetPercentileDistributionSummary(const IdPtr& id, int64_t min, int64_t max) {
     return state_.get_perc_ds(final_id(id), min, max);
   }
-
-  auto GetPercentileDistributionSummary(absl::string_view name, int64_t min,
-                                        int64_t max) {
+  auto GetPercentileDistributionSummary(absl::string_view name, int64_t min, int64_t max) {
     return GetPercentileDistributionSummary(Id::of(name), min, max);
   }
-
   auto GetPercentileDistributionSummary(absl::string_view name, Tags tags,
                                         int64_t min, int64_t max) {
-    return GetPercentileDistributionSummary(Id::of(name, std::move(tags)), min,
-                                            max);
+    return GetPercentileDistributionSummary(Id::of(name, std::move(tags)), min, max);
   }
 
-  auto GetPercentileTimer(const IdPtr& id, absl::Duration min,
-                          absl::Duration max) {
+  auto GetPercentileTimer(const IdPtr& id, absl::Duration min, absl::Duration max) {
     return state_.get_perc_timer(final_id(id), min, max);
   }
-
   auto GetPercentileTimer(const IdPtr& id, std::chrono::nanoseconds min,
                           std::chrono::nanoseconds max) {
-    return state_.get_perc_timer(final_id(id), absl::FromChrono(min),
-                                 absl::FromChrono(max));
+    return state_.get_perc_timer(final_id(id), absl::FromChrono(min), absl::FromChrono(max));
   }
-
-  auto GetPercentileTimer(absl::string_view name, absl::Duration min,
-                          absl::Duration max) {
+  auto GetPercentileTimer(absl::string_view name, absl::Duration min, absl::Duration max) {
     return GetPercentileTimer(Id::of(name), min, max);
   }
-
-  auto GetPercentileTimer(absl::string_view name, Tags tags, absl::Duration min,
-                          absl::Duration max) {
+  auto GetPercentileTimer(absl::string_view name, Tags tags,
+                          absl::Duration min, absl::Duration max) {
     return GetPercentileTimer(Id::of(name, std::move(tags)), min, max);
   }
-
-  auto GetPercentileTimer(absl::string_view name, std::chrono::nanoseconds min,
-                          std::chrono::nanoseconds max) {
-    return GetPercentileTimer(Id::of(name), absl::FromChrono(min),
+  auto GetPercentileTimer(absl::string_view name,
+                          std::chrono::nanoseconds min, std::chrono::nanoseconds max) {
+    return GetPercentileTimer(Id::of(name), absl::FromChrono(min), absl::FromChrono(max));
+  }
+  auto GetPercentileTimer(absl::string_view name, Tags tags,
+                          std::chrono::nanoseconds min, std::chrono::nanoseconds max) {
+    return GetPercentileTimer(Id::of(name, std::move(tags)), absl::FromChrono(min),
                               absl::FromChrono(max));
   }
 
-  auto GetPercentileTimer(absl::string_view name, Tags tags,
-                          std::chrono::nanoseconds min,
-                          std::chrono::nanoseconds max) {
-    return GetPercentileTimer(Id::of(name, std::move(tags)),
-                              absl::FromChrono(min), absl::FromChrono(max));
+  auto GetTimer(const IdPtr& id) {
+    return state_.get_timer(final_id(id));
+  }
+  auto GetTimer(absl::string_view name, Tags tags = {}) {
+    return GetTimer(Id::of(name, std::move(tags)));
   }
 
   auto Measurements() { return state_.measurements(); }
@@ -253,6 +257,7 @@ struct stateless_types {
   using max_gauge_t = MaxGauge<Pub>;
   using age_gauge_t = AgeGauge<Pub>;
   using monotonic_counter_t = MonotonicCounter<Pub>;
+  using monotonic_counter_uint_t = MonotonicCounterUint<Pub>;
   using perc_timer_t = PercentileTimer<Pub>;
   using perc_ds_t = PercentileDistributionSummary<Pub>;
   using timer_t = Timer<Pub>;
@@ -264,49 +269,45 @@ struct stateless {
   using types = Types;
   std::unique_ptr<typename types::publisher_t> publisher;
 
-  auto get_counter(IdPtr id) {
-    return std::make_shared<typename types::counter_t>(std::move(id),
-                                                       publisher.get());
-  }
-
-  auto get_gauge(IdPtr id) {
-    return std::make_shared<typename types::gauge_t>(std::move(id),
-                                                     publisher.get());
-  }
-
-  auto get_max_gauge(IdPtr id) {
-    return std::make_shared<typename types::max_gauge_t>(std::move(id),
-                                                         publisher.get());
-  }
-
   auto get_age_gauge(IdPtr id) {
-    return std::make_shared<typename types::age_gauge_t>(std::move(id),
-                                                         publisher.get());
+    return std::make_shared<typename types::age_gauge_t>(std::move(id), publisher.get());
   }
 
-  auto get_monotonic_counter(IdPtr id) {
-    return std::make_shared<typename types::monotonic_counter_t>(
-        std::move(id), publisher.get());
-  }
-
-  auto get_timer(IdPtr id) {
-    return std::make_shared<typename types::timer_t>(std::move(id),
-                                                     publisher.get());
+  auto get_counter(IdPtr id) {
+    return std::make_shared<typename types::counter_t>(std::move(id), publisher.get());
   }
 
   auto get_ds(IdPtr id) {
-    return std::make_shared<typename types::ds_t>(std::move(id),
-                                                  publisher.get());
+    return std::make_shared<typename types::ds_t>(std::move(id), publisher.get());
+  }
+
+  auto get_gauge(IdPtr id) {
+    return std::make_shared<typename types::gauge_t>(std::move(id), publisher.get());
+  }
+
+  auto get_max_gauge(IdPtr id) {
+    return std::make_shared<typename types::max_gauge_t>(std::move(id), publisher.get());
+  }
+
+  auto get_monotonic_counter(IdPtr id) {
+    return std::make_shared<typename types::monotonic_counter_t>(std::move(id), publisher.get());
+  }
+
+  auto get_monotonic_counter_uint(IdPtr id) {
+    return std::make_shared<typename types::monotonic_counter_uint_t>(std::move(id),
+                                                                      publisher.get());
   }
 
   auto get_perc_ds(IdPtr id, int64_t min, int64_t max) {
-    return std::make_shared<typename types::perc_ds_t>(
-        std::move(id), publisher.get(), min, max);
+    return std::make_shared<typename types::perc_ds_t>(std::move(id), publisher.get(), min, max);
   }
 
   auto get_perc_timer(IdPtr id, absl::Duration min, absl::Duration max) {
-    return std::make_shared<typename types::perc_timer_t>(
-        std::move(id), publisher.get(), min, max);
+    return std::make_shared<typename types::perc_timer_t>(std::move(id), publisher.get(), min, max);
+  }
+
+  auto get_timer(IdPtr id) {
+    return std::make_shared<typename types::timer_t>(std::move(id), publisher.get());
   }
 
   auto measurements() { return std::vector<Measurement>{}; }
