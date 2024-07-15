@@ -13,8 +13,8 @@ TEST(Counter, Activity) {
   TestPublisher publisher;
   auto id = std::make_shared<Id>("ctr.name", Tags{});
   auto id2 = std::make_shared<Id>("c2", Tags{{"key", "val"}});
-  Counter<TestPublisher> c{id, &publisher};
-  Counter<TestPublisher> c2{id2, &publisher};
+  Counter c{id, &publisher};
+  Counter c2{id2, &publisher};
   c.Increment();
   c2.Add(1.2);
   c.Add(0.1);
@@ -25,10 +25,18 @@ TEST(Counter, Activity) {
 
 TEST(Counter, Id) {
   TestPublisher publisher;
-  Counter<TestPublisher> c{std::make_shared<Id>("foo", Tags{{"key", "val"}}),
+  Counter c{std::make_shared<Id>("foo", Tags{{"key", "val"}}),
                            &publisher};
   auto id = std::make_shared<Id>("foo", Tags{{"key", "val"}});
   EXPECT_EQ(*(c.MeterId()), *id);
 }
 
+TEST(Counter, InvalidTags) {
+  TestPublisher publisher;
+  // test with a single tag, because tags order is not guaranteed in a flat_hash_map
+  auto id = std::make_shared<Id>("test`!@#$%^&*()-=~_+[]{}\\|;:'\",<.>/?foo",
+                                 Tags{{"tag1,:=", "value1,:="}});
+  Counter c{id, &publisher};
+  EXPECT_EQ("c:test______^____-_~______________.___foo,tag1___=value1___:", c.GetPrefix());
+}
 }  // namespace

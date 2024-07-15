@@ -25,4 +25,12 @@ TEST(AgeGauge, Set) {
   EXPECT_EQ(publisher.SentMessages(), expected);
 }
 
+TEST(AgeGauge, InvalidTags) {
+  TestPublisher publisher;
+  // test with a single tag, because tags order is not guaranteed in a flat_hash_map
+  auto id = std::make_shared<Id>("test`!@#$%^&*()-=~_+[]{}\\|;:'\",<.>/?foo",
+                                 Tags{{"tag1,:=", "value1,:="}});
+  AgeGauge g{id, &publisher};
+  EXPECT_EQ("A:test______^____-_~______________.___foo,tag1___=value1___:", g.GetPrefix());
+}
 }  // namespace

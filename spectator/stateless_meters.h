@@ -6,14 +6,39 @@
 namespace spectator {
 
 namespace detail {
+
+#include "valid_chars.inc"
+
 inline std::string as_string(std::string_view v) { 
     return {v.data(), v.size()}; 
 }
-inline std::string create_prefix(const Id& id, std::string_view type_name) {
-  std::string res = as_string(type_name) + ":" + id.Name();
-  for (const auto& tags : id.GetTags()) {
-    absl::StrAppend(&res, ",", tags.first, "=", tags.second);
+
+inline bool contains_non_atlas_char(const std::string& input) {
+  return std::any_of(input.begin(), input.end(), [](char c) { return !kAtlasChars[c]; });
+}
+
+inline std::string replace_invalid_characters(const std::string& input) {
+  if (contains_non_atlas_char(input)) {
+    std::string result{input};
+    for (char &c : result) {
+      if (!kAtlasChars[c]) {
+        c = '_';
+      }
+    }
+    return result;
+  } else {
+    return input;
   }
+}
+
+inline std::string create_prefix(const Id& id, std::string_view type_name) {
+  std::string res = as_string(type_name) + ":" + replace_invalid_characters(id.Name());
+  for (const auto& tags : id.GetTags()) {
+    auto first = replace_invalid_characters(tags.first);
+    auto second = replace_invalid_characters(tags.second);
+    absl::StrAppend(&res, ",", first, "=", second);
+  }
+
   absl::StrAppend(&res, ":");
   return res;
 }
@@ -38,6 +63,12 @@ class StatelessMeter {
     assert(publisher_ != nullptr);
   }
   virtual ~StatelessMeter() = default;
+  std::string GetPrefix() {
+    if (value_prefix_.empty()) {
+      value_prefix_ = detail::create_prefix(*id_, Type());
+    }
+    return value_prefix_;
+  }
   [[nodiscard]] IdPtr MeterId() const noexcept { return id_; }
   [[nodiscard]] virtual std::string_view Type() = 0;
 
