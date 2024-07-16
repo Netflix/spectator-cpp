@@ -18,8 +18,8 @@ TEST(MonotonicCounterUint, Set) {
 
   c.Set(42);
   c2.Set(2);
-  c.Set(43);
-  std::vector<std::string> expected = {"U:ctr:42", "U:ctr2,key=val:2", "U:ctr:43"};
+  c.Set(-1);
+  std::vector<std::string> expected = {"U:ctr:42", "U:ctr2,key=val:2", "U:ctr:18446744073709551615"};
   EXPECT_EQ(publisher.SentMessages(), expected);
 }
 }  // namespace
