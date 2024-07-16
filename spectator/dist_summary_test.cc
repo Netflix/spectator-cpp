@@ -22,4 +22,12 @@ TEST(DistributionSummary, Record) {
   EXPECT_EQ(publisher.SentMessages(), expected);
 }
 
+TEST(DistributionSummary, InvalidTags) {
+  TestPublisher publisher;
+  // test with a single tag, because tags order is not guaranteed in a flat_hash_map
+  auto id = std::make_shared<Id>("test`!@#$%^&*()-=~_+[]{}\\|;:'\",<.>/?foo",
+                                 Tags{{"tag1,:=", "value1,:="}});
+  DistributionSummary d{id, &publisher};
+  EXPECT_EQ("d:test______^____-_~______________.___foo,tag1___=value1___:", d.GetPrefix());
+}
 }  // namespace

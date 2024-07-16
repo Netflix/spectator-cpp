@@ -24,4 +24,12 @@ TEST(MaxGauge, Set) {
   EXPECT_EQ(publisher.SentMessages(), expected);
 }
 
+TEST(MaxGauge, InvalidTags) {
+  TestPublisher publisher;
+  // test with a single tag, because tags order is not guaranteed in a flat_hash_map
+  auto id = std::make_shared<Id>("test`!@#$%^&*()-=~_+[]{}\\|;:'\",<.>/?foo",
+                                 Tags{{"tag1,:=", "value1,:="}});
+  MaxGauge g{id, &publisher};
+  EXPECT_EQ("m:test______^____-_~______________.___foo,tag1___=value1___:", g.GetPrefix());
+}
 }  // namespace

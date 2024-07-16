@@ -22,4 +22,13 @@ TEST(MonotonicCounterUint, Set) {
   std::vector<std::string> expected = {"U:ctr:42", "U:ctr2,key=val:2", "U:ctr:18446744073709551615"};
   EXPECT_EQ(publisher.SentMessages(), expected);
 }
+
+TEST(MonotonicCounterUint, InvalidTags) {
+  TestPublisher publisher;
+  // test with a single tag, because tags order is not guaranteed in a flat_hash_map
+  auto id = std::make_shared<Id>("test`!@#$%^&*()-=~_+[]{}\\|;:'\",<.>/?foo",
+                                 Tags{{"tag1,:=", "value1,:="}});
+  MonotonicCounterUint c{id, &publisher};
+  EXPECT_EQ("U:test______^____-_~______________.___foo,tag1___=value1___:", c.GetPrefix());
+}
 }  // namespace

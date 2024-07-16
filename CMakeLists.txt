@@ -39,6 +39,17 @@ add_library(spectator
     "spectator/registry.h"
     "spectator/stateful_meters.h"
     "spectator/stateless_meters.h"
+    "spectator/valid_chars.inc"
 )
 target_link_libraries(spectator ${CONAN_LIBS})
 target_link_options(spectator PRIVATE "$<$<CONFIG:Release>:-static-libstdc++>")
+
+#-- generator tools
+add_executable(gen_valid_chars "tools/gen_valid_chars.cc")
+
+#-- file generators, must exist where the outputs are referenced
+add_custom_command(
+    OUTPUT "spectator/valid_chars.inc"
+    COMMAND "${CMAKE_BINARY_DIR}/bin/gen_valid_chars" > "${CMAKE_SOURCE_DIR}/spectator/valid_chars.inc"
+    DEPENDS gen_valid_chars
+)

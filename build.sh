@@ -10,8 +10,11 @@ NC="\033[0m"
 if [[ "$1" == "clean" ]]; then
   echo -e "${BLUE}==== clean ====${NC}"
   rm -rf $BUILD_DIR
-  # remove all packages and binaries from the local cache, to allow swapping between Debug/Release builds
-  conan remove '*' --force
+  rm -f spectator/*.inc
+  if [[ "$2" == "--force" ]]; then
+    # remove all packages and binaries from the local cache, to allow swapping between Debug/Release builds
+    conan remove '*' --force
+  fi
 fi
 
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
