@@ -17,6 +17,7 @@ TEST(Id, Create) {
   std::shared_ptr<Id> id_of{Id::of("name", Tags{{"k", "v"}, {"k1", "v1"}})};
   EXPECT_EQ(id_of->Name(), "name");
   EXPECT_EQ(id_of->GetTags().size(), 2);
+  fmt::format("{}", id);
 }
 
 TEST(Id, Tags) {
