@@ -53,6 +53,14 @@ class StatelessMeter {
     publisher_->send(msg);
   }
 
+  void send_uint(uint64_t value) {
+    if (value_prefix_.empty()) {
+      value_prefix_ = detail::create_prefix(*id_, Type());
+    }
+    auto msg = absl::StrFormat("%s%u", value_prefix_, value);
+    publisher_->send(msg);
+  }
+
  private:
   IdPtr id_;
   Pub* publisher_;
@@ -134,7 +142,7 @@ class MonotonicCounterUint : public StatelessMeter<Pub> {
  public:
   MonotonicCounterUint(IdPtr id, Pub* publisher)
       : StatelessMeter<Pub>(std::move(id), publisher) {}
-  void Set(uint64_t amount) noexcept { this->send(amount); }
+  void Set(uint64_t amount) noexcept { this->send_uint(amount); }
 
  protected:
   std::string_view Type() override { return "U"; }
