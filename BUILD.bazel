@@ -14,6 +14,7 @@ cc_library(
         "spectator/registry.h",
         "spectator/stateful_meters.h",
         "spectator/stateless_meters.h",
+        "spectator/valid_chars.inc",
     ],
     visibility = ["//visibility:public"],
     deps = [

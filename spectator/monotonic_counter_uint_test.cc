@@ -5,30 +5,30 @@
 namespace {
 
 using spectator::Id;
-using spectator::MonotonicCounter;
+using spectator::MonotonicCounterUint;
 using spectator::Tags;
 using spectator::TestPublisher;
 
-TEST(MonotonicCounter, Set) {
+TEST(MonotonicCounterUint, Set) {
   TestPublisher publisher;
   auto id = std::make_shared<Id>("ctr", Tags{});
   auto id2 = std::make_shared<Id>("ctr2", Tags{{"key", "val"}});
-  MonotonicCounter<TestPublisher> c{id, &publisher};
-  MonotonicCounter<TestPublisher> c2{id2, &publisher};
+  MonotonicCounterUint<TestPublisher> c{id, &publisher};
+  MonotonicCounterUint<TestPublisher> c2{id2, &publisher};
 
-  c.Set(42.1);
+  c.Set(42);
   c2.Set(2);
-  c.Set(43);
-  std::vector<std::string> expected = {"C:ctr:42.1", "C:ctr2,key=val:2", "C:ctr:43"};
+  c.Set(-1);
+  std::vector<std::string> expected = {"U:ctr:42", "U:ctr2,key=val:2", "U:ctr:18446744073709551615"};
   EXPECT_EQ(publisher.SentMessages(), expected);
 }
 
-TEST(MonotonicCounter, InvalidTags) {
+TEST(MonotonicCounterUint, InvalidTags) {
   TestPublisher publisher;
   // test with a single tag, because tags order is not guaranteed in a flat_hash_map
   auto id = std::make_shared<Id>("test`!@#$%^&*()-=~_+[]{}\\|;:'\",<.>/?foo",
                                  Tags{{"tag1,:=", "value1,:="}});
-  MonotonicCounter c{id, &publisher};
-  EXPECT_EQ("C:test______^____-_~______________.___foo,tag1___=value1___:", c.GetPrefix());
+  MonotonicCounterUint c{id, &publisher};
+  EXPECT_EQ("U:test______^____-_~______________.___foo,tag1___=value1___:", c.GetPrefix());
 }
 }  // namespace

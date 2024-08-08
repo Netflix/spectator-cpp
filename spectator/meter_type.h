@@ -4,17 +4,17 @@
 
 namespace spectator {
 enum class MeterType {
+  AgeGauge,
   Counter,
   DistSummary,
   Gauge,
   MaxGauge,
-  AgeGauge,
   MonotonicCounter,
-  Timer,
+  MonotonicCounterUint,
+  PercentileDistSummary,
   PercentileTimer,
-  PercentileDistSummary
+  Timer
 };
-
 }
 
 // Provide a formatter for MeterType
@@ -25,6 +25,9 @@ struct fmt::formatter<spectator::MeterType> : fmt::formatter<std::string_view> {
     using namespace spectator;
     std::string_view s = "unknown";
     switch (meter_type) {
+      case MeterType::AgeGauge:
+        s = "age-gauge";
+        break;
       case MeterType::Counter:
         s = "counter";
         break;
@@ -37,20 +40,20 @@ struct fmt::formatter<spectator::MeterType> : fmt::formatter<std::string_view> {
       case MeterType::MaxGauge:
         s = "max-gauge";
         break;
-      case MeterType::AgeGauge:
-        s = "age-gauge";
-        break;
       case MeterType::MonotonicCounter:
         s = "monotonic-counter";
         break;
-      case MeterType::Timer:
-        s = "timer";
+      case MeterType::MonotonicCounterUint:
+        s = "monotonic-counter-uint";
+        break;
+      case MeterType::PercentileDistSummary:
+        s = "percentile-distribution-summary";
         break;
       case MeterType::PercentileTimer:
         s = "percentile-timer";
         break;
-      case MeterType::PercentileDistSummary:
-        s = "percentile-distribution-summary";
+      case MeterType::Timer:
+        s = "timer";
         break;
     }
     return fmt::formatter<std::string_view>::format(s, context);
