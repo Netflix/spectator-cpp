@@ -324,7 +324,7 @@ class SpectatordRegistry
             std::move(logger)) {
     extra_tags_ = Tags::from(config.common_tags);
     state_.publisher =
-        std::make_unique<SpectatordPublisher>(config.endpoint, config.bytes_to_buffer, logger_);
+        std::make_unique<SpectatordPublisher>(config.endpoint, config.bytes_to_buffer, config.flush_interval, logger_);
   }
 };
 

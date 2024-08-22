@@ -83,6 +83,37 @@ TEST(Publisher, UnixBuffer) {
   unlink(path.c_str());
 }
 
+TEST(Publisher, UnixBufferTimeFlush) {
+  auto logger = spectator::DefaultLogger();
+  const auto* dir = first_not_null(std::getenv("TMPDIR"), "/tmp");
+  auto path = fmt::format("{}/testserver.{}", dir, getpid());
+  TestUnixServer server{path};
+  server.Start();
+  logger->info("Unix Server started on path {}", path);
+
+  // Set buffer size to a large value so that flushing is based on time
+  SpectatordPublisher publisher{fmt::format("unix:{}", path), 10000, std::chrono::seconds(5)};
+  Counter c{std::make_shared<Id>("counter", Tags{}), &publisher};
+
+  // Wait for 3 seconds, increment, and the counter should not be flushed (3s is less than the 5s flush interval)
+  std::this_thread::sleep_for(std::chrono::seconds(3));
+  c.Increment();
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  auto msgs = server.GetMessages();
+  EXPECT_TRUE(msgs.empty());
+
+  // Wait for another 3 seconds, increment, and the counter should be flushed (6s is greater than 5s flush interval)
+  std::this_thread::sleep_for(std::chrono::seconds(3));
+  c.Increment();
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  msgs = server.GetMessages();
+  std::vector<std::string> first_flush{"c:counter:1\nc:counter:1"};
+  EXPECT_EQ(msgs, first_flush);
+
+  server.Stop();
+  unlink(path.c_str());
+}
+
 TEST(Publisher, Nop) {
   SpectatordPublisher publisher{"", 0};
   Counter c{std::make_shared<Id>("counter", Tags{}), &publisher};
