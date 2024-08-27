@@ -12,7 +12,7 @@ class SpectatordPublisher {
   explicit SpectatordPublisher(
       absl::string_view endpoint,
       uint32_t bytes_to_buffer = 0,
-      std::chrono::seconds flush_interval = std::chrono::seconds(60),
+      std::chrono::milliseconds flush_interval = std::chrono::milliseconds(60000),
       std::shared_ptr<spdlog::logger> logger = DefaultLogger());
   SpectatordPublisher(const SpectatordPublisher&) = delete;
 
@@ -36,7 +36,7 @@ class SpectatordPublisher {
   std::string buffer_;
   uint32_t bytes_to_buffer_;
   std::chrono::steady_clock::time_point last_flush_time_;
-  std::chrono::seconds flush_interval_;
+  const std::chrono::milliseconds flush_interval_;
 };
 
 }  // namespace spectator

@@ -92,18 +92,18 @@ TEST(Publisher, UnixBufferTimeFlush) {
   logger->info("Unix Server started on path {}", path);
 
   // Set buffer size to a large value so that flushing is based on time
-  SpectatordPublisher publisher{fmt::format("unix:{}", path), 10000, std::chrono::seconds(5)};
+  SpectatordPublisher publisher{fmt::format("unix:{}", path), 10000, std::chrono::milliseconds(500)};
   Counter c{std::make_shared<Id>("counter", Tags{}), &publisher};
 
-  // Wait for 3 seconds, increment, and the counter should not be flushed (3s is less than the 5s flush interval)
-  std::this_thread::sleep_for(std::chrono::seconds(3));
+  // Wait for 300ms, increment, and the counter should not be flushed (300ms is less than the 500ms flush interval)
+  std::this_thread::sleep_for(std::chrono::milliseconds(300));
   c.Increment();
   std::this_thread::sleep_for(std::chrono::milliseconds(50));
   auto msgs = server.GetMessages();
   EXPECT_TRUE(msgs.empty());
 
-  // Wait for another 3 seconds, increment, and the counter should be flushed (6s is greater than 5s flush interval)
-  std::this_thread::sleep_for(std::chrono::seconds(3));
+  // Wait for another 300ms, increment, and the counter should be flushed (600ms is greater than 500ms flush interval)
+  std::this_thread::sleep_for(std::chrono::milliseconds(300));
   c.Increment();
   std::this_thread::sleep_for(std::chrono::milliseconds(50));
   msgs = server.GetMessages();

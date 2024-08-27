@@ -8,7 +8,7 @@ static const char NEW_LINE = '\n';
 
 SpectatordPublisher::SpectatordPublisher(absl::string_view endpoint,
                                          uint32_t bytes_to_buffer,
-                                         std::chrono::seconds flush_interval,
+                                         std::chrono::milliseconds flush_interval,
                                          std::shared_ptr<spdlog::logger> logger)
     : logger_(std::move(logger)),
       udp_socket_(io_context_),
@@ -59,9 +59,9 @@ void SpectatordPublisher::setup_unix_domain(absl::string_view path) {
   std::string local_path{path};
   sender_ = [local_path, this](std::string_view msg) {
     buffer_.append(msg);
-    auto now = std::chrono::steady_clock::now();
-    bool should_flush = buffer_.length() >= bytes_to_buffer_ ||
-                        std::chrono::duration_cast<std::chrono::seconds>(now - last_flush_time_) >= flush_interval_;
+    const auto now = std::chrono::steady_clock::now();
+    const bool should_flush = buffer_.length() >= bytes_to_buffer_ ||
+                        now - last_flush_time_ >= flush_interval_;
 
     if (should_flush) {
       for (auto i = 0; i < 3; ++i) {
