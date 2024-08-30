@@ -9,6 +9,7 @@ struct Config {
   std::string endpoint;
   std::unordered_map<std::string, std::string> common_tags;
   uint32_t bytes_to_buffer;
+  const std::chrono::milliseconds flush_interval;
 };
 
 }  // namespace spectator
