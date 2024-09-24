@@ -131,11 +131,6 @@ class Id {
     }
   }
 
-  friend std::ostream& operator<<(std::ostream& os, const Id& id) {
-    os << fmt::format("{}", id);
-    return os;
-  }
-
   friend struct std::hash<Id>;
 
   friend struct std::hash<std::shared_ptr<Id>>;
@@ -159,6 +154,7 @@ using IdPtr = std::shared_ptr<Id>;
 }  // namespace spectator
 
 namespace std {
+
 template <>
 struct hash<spectator::Id> {
   size_t operator()(const spectator::Id& id) const { return id.Hash(); }
@@ -187,7 +183,7 @@ struct equal_to<shared_ptr<spectator::Id>> {
 }  // namespace std
 
 template <>
-struct fmt::formatter<spectator::Id> {
+struct fmt::formatter<spectator::Id> : fmt::formatter<std::string_view> {
   constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin()) {
     return ctx.begin();
   }
