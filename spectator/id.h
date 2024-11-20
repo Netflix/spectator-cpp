@@ -186,16 +186,39 @@ struct equal_to<shared_ptr<spectator::Id>> {
 
 }  // namespace std
 
-template <>
-struct fmt::formatter<spectator::Id> {
-  constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin()) {
-    return ctx.begin();
-  }
+template <> struct fmt::formatter<spectator::Tags>: formatter<std::string_view> {
+  auto format(const spectator::Tags& tags, format_context& ctx) const -> format_context::iterator {
+    std::string s;
+    auto size = tags.size();
 
-  // formatter for Ids
-  template <typename FormatContext>
-  auto format(const spectator::Id& id, FormatContext& context) {
-    return fmt::format_to(context.out(), "Id(name={}, tags={})", id.Name(),
-                          id.GetTags());
+    if (size > 0) {
+      // sort keys, to ensure stable output
+      std::vector<std::string> keys;
+      for (const auto& pair : tags) {
+        keys.push_back(pair.first);
+      }
+      std::sort(keys.begin(), keys.end());
+
+      s = "[";
+      for (const auto &key : keys) {
+        if (size > 1) {
+          s += key + "=" + tags.at(key) + ", ";
+        } else {
+          s += key + "=" + tags.at(key) + "]";
+        }
+        size -= 1;
+      }
+    } else {
+      s = "[]";
+    }
+
+    return fmt::formatter<std::string_view>::format(s, ctx);
+  }
+};
+
+template <> struct fmt::formatter<spectator::Id>: formatter<std::string_view> {
+  auto format(const spectator::Id& id, format_context& ctx) const -> format_context::iterator {
+    auto s = fmt::format("Id(name={}, tags={})", id.Name(), id.GetTags());
+    return fmt::formatter<std::string_view>::format(s, ctx);
   }
 };

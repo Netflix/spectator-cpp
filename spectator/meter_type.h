@@ -17,13 +17,11 @@ enum class MeterType {
 };
 }
 
-// Provide a formatter for MeterType
-template <>
-struct fmt::formatter<spectator::MeterType> : fmt::formatter<std::string_view> {
-  template <typename FormatContext>
-  auto format(const spectator::MeterType& meter_type, FormatContext& context) {
+template <> struct fmt::formatter<spectator::MeterType>: formatter<std::string_view> {
+  auto format(spectator::MeterType meter_type, format_context& ctx) const -> format_context::iterator {
     using namespace spectator;
     std::string_view s = "unknown";
+
     switch (meter_type) {
       case MeterType::AgeGauge:
         s = "age-gauge";
@@ -56,6 +54,7 @@ struct fmt::formatter<spectator::MeterType> : fmt::formatter<std::string_view> {
         s = "timer";
         break;
     }
-    return fmt::formatter<std::string_view>::format(s, context);
+
+    return fmt::formatter<std::string_view>::format(s, ctx);
   }
 };
