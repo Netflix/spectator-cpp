@@ -4,13 +4,19 @@ project(spectator-cpp)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-add_compile_options(-fno-omit-frame-pointer "$<$<CONFIG:Debug>:-fsanitize=address>")
-add_link_options(-fno-omit-frame-pointer "$<$<CONFIG:Debug>:-fsanitize=address>")
+add_compile_options(-pedantic -Werror -Wall -Wno-missing-braces -fno-omit-frame-pointer "$<$<CONFIG:Debug>:-fsanitize=address>")
+
+find_package(absl REQUIRED)
+find_package(asio REQUIRED)
+find_package(Backward REQUIRED)
+find_package(fmt REQUIRED)
+find_package(GTest REQUIRED)
+find_package(spdlog REQUIRED)
 
 include(CTest)
-include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-conan_basic_setup()
 
 #-- spectator_test test executable
 file(GLOB spectator_test_source_files
@@ -19,7 +25,10 @@ file(GLOB spectator_test_source_files
     "spectator/test_*.h"
 )
 add_executable(spectator_test ${spectator_test_source_files})
-target_link_libraries(spectator_test spectator ${CONAN_LIBS})
+target_link_libraries(spectator_test
+    spectator
+    gtest::gtest
+)
 add_test(
     NAME spectator_test
     COMMAND spectator_test
@@ -41,8 +50,13 @@ add_library(spectator
     "spectator/stateless_meters.h"
     "spectator/valid_chars.inc"
 )
-target_link_libraries(spectator ${CONAN_LIBS})
-target_link_options(spectator PRIVATE "$<$<CONFIG:Release>:-static-libstdc++>")
+target_link_libraries(spectator
+    abseil::abseil
+    asio::asio
+    Backward::Backward
+    fmt::fmt
+    spdlog::spdlog
+)
 
 #-- generator tools
 add_executable(gen_valid_chars "tools/gen_valid_chars.cc")
