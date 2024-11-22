@@ -4,7 +4,7 @@ from conan import ConanFile
 class SpectatorCppConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     requires = (
-        "abseil/20240722.0",
+        "abseil/20240116.2",
         "asio/1.32.0",
         "backward-cpp/1.6",
         "fmt/11.0.2",
