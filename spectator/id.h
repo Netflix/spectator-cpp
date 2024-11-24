@@ -217,8 +217,7 @@ template <> struct fmt::formatter<spectator::Tags>: formatter<std::string_view> 
 };
 
 template <> struct fmt::formatter<spectator::Id>: formatter<std::string_view> {
-  auto format(const spectator::Id& id, format_context& ctx) const -> format_context::iterator {
-    auto s = fmt::format("Id(name={}, tags={})", id.Name(), id.GetTags());
-    return fmt::formatter<std::string_view>::format(s, ctx);
+  static auto format(const spectator::Id& id, format_context& ctx) -> format_context::iterator {
+    return fmt::format_to(ctx.out(), "Id(name={}, tags={})", id.Name(), id.GetTags());
   }
 };

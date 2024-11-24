@@ -18,16 +18,8 @@ struct Measurement {
 
 }  // namespace spectator
 
-template <>
-struct fmt::formatter<spectator::Measurement> {
-  constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin()) {
-    return ctx.begin();
-  }
-
-  // formatter for Ids
-  template <typename FormatContext>
-  auto format(const spectator::Measurement& m, FormatContext& context) {
-    return fmt::format_to(context.out(), "Measurement({}, {})", *(m.id),
-                          m.value);
+template <> struct fmt::formatter<spectator::Measurement>: formatter<std::string_view> {
+  static auto format(const spectator::Measurement& m, format_context& ctx) -> format_context::iterator {
+    return fmt::format_to(ctx.out(), "Measurement({}, {})", *(m.id), m.value);
   }
 };
