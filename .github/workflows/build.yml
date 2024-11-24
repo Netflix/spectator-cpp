@@ -13,6 +13,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Restore Conan Cache
+        id: conan-cache-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            /home/runner/.conan2
+            /home/runner/work/spectator-cpp/spectator-cpp/cmake-build
+          key: ${{ runner.os }}-conan
+
       - name: Install System Dependencies
         run: |
           sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
@@ -23,3 +32,12 @@ jobs:
           ./setup-venv.sh
           source venv/bin/activate
           ./build.sh
+
+      - name: Save Conan Cache
+        id: conan-cache-save
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            /home/runner/.conan2
+            /home/runner/work/spectator-cpp/spectator-cpp/cmake-build
+          key: ${{ steps.conan-cache-restore.outputs.cache-primary-key }}
