@@ -21,7 +21,7 @@ enum class MeterType {
 template <>
 struct fmt::formatter<spectator::MeterType> : fmt::formatter<std::string_view> {
   template <typename FormatContext>
-  auto format(const spectator::MeterType& meter_type, FormatContext& ctx) {
+  auto format(const spectator::MeterType& meter_type, FormatContext& ctx) const {
     using namespace spectator;
     std::string_view s = "unknown";
     switch (meter_type) {

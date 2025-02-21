@@ -190,7 +190,7 @@ struct fmt::formatter<spectator::Id> : fmt::formatter<std::string_view> {
 
   // formatter for Ids
   template <typename FormatContext>
-  auto format(const spectator::Id& id, FormatContext& context) {
+  auto format(const spectator::Id& id, FormatContext& context) const {
     return fmt::format_to(context.out(), "Id(name={}, tags={})", id.Name(),
                           id.GetTags());
   }
