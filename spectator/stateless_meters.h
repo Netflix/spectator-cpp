@@ -137,12 +137,23 @@ class DistributionSummary : public StatelessMeter<Pub> {
 template <typename Pub>
 class Gauge : public StatelessMeter<Pub> {
  public:
-  Gauge(IdPtr id, Pub* publisher)
-      : StatelessMeter<Pub>(std::move(id), publisher) {}
+  Gauge(IdPtr id, Pub* publisher, const int ttl = 0)
+      : StatelessMeter<Pub>(std::move(id), publisher),
+        ttl{ttl} {}
+
   void Set(double value) noexcept { this->send(value); }
 
  protected:
-  std::string_view Type() override { return "g"; }
+  std::string_view Type() override {
+      if (ttl > 0) {
+          return "f," + std::to_string(ttl);
+      } else {
+          std::cout << "";
+      }
+      return "g";
+  }
+ private:
+  int ttl;
 };
 
 template <typename Pub>
