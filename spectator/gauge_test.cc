@@ -24,6 +24,22 @@ TEST(Gauge, Set) {
   EXPECT_EQ(publisher.SentMessages(), expected);
 }
 
+TEST(Gauge, SetWithTTL) {
+  TestPublisher publisher;
+  auto id = std::make_shared<Id>("gauge", Tags{});
+  auto id2 = std::make_shared<Id>("gauge2", Tags{{"key", "val"}});
+  Gauge g{id, &publisher, 1};
+  Gauge g2{id2, &publisher, 2};
+
+  g.Set(42);
+  g2.Set(2);
+  g.Set(1);
+  std::vector<std::string> expected = {"g,1:gauge:42", "g,2:gauge2,key=val:2",
+                                       "g,1:gauge:1"};
+  EXPECT_EQ(publisher.SentMessages(), expected);
+}
+
+
 TEST(Gauge, InvalidTags) {
   TestPublisher publisher;
   // test with a single tag, because tags order is not guaranteed in a flat_hash_map
