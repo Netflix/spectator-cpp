@@ -69,6 +69,10 @@ struct single_table_state {
     return get_or_create<typename types::gauge_t>(std::move(id));
   }
 
+  auto get_gauge_ttl(IdPtr id, unsigned int ttl_seconds) {
+    return get_or_create<typename types::gauge_t>(std::move(id), ttl_seconds);
+  }
+
   auto get_max_gauge(IdPtr id) {
     return get_or_create<typename types::max_gauge_t>(std::move(id));
   }
@@ -167,6 +171,14 @@ class base_registry {
   }
   auto GetGauge(absl::string_view name, Tags tags = {}) {
     return GetGauge(Id::of(name, std::move(tags)));
+  }
+  
+  auto GetGaugeTTL(const IdPtr& id, unsigned int ttl_seconds) {
+    return state_.get_gauge_ttl(final_id(id), ttl_seconds);
+  }
+
+  auto GetGaugeTTL(absl::string_view name, unsigned int ttl_seconds, Tags tags = {}) {
+    return GetGaugeTTL(Id::of(name, std::move(tags)), ttl_seconds);
   }
 
   auto GetMaxGauge(const IdPtr& id) {
@@ -282,6 +294,10 @@ struct stateless {
 
   auto get_gauge(IdPtr id) {
     return std::make_shared<typename types::gauge_t>(std::move(id), publisher.get());
+  }
+
+  auto get_gauge_ttl(IdPtr id, unsigned int ttl_seconds) {
+    return std::make_shared<typename types::gauge_t>(std::move(id), publisher.get(), ttl_seconds);
   }
 
   auto get_max_gauge(IdPtr id) {

@@ -61,9 +61,14 @@ TEST(StatelessRegistry, Gauge) {
   TestStatelessRegistry r;
   auto g = r.GetGauge("foo");
   auto g2 = r.GetGauge("bar", {{"id", "2"}});
+  auto g3 = r.GetGaugeTTL("baz", 1);
+  auto g4 = r.GetGaugeTTL("quux", 2, {{"id", "2"}});
   g->Set(100);
   g2->Set(101);
-  std::vector<std::string> expected = {"g:foo:100", "g:bar,id=2:101"};
+  g3->Set(102);
+  g4->Set(103);
+  std::vector<std::string> expected = {"g:foo:100", "g:bar,id=2:101",
+                                       "g,1:baz:102", "g,2:quux,id=2:103"};
   EXPECT_EQ(r.SentMessages(), expected);
 }
 
