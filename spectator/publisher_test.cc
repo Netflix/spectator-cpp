@@ -77,7 +77,7 @@ TEST(Publisher, UnixBuffer) {
   c.Increment();
   std::this_thread::sleep_for(std::chrono::milliseconds(50));
   msgs = server.GetMessages();
-  std::vector<std::string> expected{"c:counter:1\nc:counter:1\nc:counter:1"};
+  std::vector<std::string> expected{"c:counter:1\nc:counter:1\nc:counter:1\n"};
   EXPECT_EQ(msgs, expected);
   server.Stop();
   unlink(path.c_str());
