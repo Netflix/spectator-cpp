@@ -14,7 +14,8 @@ SpectatordPublisher::SpectatordPublisher(absl::string_view endpoint,
       local_socket_(io_context_), bytes_to_buffer_(bytes_to_buffer) {
   buffer_.reserve(bytes_to_buffer_ + 1024);     
   if (absl::StartsWith(endpoint, "unix:")) {
-    setup_unix_domain(endpoint.substr(5));
+    this->unixDomainPath_ = std::string(endpoint.substr(5));
+    setup_unix_domain();
   } else if (absl::StartsWith(endpoint, "udp:")) {
     auto pos = 4;
     // if the user used udp://foo:1234 instead of udp:foo:1234
@@ -49,29 +50,68 @@ void SpectatordPublisher::local_reconnect(absl::string_view path) {
   }
 }
 
-void SpectatordPublisher::setup_unix_domain(absl::string_view path) {
-  local_reconnect(path);
-  // get a copy of the file path
-  std::string local_path{path};
-  sender_ = [local_path, this](std::string_view msg) {
-    buffer_.append(msg);
-    if (buffer_.length() >= bytes_to_buffer_) {
-      for (auto i = 0; i < 3; ++i) {
-        try {
-          auto sent_bytes = local_socket_.send(asio::buffer(buffer_));
-          logger_->trace("Sent (local): {} bytes, in total had {}", sent_bytes, buffer_.length());
-          break;
-        } catch (std::exception& e) {
-          local_reconnect(local_path);
-          logger_->warn("Unable to send {} - attempt {}/3 ({})", buffer_, i,
-                        e.what());
-        }
+
+bool SpectatordPublisher::try_to_send(const std::string& buffer) {
+  for (auto i = 0; i < 3; ++i) {
+    try {
+      auto sent_bytes = local_socket_.send(asio::buffer(buffer));
+      logger_->trace("Sent (local): {} bytes, in total had {}", sent_bytes,
+                     buffer.length());
+      return true;
+    } catch (std::exception& e) {
+      local_reconnect(this->unixDomainPath_);
+      logger_->warn("Unable to send {} - attempt {}/3 ({})", buffer, i, e.what());
+    }
+  }
+  return false;
+}
+
+void SpectatordPublisher::taskThreadFunction() try {
+  while (shutdown_.load() == false) {
+    std::string message {};
+    {
+      std::unique_lock<std::mutex> lock(mtx_);
+      cv_sender_.wait(lock, [this] { return buffer_.size() > bytes_to_buffer_ || shutdown_.load();});
+      if (shutdown_.load() == true) {
+        return;
       }
-      buffer_.clear();
-    } else {
-      buffer_.push_back(NEW_LINE);
-    }   
-  };
+      message = std::move(buffer_);
+      buffer_ = std::string();
+      buffer_.reserve(bytes_to_buffer_);
+    }
+    cv_receiver_.notify_one();
+    try_to_send(message);
+  }
+} catch (const std::exception& e) {
+  logger_->error("Fatal error in message processing thread: {}", e.what());
+}
+
+void SpectatordPublisher::setup_unix_domain(){
+  // Reset connection to the unix domain socket
+  local_reconnect(this->unixDomainPath_);
+  if (bytes_to_buffer_ == 0) {
+    sender_ = [this](std::string_view msg) {
+      try_to_send(std::string(msg));
+    };
+    return;
+  }
+  else {
+    sender_ = [this](std::string_view msg) {
+      unsigned int currentBufferSize = buffer_.size();
+      {
+        std::unique_lock<std::mutex> lock(mtx_);
+        cv_receiver_.wait(lock, [this] { return buffer_.size() <= bytes_to_buffer_ || shutdown_.load(); }); 
+        if (shutdown_.load()) {
+          return;
+        }
+        buffer_.append(msg.data(), msg.size());
+        buffer_.append(1, NEW_LINE);
+        currentBufferSize = buffer_.size();
+      }
+      currentBufferSize > bytes_to_buffer_ ? cv_sender_.notify_one() : cv_receiver_.notify_one();
+    };
+    this->sendingThread_ = std::thread(&SpectatordPublisher::taskThreadFunction, this);
+  }
 }
 
 inline asio::ip::udp::endpoint resolve_host_port(
