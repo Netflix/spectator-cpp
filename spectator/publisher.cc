@@ -68,7 +68,7 @@ bool SpectatordPublisher::try_to_send(const std::string& buffer) {
 
 void SpectatordPublisher::taskThreadFunction() try {
   while (shutdown_.load() == false) {
-    std::string message{};
+    std::string message {};
     {
       std::unique_lock<std::mutex> lock(mtx_);
       cv_sender_.wait(lock, [this] { return buffer_.size() > bytes_to_buffer_ || shutdown_.load();});
@@ -77,6 +77,7 @@ void SpectatordPublisher::taskThreadFunction() try {
       }
       message = std::move(buffer_);
       buffer_ = std::string();
+      buffer_.reserve(bytes_to_buffer_);
     }
     cv_receiver_.notify_one();
     try_to_send(message);
@@ -94,7 +95,7 @@ void SpectatordPublisher::setup_unix_domain(){
     };
     return;
   }
-  else{
+  else {
     sender_ = [this](std::string_view msg) {
       unsigned int currentBufferSize = buffer_.size();
       {

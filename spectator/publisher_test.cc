@@ -5,6 +5,7 @@
 #include "test_server.h"
 #include <gtest/gtest.h>
 #include <unistd.h>
+#include <regex>
 
 namespace {
 
@@ -88,6 +89,78 @@ TEST(Publisher, Nop) {
   Counter c{std::make_shared<Id>("counter", Tags{}), &publisher};
   c.Increment();
   c.Add(2);
+}
+
+TEST(Publisher, MultiThreadedCounters) {
+  auto logger = spectator::DefaultLogger();
+  const auto* dir = first_not_null(std::getenv("TMPDIR"), "/tmp");
+  auto path = fmt::format("{}/testserver.{}", dir, getpid());
+  TestUnixServer server{path};
+  server.Start();
+  logger->info("Unix Server started on path {}", path);
+ 
+  // Create publisher with a small buffer size to ensure flushing
+  SpectatordPublisher publisher{fmt::format("unix:{}", path), 50};
+ 
+  // Number of threads and counters to create
+  const int numThreads = 4;
+  const int countersPerThread = 3;
+  const int incrementsPerCounter = 5;
+ 
+  // Function for worker threads
+  auto worker = [&](int threadId) {
+    // Create several counters per thread with unique names
+    for (int i = 0; i < countersPerThread; i++) {
+      std::string counterName = fmt::format("counter.thread{}.{}", threadId, i);
+      Counter counter(std::make_shared<Id>(counterName, Tags{}), &publisher);
+     
+      // Increment each counter multiple times
+      for (int j = 0; j < incrementsPerCounter; j++) {
+        counter.Increment();
+      }
+    }
+  };
+ 
+  // Start worker threads
+  std::vector<std::thread> threads;
+  for (int i = 0; i < numThreads; i++) {
+    threads.emplace_back(worker, i);
+  }
+ 
+  // Wait for all threads to complete
+  for (auto& t : threads) {
+    t.join();
+  }
+ 
+  // Give some time for messages to be sent
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+ 
+  // Check messages
+  auto msgs = server.GetMessages();
+  EXPECT_FALSE(msgs.empty());
+ 
+  // Verify total number of increments
+  int expectedIncrements = numThreads * countersPerThread * incrementsPerCounter;
+  int actualIncrements = 0;
+ 
+  // Verify every string in msgs follows the form counter.thread<digit>.<digit>
+  std::regex counter_regex(R"(c:counter\.thread\d+\.\d+:1)");
+  for (const auto& msg : msgs) {
+    std::stringstream ss(msg);
+    std::string line;
+    while (std::getline(ss, line)) {
+      if (!line.empty()) {
+        EXPECT_TRUE(std::regex_match(line, counter_regex))
+            << "Unexpected counter format: " << line;
+        actualIncrements++;
+      }
+    }
+  }
+ 
+  EXPECT_EQ(actualIncrements, expectedIncrements);
+ 
+  server.Stop();
+  unlink(path.c_str());
 }
 
 }  // namespace
