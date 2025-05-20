@@ -33,6 +33,12 @@ if [[ "$OSTYPE" == "linux-gnu"* ]]; then
   fi
 fi
 
+echo -e "${BLUE}==== env configuration ====${NC}"
+echo "BUILD_DIR=$BUILD_DIR"
+echo "BUILD_TYPE=$BUILD_TYPE"
+echo "CC=$CC"
+echo "CXX=$CXX"
+
 if [[ ! -f "$HOME/.conan2/profiles/default" ]]; then
   echo -e "${BLUE}==== create default profile ====${NC}"
   conan profile detect
