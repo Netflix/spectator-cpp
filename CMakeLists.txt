@@ -36,7 +36,7 @@ add_test(
 )
 
 #-- spectator library
-add_library(spectator
+add_library(spectator SHARED
     "spectator/logger.cc"
     "spectator/publisher.cc"
     "spectator/config.h"
