@@ -74,11 +74,6 @@ class Tags {
   [[nodiscard]] table_t::const_iterator end() const { return entries_.end(); }
 };
 
-inline std::ostream& operator<<(std::ostream& os, const Tags& tags) {
-  os << fmt::format("{}", tags);
-  return os;
-}
-
 class Id {
  public:
   Id(absl::string_view name, Tags tags) noexcept
@@ -131,11 +126,6 @@ class Id {
     }
   }
 
-  friend std::ostream& operator<<(std::ostream& os, const Id& id) {
-    os << fmt::format("{}", id);
-    return os;
-  }
-
   friend struct std::hash<Id>;
 
   friend struct std::hash<std::shared_ptr<Id>>;
@@ -186,7 +176,7 @@ struct equal_to<shared_ptr<spectator::Id>> {
 
 }  // namespace std
 
-template <> struct fmt::formatter<spectator::Tags>: formatter<std::string_view> {
+template <> struct fmt::formatter<spectator::Tags>: fmt::formatter<std::string_view> {
   auto format(const spectator::Tags& tags, format_context& ctx) const -> format_context::iterator {
     std::string s;
     auto size = tags.size();
@@ -216,8 +206,18 @@ template <> struct fmt::formatter<spectator::Tags>: formatter<std::string_view> 
   }
 };
 
-template <> struct fmt::formatter<spectator::Id>: formatter<std::string_view> {
+inline auto operator<<(std::ostream& os, const spectator::Tags& tags) -> std::ostream& {
+  os << fmt::format("{}", tags);
+  return os;
+}
+
+template <> struct fmt::formatter<spectator::Id>: fmt::formatter<std::string_view> {
   static auto format(const spectator::Id& id, format_context& ctx) -> format_context::iterator {
     return fmt::format_to(ctx.out(), "Id(name={}, tags={})", id.Name(), id.GetTags());
   }
 };
+
+inline auto operator<<(std::ostream& os, const spectator::Id& id) -> std::ostream& {
+  os << fmt::format("{}", id);
+  return os;
+}
