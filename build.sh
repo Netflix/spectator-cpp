@@ -19,7 +19,7 @@ NC="\033[0m"
 if [[ "$1" == "clean" ]]; then
   echo -e "${BLUE}==== clean ====${NC}"
   rm -rf "$BUILD_DIR"
-  rm -f spectator/*.inc
+  rm -rf lib/spectator
   if [[ "$2" == "--confirm" ]]; then
     # remove all packages from the conan cache, to allow swapping between Release/Debug builds
     conan remove "*" --confirm
@@ -27,17 +27,12 @@ if [[ "$1" == "clean" ]]; then
 fi
 
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-  if [[ -z "$CC" || -z "$CXX" ]]; then
-    export CC=gcc-13
-    export CXX=g++-13
+  source /etc/os-release
+  if [[ "$NAME" == "Ubuntu" ]]; then
+    if [[ -z "$CC" ]]; then export CC=gcc-13; fi
+    if [[ -z "$CXX" ]]; then export CXX=g++-13; fi
   fi
 fi
-
-echo -e "${BLUE}==== env configuration ====${NC}"
-echo "BUILD_DIR=$BUILD_DIR"
-echo "BUILD_TYPE=$BUILD_TYPE"
-echo "CC=$CC"
-echo "CXX=$CXX"
 
 if [[ ! -f "$HOME/.conan2/profiles/default" ]]; then
   echo -e "${BLUE}==== create default profile ====${NC}"
@@ -47,13 +42,16 @@ fi
 if [[ ! -d $BUILD_DIR ]]; then
   echo -e "${BLUE}==== install required dependencies ====${NC}"
   if [[ "$BUILD_TYPE" == "Debug" ]]; then
-    conan install . --output-folder="$BUILD_DIR" --build="*" --settings=build_type="$BUILD_TYPE" --profile=./sanitized
+    conan install . --output-folder="$BUILD_DIR" --build="*" --settings=build_type="$BUILD_TYPE"
   else
-    conan install . --output-folder="$BUILD_DIR" --build=missing --settings=build_type="$BUILD_TYPE"
+    conan install . --output-folder="$BUILD_DIR" --build=missing
   fi
+
+  echo -e "${BLUE}==== install source dependencies ====${NC}"
+  conan source .
 fi
 
-pushd $BUILD_DIR
+pushd "$BUILD_DIR"
 
 echo -e "${BLUE}==== configure conan environment to access tools ====${NC}"
 source conanbuild.sh
@@ -63,7 +61,7 @@ if [[ $OSTYPE == "darwin"* ]]; then
 fi
 
 echo -e "${BLUE}==== generate build files ====${NC}"
-cmake .. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+cmake .. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -DCMAKE_BUILD_TYPE="$BUILD_TYPE"
 
 echo -e "${BLUE}==== build ====${NC}"
 cmake --build .

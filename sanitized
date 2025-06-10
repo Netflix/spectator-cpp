@@ -1,9 +1,0 @@
-include(default)
-
-# https://blog.conan.io/2022/04/21/New-conan-release-1-47.html
-#
-# inject sanitizer flags into conan packages, so that we do not get segfaults when
-# we try to run the local build with the address sanitizer for debug builds
-
-[conf]
-tools.build:cxxflags=["-fno-omit-frame-pointer", "-fsanitize=address"]

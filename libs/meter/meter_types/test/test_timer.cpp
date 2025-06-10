@@ -1,0 +1,43 @@
+#include <libs/meter/meter_types/include/timer.h>
+#include <libs/writer/writer_wrapper/include/writer_test_helper.h>
+
+#include <gtest/gtest.h>
+
+class TimerTest : public ::testing::Test
+{
+  protected:
+    MeterId tid = MeterId("timer");
+};
+
+TEST_F(TimerTest, record)
+{
+    WriterTestHelper::InitializeWriter(WriterType::Memory);
+    auto *writer = dynamic_cast<MemoryWriter *>(WriterTestHelper::GetImpl());
+    Timer t(tid);
+    EXPECT_TRUE(writer->IsEmpty());
+
+    t.Record(42);
+    EXPECT_EQ("t:timer:42.000000", writer->LastLine());
+}
+
+TEST_F(TimerTest, recordNegative)
+{
+    WriterTestHelper::InitializeWriter(WriterType::Memory);
+    auto *writer = dynamic_cast<MemoryWriter *>(WriterTestHelper::GetImpl());
+    Timer t(tid);
+    EXPECT_TRUE(writer->IsEmpty());
+
+    t.Record(-42);
+    EXPECT_TRUE(writer->IsEmpty());
+}
+
+TEST_F(TimerTest, recordZero)
+{
+    WriterTestHelper::InitializeWriter(WriterType::Memory);
+    auto *writer = dynamic_cast<MemoryWriter *>(WriterTestHelper::GetImpl());
+    Timer t(tid);
+    EXPECT_TRUE(writer->IsEmpty());
+
+    t.Record(0);
+    EXPECT_EQ("t:timer:0.000000", writer->LastLine());
+}

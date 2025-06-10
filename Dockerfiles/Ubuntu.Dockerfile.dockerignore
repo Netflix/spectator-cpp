@@ -1,0 +1,2 @@
+# Ignore copying the default build folder if it exists
+cmake-build/

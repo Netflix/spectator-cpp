@@ -1,5 +1,6 @@
 .DS_Store
 .idea/
+.vscode/
 CMakeUserPresets.json
 cmake-build/
 conan_provider.cmake
