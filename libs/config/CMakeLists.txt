@@ -6,6 +6,11 @@ target_include_directories(spectator-config
     PUBLIC ${CMAKE_SOURCE_DIR}
 )
 
+target_link_libraries(spectator-config
+    PUBLIC
+    spectator-writer-config
+)
+
 add_executable(config-tests
     test/test_config.cpp
 )

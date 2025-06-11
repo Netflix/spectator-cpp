@@ -13,7 +13,7 @@ following commands from the root directory of the project.
 
 ```shell
 sudo docker build -t spectator-cpp-image -f Dockerfiles/Ubuntu.Dockerfile .
-sudo docker run -it spectatord-cpp-image
+sudo docker run -it spectator-cpp-image
 ./build.sh
 ```
 
@@ -24,8 +24,8 @@ sudo docker run -it spectatord-cpp-image
 - Start `Docker` before opening `Powershell`
 
 ```shell
-docker build -t spectatord-cpp-image -f Dockerfiles/Ubuntu.Dockerfile .
-docker run -it spectatord-cpp-image
+docker build -t spectator-cpp-image -f Dockerfiles/Ubuntu.Dockerfile .
+docker run -it spectator-cpp-image /bin/bash
 apt-get install dos2unix
 dos2unix build.sh
 ./build.sh

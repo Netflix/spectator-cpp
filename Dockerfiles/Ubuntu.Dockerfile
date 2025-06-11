@@ -9,7 +9,8 @@ RUN apt-get update && apt-get install -y \
     python3-venv \
     gcc-13\
     g++-13 \
-    cmake 
+    cmake \
+    build-essential
 
 # Create a default working directory
 WORKDIR /home/ubuntu/spectator-cpp

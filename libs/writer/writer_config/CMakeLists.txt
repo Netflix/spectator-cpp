@@ -12,6 +12,7 @@ target_include_directories(spectator-writer-config
 target_link_libraries(spectator-writer-config
     PUBLIC
     spectator-writer-types
+    spectator-logger
 )
 
 add_executable(test_writer_config 

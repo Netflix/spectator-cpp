@@ -40,9 +40,6 @@ std::string ToSpectatorId(const std::string &name, const std::unordered_map<std:
     return ss.str();
 }
 
-
-
-
 MeterId::MeterId(const std::string &name, const std::unordered_map<std::string, std::string> &tags)
     : m_name(name), m_tags(ValidateTags(tags))
 {
