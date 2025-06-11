@@ -41,3 +41,14 @@ inline const std::map<std::string_view, std::pair<WriterType, std::string_view>>
     {WriterTypes::UDP, {WriterType::UDP, DefaultLocations::UDP}},
     {WriterTypes::Unix, {WriterType::Unix, DefaultLocations::UDS}},
 };
+
+inline std::string WriterTypeToString(WriterType type) 
+{
+    switch (type)
+    {
+        case WriterType::Memory: return WriterTypes::Memory;
+        case WriterType::UDP: return WriterTypes::UDP;
+        case WriterType::Unix: return WriterTypes::Unix;
+        default: return "Unknown";
+    }
+}

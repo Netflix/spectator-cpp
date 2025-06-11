@@ -2,68 +2,40 @@
 
 ## Overview
 
-The `Config` class serves as the configuration object for the Registry class, which manages metrics for the spectatorD system. It defines how and where metrics are written and what additional tags are applied to them.
+The `Config` class serves as the configuration object for the Registry class, which manages how metrics are sent to SpectatorD.
+The `Config` constructor takes two parameters. The first parameter is required and is a `WriterConfig` object. This object defines
+how metrics will be sent to `SpectatorD`. The second parameter `extraTags` is a unordered map of strings allowing you to provide additional tags to 
+all of your metrics. Extra tags are additional key-value pairs attached to all metrics and will be merged with environment-derived tags.
 
 ## Usage
 
 The `Config` class provides two constructors:
 
 ```cpp
-// Constructor 1: Specify output location as string
-Config(const std::string &location = "udp", 
-       const std::unordered_map<std::string, std::string> &extra_tags = {});
+// Constructor 1: Output location only
 
-// Constructor 2: Specify writer type directly (recommended)
-Config(WriterType type,
-       const std::unordered_map<std::string, std::string> &extra_tags = {});
+// Example 1
+Config config(WriterConfig(WriterTypes::Memory));
+Config config(WriterConfig(WriterTypes::UDP))
 
-// Examples:
+// Example 2
+const std::string udpUrl = std::string(WriterTypes::UDPURL) + "192.168.1.100:8125";
+Config config(WriterConfig(udpUrl));
 
-// Example 1: Create a default config (UDP output)
-auto defaultConfig = Config();
+// Constructor 2: Output location and tags
 
-// Example 2: Config with memory storage and custom tags
-auto memoryConfig = Config("memory", {
-    {"app", "myService"},
-    {"zone", "us-west-2"}
-});
-
-// Example 3: Config with direct writer type
-auto stdoutConfig = Config(WriterTypes::Memory, {
-    {"env", "production"}
-});
-
-// Example 4: Config writing to a specific file
-auto fileConfig = Config("file:///var/log/metrics.log");
-
-// Example 5: Config sending to specific UDP endpoint
-auto customUdpConfig = Config("udp://metrics-collector.example.com:8125");
+// Example 1
+std::unordered_map<std::string, std::string> tags = {{"app", "test-app"}, {"env", "testing"}, {"region", "us-east-1"}};
+Config config(WriterConfig(WriterTypes::Memory), tags);
 ```
 
-### When to Use Each Constructor
+## Environment Variables
 
-- Use the first constructor when you need to specify a custom output location.
-- Use the second constructor (preferred) when working with standard writer types.
-
-### Output Locations
-
-Valid output locations include:
-- `none`: Disable output
-- `memory`: Store metrics in memory
-- `stdout`: Write to standard output
-- `stderr`: Write to standard error
-- `udp`: Send metrics over UDP (default)
-- `unix`: Use Unix domain sockets
-- `file://path`: Write to a file
-- `udp://host:port`: Send to specific UDP endpoint
-- `unix://path`: Use specific Unix socket
-
-### Environment Variables
-
-- `SPECTATOR_OUTPUT_LOCATION`: Override the configured output location
+If the following environment variables are set and not empty, there key and value will also be read and applied to your tags
 - `TITUS_CONTAINER_NAME`: Set the `nf.container` tag automatically
 - `TITUS_PROCESS_NAME`: Set the `nf.process` tag automatically
 
-## Extra Tags
+### Warning
 
-Extra tags are additional key-value pairs attached to all metrics. They can be specified during initialization and will be merged with environment-derived tags.
+If the environment variable `SPECTATOR_OUTPUT_LOCATION` is set this will override the value specefied in the `WriterConfig`
+read the `WriterConfig` readme.md for more details.

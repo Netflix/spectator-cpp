@@ -7,26 +7,23 @@
 
 class Config
 {
-  public:
+public:
+	Config(const WriterConfig &writerConfig, const std::unordered_map<std::string, std::string> &extraTags = {});
 
-    Config(WriterConfig writerConfig, const std::unordered_map<std::string, std::string> &extra_tags = {});
+	~Config() = default;
+	Config(const Config &other) = default;
+	Config &operator=(const Config &other) = delete;
+	Config(Config &&other) noexcept = delete;
+	Config &operator=(Config &&other) noexcept = delete;
 
-    // Rule of 5
-    ~Config()                                  = default; // Destructor
-    Config(const Config &other)                = default; // Copy constructor
-    Config &operator=(const Config &other)     = delete; // Copy assignment operator
-    Config(Config &&other) noexcept            = delete; // Move constructor
-    Config &operator=(Config &&other) noexcept = delete; // Move assignment operator
+	const std::unordered_map<std::string, std::string> &GetExtraTags() const noexcept { return m_extraTags; }
 
-    const std::string &GetLocation() const { return m_writerConfig.GetLocation(); }
+	const std::string &GetWriterLocation() const noexcept { return m_writerConfig.GetLocation(); }
+	const WriterType &GetWriterType() const noexcept { return m_writerConfig.GetType(); }
 
-    const std::unordered_map<std::string, std::string> &GetExtraTags() const{ return m_extraTags;}
+private:
+	std::unordered_map<std::string, std::string> CalculateTags(const std::unordered_map<std::string, std::string> &tags);
 
-    const WriterType &GetWriterType() const { return m_writerConfig.GetType();}
-
-  private:
-    std::unordered_map<std::string, std::string> CalculateTags(const std::unordered_map<std::string, std::string> &tags);
-    
-    std::unordered_map<std::string, std::string> m_extraTags;
-    WriterConfig m_writerConfig;
+	std::unordered_map<std::string, std::string> m_extraTags;
+	WriterConfig m_writerConfig;
 };

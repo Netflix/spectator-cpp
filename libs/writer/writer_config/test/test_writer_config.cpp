@@ -4,75 +4,52 @@
 #include <gmock/gmock.h>
 
 #include <cstdlib>
+#include <optional>
 
-// Helper to temporarily set an environment variable for testing
-class EnvironmentVariableSetter
+// Enhanced helper to temporarily modify an environment variable for testing
+class EnvironmentVariableGuard
 {
-  public:
-    EnvironmentVariableSetter(const std::string &name, const std::string &value) : m_name(name)
-    {
-        // Store original value (might be nullptr)
-        m_originalValue = std::getenv(name.c_str());
+public:
 
-        // Set the new value
-        setenv(name.c_str(), value.c_str(), 1);
+    EnvironmentVariableGuard(const std::string& name) : m_name(name) 
+    {
+        if (const char* value = std::getenv(name.c_str())) 
+        {
+            m_originalValue = value;
+        }
     }
 
-    ~EnvironmentVariableSetter()
+    void setValue(const std::string& value) 
     {
-        // Restore original state
-        if (m_originalValue)
-            setenv(m_name.c_str(), m_originalValue, 1);
-        else
-            unsetenv(m_name.c_str());
+        setenv(m_name.c_str(), value.c_str(), 1);
     }
 
-  private:
+    void unsetValue() { unsetenv(m_name.c_str()); }
+
+    ~EnvironmentVariableGuard() 
+    {
+        if (m_originalValue.has_value()) { setenv(m_name.c_str(), m_originalValue->c_str(), 1); } 
+        else { unsetenv(m_name.c_str()); }
+    }
+
+private:
     std::string m_name;
-    const char *m_originalValue;
+    std::optional<std::string> m_originalValue;
 };
 
-// Helper to temporarily unset an environment variable for testing
-class EnvironmentVariableUnset
-{
-  public:
-    EnvironmentVariableUnset(const std::string &name) : m_name(name)
+class WriterConfigTest : public ::testing::Test {
+protected:
+    EnvironmentVariableGuard envGuard{"SPECTATOR_OUTPUT_LOCATION"};
+
+    void SetUp() override 
     {
-        // Store original value (might be nullptr)
-        m_originalValue = std::getenv(name.c_str());
-
-        // Always unset regardless of whether it was set before
-        unsetenv(name.c_str());
-    }
-
-    ~EnvironmentVariableUnset()
-    {
-        // Only restore if there was an original value
-        if (m_originalValue)
-            setenv(m_name.c_str(), m_originalValue, 1);
-    }
-
-  private:
-    std::string m_name;
-    const char *m_originalValue;
-};
-
-// Test fixture for WriterConfig tests
-class WriterConfigTest : public ::testing::Test
-{
-  protected:
-    void SetUp() override
-    {
-        // Ensure environment variable is unset before each test
-        unsetenv("SPECTATOR_OUTPUT_LOCATION");
+        envGuard.unsetValue();
     }
 };
 
-// Test basic writer type initialization
+
 TEST_F(WriterConfigTest, BasicWriterTypes)
 {
-    
-
     // Test "memory" type
     {
         WriterConfig config(WriterTypes::Memory);
@@ -95,10 +72,9 @@ TEST_F(WriterConfigTest, BasicWriterTypes)
     }
 }
 
-// Test URL-based writer initialization
+
 TEST_F(WriterConfigTest, URLBasedWriterTypes)
 {
-
     // Test UDP URL
     {
         const std::string udpUrl = std::string(WriterTypes::UDPURL) + "192.168.1.100:8125";
@@ -116,49 +92,36 @@ TEST_F(WriterConfigTest, URLBasedWriterTypes)
     }
 }
 
-// Test environment variable override
 TEST_F(WriterConfigTest, EnvironmentVariableOverride)
 {
-    // Test environment variable overriding constructor parameter
     {
-        EnvironmentVariableSetter setter("SPECTATOR_OUTPUT_LOCATION", WriterTypes::Memory);
+        envGuard.setValue(WriterTypes::Memory);
         WriterConfig config(WriterTypes::UDP); // This should be ignored due to env var
         EXPECT_EQ(config.GetType(), WriterType::Memory);
         EXPECT_EQ(config.GetLocation(), DefaultLocations::NoLocation);
     }
-
     
-    // Test with environment variable unset
     {
-        EnvironmentVariableUnset unset("SPECTATOR_OUTPUT_LOCATION");
+        envGuard.unsetValue();
         WriterConfig config(WriterTypes::Memory);
         EXPECT_EQ(config.GetType(), WriterType::Memory);
         EXPECT_EQ(config.GetLocation(), DefaultLocations::NoLocation);
     }
 }
 
-// Test invalid writer type handling
 TEST_F(WriterConfigTest, InvalidWriterType)
 {
-    // Test invalid type from constructor
-    EXPECT_THROW({ WriterConfig config("invalid_type"); }, std::invalid_argument);
+    EXPECT_THROW({ WriterConfig config("invalid_type"); }, std::runtime_error);
+    EXPECT_THROW({ WriterConfig config(""); }, std::runtime_error);
 
-    // Test invalid type from environment variable
     {
-        EnvironmentVariableSetter setter("SPECTATOR_OUTPUT_LOCATION", "invalid_env_value");
-        EXPECT_THROW(
-            {
-                WriterConfig config("none"); // This should be ignored, env var used instead
-            },
-            std::invalid_argument);
+        envGuard.setValue("invalid_env_value");
+        EXPECT_THROW({WriterConfig config(WriterTypes::Memory);}, std::runtime_error);
     }
 }
 
-// Test case for edge cases
 TEST_F(WriterConfigTest, EdgeCases)
 {
-    // Test empty string
-    EXPECT_THROW({ WriterConfig config(""); }, std::invalid_argument);
 
     // Test with just URL scheme but no path
     {

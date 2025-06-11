@@ -2,79 +2,56 @@
 #include <gmock/gmock.h>
 
 #include <libs/config/include/config.h>
+#include <optional>
 
-// Helper to temporarily set an environment variable for testing
-class EnvVarSetter
-{
-  public:
-    EnvVarSetter(const std::string &name, const std::string &value) : m_name(name)
+// Enhanced helper to temporarily modify an environment variable for testing
+class EnvironmentVariableGuard {
+public:
+    
+    EnvironmentVariableGuard(const std::string& name) : m_name(name) 
     {
-        // Store original value (might be nullptr)
-        m_originalValue = std::getenv(name.c_str());
-
-        // Set the new value
-        setenv(name.c_str(), value.c_str(), 1);
+        if (const char* value = std::getenv(name.c_str())) 
+        {
+            m_originalValue = value;
+        }
     }
 
-    ~EnvVarSetter()
+    void setValue(const std::string& value) { setenv(m_name.c_str(), value.c_str(), 1); }
+
+    void unsetValue() { unsetenv(m_name.c_str()); }
+
+    ~EnvironmentVariableGuard() 
     {
-        // Restore original state
-        if (m_originalValue)
-            setenv(m_name.c_str(), m_originalValue, 1);
-        else
-            unsetenv(m_name.c_str());
+        if (m_originalValue.has_value()) { setenv(m_name.c_str(), m_originalValue->c_str(), 1); } 
+        else { unsetenv(m_name.c_str()); }
     }
 
-  private:
+private:
     std::string m_name;
-    const char *m_originalValue;
+    std::optional<std::string> m_originalValue;
 };
 
-// Helper to temporarily unset an environment variable
-class EnvVarUnset
-{
-  public:
-    EnvVarUnset(const std::string &name) : m_name(name)
-    {
-        // Store original value (might be nullptr)
-        m_originalValue = std::getenv(name.c_str());
-
-        // Always unset regardless of whether it was set before
-        unsetenv(name.c_str());
-    }
-
-    ~EnvVarUnset()
-    {
-        // Only restore if there was an original value
-        if (m_originalValue)
-            setenv(m_name.c_str(), m_originalValue, 1);
-    }
-
-  private:
-    std::string m_name;
-    const char *m_originalValue;
-};
-
-class ConfigTest : public ::testing::Test
-{
-  protected:
-    void SetUp() override
-    {
+class ConfigTest : public ::testing::Test {
+protected:
+    // Create guards for each environment variable
+    EnvironmentVariableGuard containerGuard{"TITUS_CONTAINER_NAME"};
+    EnvironmentVariableGuard processGuard{"TITUS_PROCESS_NAME"};
+    
+    void SetUp() override {
         // Ensure environment variables are unset before each test
-        unsetenv("TITUS_CONTAINER_NAME");
-        unsetenv("TITUS_PROCESS_NAME");
+        containerGuard.unsetValue();
+        processGuard.unsetValue();
     }
 };
 
 // Test initialization with different writer configs
-TEST_F(ConfigTest, WriterConfigInitialization)
-{
+TEST_F(ConfigTest, WriterConfigInitialization) {
     // Test with memory writer
     {
         WriterConfig writerConfig(WriterTypes::Memory);
         Config config(writerConfig);
 
-        EXPECT_EQ(config.GetLocation(), "");
+        EXPECT_EQ(config.GetWriterLocation(), "");
         EXPECT_EQ(config.GetWriterType(), WriterType::Memory);
         EXPECT_TRUE(config.GetExtraTags().empty());
     }
@@ -84,14 +61,23 @@ TEST_F(ConfigTest, WriterConfigInitialization)
         WriterConfig writerConfig(WriterTypes::UDP);
         Config config(writerConfig);
 
-        EXPECT_EQ(config.GetLocation(), DefaultLocations::UDP);
+        EXPECT_EQ(config.GetWriterLocation(), DefaultLocations::UDP);
         EXPECT_EQ(config.GetWriterType(), WriterType::UDP);
+    }
+
+    // Test UDP URL
+    {
+        const std::string udpUrl = std::string(WriterTypes::UDPURL) + "192.168.1.100:8125";
+        WriterConfig writerConfig(udpUrl);
+        Config config(writerConfig);
+
+        EXPECT_EQ(config.GetWriterType(), WriterType::UDP);
+        EXPECT_EQ(config.GetWriterLocation(), udpUrl);
     }
 }
 
 // Test extra tags handling
-TEST_F(ConfigTest, ExtraTags)
-{
+TEST_F(ConfigTest, ExtraTags) {
     WriterConfig writerConfig(WriterTypes::Memory);
 
     // Empty tags
@@ -102,7 +88,12 @@ TEST_F(ConfigTest, ExtraTags)
 
     // Valid tags
     {
-        std::unordered_map<std::string, std::string> tags = {{"app", "test-app"}, {"env", "testing"}, {"region", "us-east-1"}};
+        std::unordered_map<std::string, std::string> tags = 
+        {
+            {"app", "test-app"}, 
+            {"env", "testing"}, 
+            {"region", "us-east-1"}
+        };
 
         Config config(writerConfig, tags);
 
@@ -114,7 +105,12 @@ TEST_F(ConfigTest, ExtraTags)
 
     // Invalid tags (empty keys or values should be ignored)
     {
-        std::unordered_map<std::string, std::string> tags = {{"valid", "value"}, {"", "empty-key"}, {"empty-value", ""}};
+        std::unordered_map<std::string, std::string> tags = 
+        {
+            {"valid", "value"}, 
+            {"", "empty-key"}, 
+            {"empty-value", ""}
+        };
 
         Config config(writerConfig, tags);
 
@@ -126,24 +122,20 @@ TEST_F(ConfigTest, ExtraTags)
 }
 
 // Test environment variable integration
-TEST_F(ConfigTest, EnvironmentVariables)
-{
+TEST_F(ConfigTest, EnvironmentVariables) {
     WriterConfig writerConfig(WriterTypes::Memory);
 
-    // No environment variables
+    // No environment variables - already unset in SetUp()
     {
-        EnvVarUnset container("TITUS_CONTAINER_NAME");
-        EnvVarUnset process("TITUS_PROCESS_NAME");
-
         Config config(writerConfig);
         EXPECT_TRUE(config.GetExtraTags().empty());
     }
 
     // With container name
     {
-        EnvVarSetter container("TITUS_CONTAINER_NAME", "test-container");
-        EnvVarUnset process("TITUS_PROCESS_NAME");
-
+        containerGuard.setValue("test-container");
+        // Process already unset from SetUp()
+        
         Config config(writerConfig);
 
         EXPECT_EQ(config.GetExtraTags().size(), 1);
@@ -152,8 +144,8 @@ TEST_F(ConfigTest, EnvironmentVariables)
 
     // With process name
     {
-        EnvVarUnset container("TITUS_CONTAINER_NAME");
-        EnvVarSetter process("TITUS_PROCESS_NAME", "test-process");
+        containerGuard.unsetValue();
+        processGuard.setValue("test-process");
 
         Config config(writerConfig);
 
@@ -163,8 +155,8 @@ TEST_F(ConfigTest, EnvironmentVariables)
 
     // With both environment variables
     {
-        EnvVarSetter container("TITUS_CONTAINER_NAME", "test-container");
-        EnvVarSetter process("TITUS_PROCESS_NAME", "test-process");
+        containerGuard.setValue("test-container");
+        processGuard.setValue("test-process");
 
         Config config(writerConfig);
 
@@ -175,16 +167,19 @@ TEST_F(ConfigTest, EnvironmentVariables)
 }
 
 // Test merging of environment variables and explicit tags
-TEST_F(ConfigTest, MergingTags)
-{
+TEST_F(ConfigTest, MergingTags) {
     WriterConfig writerConfig(WriterTypes::Memory);
 
     // Environment variables with additional tags
     {
-        EnvVarSetter container("TITUS_CONTAINER_NAME", "test-container");
-        EnvVarSetter process("TITUS_PROCESS_NAME", "test-process");
+        containerGuard.setValue("test-container");
+        processGuard.setValue("test-process");
 
-        std::unordered_map<std::string, std::string> tags = {{"custom", "value"}, {"env", "test"}};
+        std::unordered_map<std::string, std::string> tags = 
+        {
+            {"custom", "value"}, 
+            {"env", "test"}
+        };
 
         Config config(writerConfig, tags);
 
@@ -197,9 +192,12 @@ TEST_F(ConfigTest, MergingTags)
 
     // Override environment variables with explicit tags
     {
-        EnvVarSetter container("TITUS_CONTAINER_NAME", "test-container");
+        containerGuard.setValue("test-container");
+        processGuard.unsetValue();
 
-        std::unordered_map<std::string, std::string> tags = {{"nf.container", "override-container"}};
+        std::unordered_map<std::string, std::string> tags = {
+            {"nf.container", "override-container"}
+        };
 
         Config config(writerConfig, tags);
 

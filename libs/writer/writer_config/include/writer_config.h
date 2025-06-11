@@ -1,6 +1,7 @@
 #pragma once
 
 #include <libs/writer/writer_types/include/writer_types.h>
+#include <libs/logger/logger.h>
 
 #include <string>
 #include <stdexcept>
@@ -8,7 +9,7 @@
 class WriterConfig
 {
 	public:
-		WriterConfig(std::string type);
+		WriterConfig(const std::string &type);
 
 		const WriterType &GetType() const noexcept { return m_type; };
 
