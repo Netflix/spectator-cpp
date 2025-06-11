@@ -17,13 +17,13 @@ class AgeGauge final : public Meter
 
     void Now()
     {
-        auto line = this->m_meterTypeSymbol + FIELD_SEPARATOR + this->m_id.spectatord_id + FIELD_SEPARATOR + "0";
+        auto line = this->m_meterTypeSymbol + FIELD_SEPARATOR + this->m_id.GetSpectatordId() + FIELD_SEPARATOR + "0";
         Writer::GetInstance().Write(line);
     }
 
     void Set(const int &seconds)
     {
-        auto line = this->m_meterTypeSymbol + FIELD_SEPARATOR + this->m_id.spectatord_id + FIELD_SEPARATOR + std::to_string(seconds);
+        auto line = this->m_meterTypeSymbol + FIELD_SEPARATOR + this->m_id.GetSpectatordId() + FIELD_SEPARATOR + std::to_string(seconds);
         Writer::GetInstance().Write(line);
     }
 };

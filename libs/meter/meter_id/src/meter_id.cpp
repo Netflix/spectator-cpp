@@ -4,7 +4,7 @@
 #include <sstream>
 
 // Define the static member
-const std::regex MeterId::INVALID_CHARS("[^-._A-Za-z0-9~^]");
+const std::regex INVALID_CHARS("[^-._A-Za-z0-9~^]");
 
 std::unordered_map<std::string, std::string> ValidateTags(const std::unordered_map<std::string, std::string> &tags)
 {
@@ -21,10 +21,32 @@ std::unordered_map<std::string, std::string> ValidateTags(const std::unordered_m
     return validTags;
 }
 
+std::string RepleaceInvalidChars(const std::string &s)
+{
+    return std::regex_replace(s, INVALID_CHARS, "_");
+}
+
+std::string ToSpectatorId(const std::string &name, const std::unordered_map<std::string, std::string> &tags)
+{
+    std::ostringstream ss;
+    ss << RepleaceInvalidChars(name);
+    if (!tags.empty())
+    {
+        for (const auto &tag : tags)
+        {
+            ss << "," << RepleaceInvalidChars(tag.first) << "=" << RepleaceInvalidChars(tag.second);
+        }
+    }
+    return ss.str();
+}
+
+
+
+
 MeterId::MeterId(const std::string &name, const std::unordered_map<std::string, std::string> &tags)
     : m_name(name), m_tags(ValidateTags(tags))
 {
-    spectatord_id = ToSpectatorId(m_name, m_tags);
+    m_spectatord_id = ToSpectatorId(name, tags);
 }
 
 MeterId MeterId::WithTag(const std::string &key, const std::string &value) const
@@ -67,24 +89,7 @@ std::string MeterId::to_string() const
     return ss.str();
 }
 
-std::string MeterId::RepleaceInvalidChars(const std::string &s) const
-{
-    return std::regex_replace(s, INVALID_CHARS, "_");
-}
 
-std::string MeterId::ToSpectatorId(const std::string &name, const std::unordered_map<std::string, std::string> &tags) const
-{
-    std::ostringstream ss;
-    ss << RepleaceInvalidChars(name);
-    if (!tags.empty())
-    {
-        for (const auto &tag : tags)
-        {
-            ss << "," << RepleaceInvalidChars(tag.first) << "=" << RepleaceInvalidChars(tag.second);
-        }
-    }
-    return ss.str();
-}
 
 // Implementation of the hash function for MeterId
 size_t std::hash<MeterId>::operator()(const MeterId &id) const

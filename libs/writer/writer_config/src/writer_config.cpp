@@ -30,30 +30,20 @@ std::pair<WriterType, std::string> GetWriterConfigFromString(const std::string &
 WriterConfig::WriterConfig(const std::string &type)
 {
     const char *envLocation = std::getenv("SPECTATOR_OUTPUT_LOCATION");
-    try
+    if (envLocation != nullptr)
     {
-        if (envLocation != nullptr)
-        {
-            Logger::debug("Using environment variable SPECTATOR_OUTPUT_LOCATION: {}", envLocation);
-            std::string envValue(envLocation);
-            auto [writer_type, location] = GetWriterConfigFromString(envValue);
-            m_type                       = writer_type;
-            m_location                   = location;
-        }
-        else
-        {
-            Logger::debug("Using provided type: {}", type);
-            auto [writer_type, location] = GetWriterConfigFromString(type);
-            m_type                       = writer_type;
-            m_location                   = location;
-        }
-        Logger::debug("WriterConfig initialized with type: {}, location: {}", WriterTypeToString(m_type), m_location);
+        Logger::debug("Using environment variable SPECTATOR_OUTPUT_LOCATION: {}", envLocation);
+        std::string envValue(envLocation);
+        auto [writer_type, location] = GetWriterConfigFromString(envValue);
+        m_type                       = writer_type;
+        m_location                   = location;
     }
-    catch (const std::exception& e)
+    else
     {
-        // TODO: Throwing same exception twice 
-        // Matthew: Catch exception and default to udp or exit?
-        Logger::error("Failed to initialize WriterConfig: {}", e.what());
-        throw std::runtime_error(WriterConfigConstants::RuntimeErrorMessage + type);
+        Logger::debug("Using provided type: {}", type);
+        auto [writer_type, location] = GetWriterConfigFromString(type);
+        m_type                       = writer_type;
+        m_location                   = location;
     }
+    Logger::debug("WriterConfig initialized with type: {}, location: {}", WriterTypeToString(m_type), m_location);   
 }

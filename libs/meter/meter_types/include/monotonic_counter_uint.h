@@ -17,7 +17,7 @@ class MonotonicCounterUint final : public Meter
 
     void Set(const uint64_t &amount)
     {
-        auto line = this->m_meterTypeSymbol + FIELD_SEPARATOR + this->m_id.spectatord_id + FIELD_SEPARATOR + std::to_string(amount);
+        auto line = this->m_meterTypeSymbol + FIELD_SEPARATOR + this->m_id.GetSpectatordId() + FIELD_SEPARATOR + std::to_string(amount);
         Writer::GetInstance().Write(line);
     }
 };
