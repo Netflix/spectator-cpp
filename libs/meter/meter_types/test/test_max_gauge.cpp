@@ -16,5 +16,5 @@ TEST_F(MaxGaugeTest, Set)
     MaxGauge g(tid);
     EXPECT_TRUE(writer->IsEmpty());
     g.Set(0);
-    EXPECT_EQ("m:max_gauge:0.000000", writer->LastLine());
+    EXPECT_EQ("m:max_gauge:0.000000\n", writer->LastLine());
 }

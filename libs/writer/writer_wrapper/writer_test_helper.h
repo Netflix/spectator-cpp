@@ -12,9 +12,9 @@ class WriterTestHelper
 {
    public:
     // Initialize the Writer for testing purposes
-    static void InitializeWriter(WriterType type, const std::string& param = "", int port = 0)
+    static void InitializeWriter(WriterType type, const std::string& param = "", int port = 0, unsigned int bufferSize = 0)
     {
-        Writer::Initialize(type, param, port);
+        Writer::Initialize(type, param, port, bufferSize);
     }
 
     // Reset the Writer for testing purposes

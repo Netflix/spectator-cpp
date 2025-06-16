@@ -16,7 +16,7 @@ TEST_F(AgeGaugeTest, Now)
     AgeGauge g(tid);
     EXPECT_TRUE(writer->IsEmpty());
     g.Now();
-    EXPECT_EQ("A:age_gauge:0", writer->LastLine());
+    EXPECT_EQ("A:age_gauge:0\n", writer->LastLine());
 }
 
 TEST_F(AgeGaugeTest, Set)
@@ -26,5 +26,5 @@ TEST_F(AgeGaugeTest, Set)
     AgeGauge g(tid);
     EXPECT_TRUE(writer->IsEmpty());
     g.Set(10);
-    EXPECT_EQ("A:age_gauge:10", writer->LastLine());
+    EXPECT_EQ("A:age_gauge:10\n", writer->LastLine());
 }

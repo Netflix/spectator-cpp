@@ -17,7 +17,7 @@ TEST_F(DistSummaryTest, record)
     EXPECT_TRUE(writer->IsEmpty());
 
     ds.Record(42);
-    EXPECT_EQ("d:dist_summary:42", writer->LastLine());
+    EXPECT_EQ("d:dist_summary:42\n", writer->LastLine());
 }
 
 TEST_F(DistSummaryTest, recordNegative)
@@ -39,5 +39,5 @@ TEST_F(DistSummaryTest, recordZero)
     EXPECT_TRUE(writer->IsEmpty());
 
     ds.Record(0);
-    EXPECT_EQ("d:dist_summary:0", writer->LastLine());
+    EXPECT_EQ("d:dist_summary:0\n", writer->LastLine());
 }

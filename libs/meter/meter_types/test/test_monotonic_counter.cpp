@@ -16,7 +16,7 @@ TEST_F(MonotonicCounterTest, SetValue)
     MonotonicCounter mc(tid);
     EXPECT_TRUE(writer->IsEmpty());
     mc.Set(1);
-    EXPECT_EQ("C:monotonic_counter:1.000000", writer->LastLine());
+    EXPECT_EQ("C:monotonic_counter:1.000000\n", writer->LastLine());
 }
 
 TEST_F(MonotonicCounterTest, SetNegativeValue)
@@ -26,5 +26,5 @@ TEST_F(MonotonicCounterTest, SetNegativeValue)
     MonotonicCounter mc(tid);
     EXPECT_TRUE(writer->IsEmpty());
     mc.Set(-1);
-    EXPECT_EQ("C:monotonic_counter:-1.000000", writer->LastLine());
+    EXPECT_EQ("C:monotonic_counter:-1.000000\n", writer->LastLine());
 }

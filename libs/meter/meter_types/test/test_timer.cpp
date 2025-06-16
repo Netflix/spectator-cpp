@@ -17,7 +17,7 @@ TEST_F(TimerTest, record)
     EXPECT_TRUE(writer->IsEmpty());
 
     t.Record(42);
-    EXPECT_EQ("t:timer:42.000000", writer->LastLine());
+    EXPECT_EQ("t:timer:42.000000\n", writer->LastLine());
 }
 
 TEST_F(TimerTest, recordNegative)
@@ -39,5 +39,5 @@ TEST_F(TimerTest, recordZero)
     EXPECT_TRUE(writer->IsEmpty());
 
     t.Record(0);
-    EXPECT_EQ("t:timer:0.000000", writer->LastLine());
+    EXPECT_EQ("t:timer:0.000000\n", writer->LastLine());
 }

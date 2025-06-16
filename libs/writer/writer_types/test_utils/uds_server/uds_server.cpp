@@ -88,15 +88,27 @@ try
                 }
             }
 
-            // Connection accepted, set back to blocking for data reading
-            socket.non_blocking(false);
+            // Connection accepted, set to non-blocking to avoid hanging
+            socket.non_blocking(true);
 
             // Buffer for reading data
             std::array<char, 2048> buffer;
-            while (true)
+            while (uds_server_running)
             {
+                // We need to handle both data availability and potential errors
                 boost::system::error_code read_ec;
-                std::size_t bytes_read = socket.read_some(boost::asio::buffer(buffer), read_ec);
+                std::size_t bytes_read = 0;
+                
+                // Try to read data even if none is immediately available
+                // This allows us to detect connection closure properly
+                bytes_read = socket.read_some(boost::asio::buffer(buffer), read_ec);
+                
+                // Handle the case where no data is available
+                if (read_ec == boost::asio::error::would_block) {
+                    // No data available, wait a bit and try again
+                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                    continue;
+                }
 
                 if (read_ec == boost::asio::error::eof)
                 {

@@ -17,7 +17,7 @@ TEST_F(PercentileTimerTest, record)
     EXPECT_TRUE(writer->IsEmpty());
 
     pt.Record(42);
-    EXPECT_EQ("T:percentile_timer:42.000000", writer->LastLine());
+    EXPECT_EQ("T:percentile_timer:42.000000\n", writer->LastLine());
 }
 
 TEST_F(PercentileTimerTest, recordNegative)
@@ -39,5 +39,5 @@ TEST_F(PercentileTimerTest, recordZero)
     EXPECT_TRUE(writer->IsEmpty());
 
     pt.Record(0);
-    EXPECT_EQ("T:percentile_timer:0.000000", writer->LastLine());
+    EXPECT_EQ("T:percentile_timer:0.000000\n", writer->LastLine());
 }

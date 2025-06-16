@@ -17,7 +17,7 @@ TEST_F(MonoCounterTest, set)
     EXPECT_TRUE(writer->IsEmpty());
 
     mc.Set(1);
-    EXPECT_EQ("U:monotonic_counter_uint:1", writer->LastLine());
+    EXPECT_EQ("U:monotonic_counter_uint:1\n", writer->LastLine());
 }
 
 TEST_F(MonoCounterTest, setNegative)
@@ -28,5 +28,5 @@ TEST_F(MonoCounterTest, setNegative)
     EXPECT_TRUE(writer->IsEmpty());
 
     mc.Set(-1);
-    EXPECT_EQ("U:monotonic_counter_uint:18446744073709551615", writer->LastLine());
+    EXPECT_EQ("U:monotonic_counter_uint:18446744073709551615\n", writer->LastLine());
 }

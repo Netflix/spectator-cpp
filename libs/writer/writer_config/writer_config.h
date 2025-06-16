@@ -10,12 +10,16 @@ class WriterConfig
 {
    public:
     WriterConfig(const std::string& type);
+    WriterConfig(const std::string& type, const unsigned int bufferSize);
 
     const WriterType& GetType() const noexcept { return m_type; };
-
+    const unsigned int GetBufferSize() const noexcept { return m_bufferSize; };
+    const bool IsBufferingEnabled() const noexcept { return m_isBufferingEnabled; };
     const std::string& GetLocation() const noexcept { return m_location; };
 
    private:
     WriterType m_type;
     std::string m_location;
+    unsigned int m_bufferSize;
+    bool m_isBufferingEnabled = false;
 };

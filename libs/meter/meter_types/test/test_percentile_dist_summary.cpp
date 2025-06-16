@@ -17,7 +17,7 @@ TEST_F(PercentileDistSummaryTest, record)
     EXPECT_TRUE(writer->IsEmpty());
 
     pds.Record(42);
-    EXPECT_EQ("D:percentile_dist_summary:42", writer->LastLine());
+    EXPECT_EQ("D:percentile_dist_summary:42\n", writer->LastLine());
 }
 
 TEST_F(PercentileDistSummaryTest, recordNegative)
@@ -39,5 +39,5 @@ TEST_F(PercentileDistSummaryTest, recordZero)
     EXPECT_TRUE(writer->IsEmpty());
 
     pds.Record(0);
-    EXPECT_EQ("D:percentile_dist_summary:0", writer->LastLine());
+    EXPECT_EQ("D:percentile_dist_summary:0\n", writer->LastLine());
 }

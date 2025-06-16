@@ -47,3 +47,11 @@ WriterConfig::WriterConfig(const std::string& type)
     }
     Logger::debug("WriterConfig initialized with type: {}, location: {}", WriterTypeToString(m_type), m_location);
 }
+
+WriterConfig::WriterConfig(const std::string& type, const unsigned int bufferSize)
+    : WriterConfig(type)  // Constructor delegation
+{
+    m_bufferSize = bufferSize;
+    m_isBufferingEnabled = true;
+    Logger::debug("WriterConfig buffering enabled with size: {}", m_bufferSize);
+}

@@ -101,7 +101,7 @@ TEST_F(UDSWriterTest, CloseAndReopen)
     writer2.Write(message2);
 
     // Wait for message processing
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    std::this_thread::sleep_for(std::chrono::milliseconds(300));
 
     // Verify second message
     messages = get_uds_messages();
