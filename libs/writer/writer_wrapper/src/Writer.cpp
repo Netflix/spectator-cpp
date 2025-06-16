@@ -9,35 +9,35 @@ Writer::~Writer()
     // No need to explicitly close here as unique_ptr will clean up
 }
 
-void Writer::Initialize(WriterType type, const std::string &param, int port)
+void Writer::Initialize(WriterType type, const std::string& param, int port)
 {
     // Get the singleton instance directly
-    auto &instance = GetInstance();
+    auto& instance = GetInstance();
 
     // Create the new writer based on type
     try
     {
         switch (type)
         {
-        case WriterType::Memory:
-            instance.m_impl = std::make_unique<MemoryWriter>();
-            Logger::info("Writer initialized as MemoryWriter");
-            break;
-        case WriterType::UDP:
-            instance.m_impl = std::make_unique<UDPWriter>(param, port);
-            Logger::info("Writer initialized as UDPWriter with host: {} and port: {}", param, port);
-            break;
-        case WriterType::Unix:
-            instance.m_impl = std::make_unique<UDSWriter>(param);
-            Logger::info("Writer initialized as UnixWriter with socket path: {}", param);
-            break;
-        default:
-            throw std::runtime_error("Unsupported writer type");
+            case WriterType::Memory:
+                instance.m_impl = std::make_unique<MemoryWriter>();
+                Logger::info("Writer initialized as MemoryWriter");
+                break;
+            case WriterType::UDP:
+                instance.m_impl = std::make_unique<UDPWriter>(param, port);
+                Logger::info("Writer initialized as UDPWriter with host: {} and port: {}", param, port);
+                break;
+            case WriterType::Unix:
+                instance.m_impl = std::make_unique<UDSWriter>(param);
+                Logger::info("Writer initialized as UnixWriter with socket path: {}", param);
+                break;
+            default:
+                throw std::runtime_error("Unsupported writer type");
         }
 
         instance.m_currentType = type;
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
         Logger::error("Failed to initialize writer: {}", e.what());
         throw;
@@ -46,7 +46,7 @@ void Writer::Initialize(WriterType type, const std::string &param, int port)
 
 void Writer::Reset()
 {
-    auto &instance = GetInstance();
+    auto& instance = GetInstance();
 
     if (instance.m_impl)
     {
@@ -54,7 +54,7 @@ void Writer::Reset()
         {
             instance.m_impl->Close();
         }
-        catch (const std::exception &e)
+        catch (const std::exception& e)
         {
             Logger::warn("Exception while closing writer during reset: {}", e.what());
         }
@@ -64,9 +64,9 @@ void Writer::Reset()
     Logger::info("Writer has been reset");
 }
 
-void Writer::Write(const std::string &message)
+void Writer::Write(const std::string& message)
 {
-    auto &instance = GetInstance();
+    auto& instance = GetInstance();
 
     if (!instance.m_impl)
     {
@@ -78,7 +78,7 @@ void Writer::Write(const std::string &message)
     {
         instance.m_impl->Write(message);
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
         Logger::error("Write operation failed: {}", e.what());
     }
@@ -86,7 +86,7 @@ void Writer::Write(const std::string &message)
 
 void Writer::Close()
 {
-    auto &instance = GetInstance();
+    auto& instance = GetInstance();
 
     if (!instance.m_impl)
     {
@@ -99,13 +99,10 @@ void Writer::Close()
         instance.m_impl->Close();
         Logger::debug("Writer closed successfully");
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
         Logger::error("Failed to close writer: {}", e.what());
     }
 }
 
-WriterType Writer::GetWriterType()
-{
-    return GetInstance().m_currentType;
-}
+WriterType Writer::GetWriterType() { return GetInstance().m_currentType; }

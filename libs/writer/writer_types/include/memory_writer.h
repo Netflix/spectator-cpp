@@ -6,23 +6,20 @@
 
 class MemoryWriter final : public BaseWriter
 {
-  public:
-    MemoryWriter()           = default;
+   public:
+    MemoryWriter() = default;
     ~MemoryWriter() override = default;
 
-    void Write(const std::string &message) override;
+    void Write(const std::string& message) override;
     void Close() override;
     void Clear();
 
-    const std::vector<std::string> &GetMessages() const noexcept
-    {
-        return m_messages;
-    }
+    const std::vector<std::string>& GetMessages() const noexcept { return m_messages; }
 
-    const std::string &LastLine() const noexcept;
-    
-	bool IsEmpty() const noexcept { return m_messages.empty(); }
+    const std::string& LastLine() const noexcept;
 
-  private:
+    bool IsEmpty() const noexcept { return m_messages.empty(); }
+
+   private:
     std::vector<std::string> m_messages;
 };

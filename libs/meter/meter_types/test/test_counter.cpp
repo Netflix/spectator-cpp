@@ -5,14 +5,14 @@
 
 class CounterTest : public ::testing::Test
 {
-  protected:
+   protected:
     MeterId tid = MeterId("counter");
 };
 
 TEST_F(CounterTest, increment)
 {
     WriterTestHelper::InitializeWriter(WriterType::Memory);
-    auto *writer = dynamic_cast<MemoryWriter *>(WriterTestHelper::GetImpl());
+    auto* writer = dynamic_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
     Counter c(tid);
     EXPECT_TRUE(writer->IsEmpty());
@@ -25,7 +25,7 @@ TEST_F(CounterTest, increment)
 TEST_F(CounterTest, incrementNegative)
 {
     WriterTestHelper::InitializeWriter(WriterType::Memory);
-	auto *writer = dynamic_cast<MemoryWriter *>(WriterTestHelper::GetImpl());
+    auto* writer = dynamic_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
     Counter c(tid);
     c.Increment(-1);

@@ -5,14 +5,14 @@
 
 class PercentileTimerTest : public ::testing::Test
 {
-  protected:
+   protected:
     MeterId tid = MeterId("percentile_timer");
 };
 
 TEST_F(PercentileTimerTest, record)
 {
     WriterTestHelper::InitializeWriter(WriterType::Memory);
-    auto *writer = dynamic_cast<MemoryWriter *>(WriterTestHelper::GetImpl());
+    auto* writer = dynamic_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
     PercentileTimer pt(tid);
     EXPECT_TRUE(writer->IsEmpty());
 
@@ -23,7 +23,7 @@ TEST_F(PercentileTimerTest, record)
 TEST_F(PercentileTimerTest, recordNegative)
 {
     WriterTestHelper::InitializeWriter(WriterType::Memory);
-    auto *writer = dynamic_cast<MemoryWriter *>(WriterTestHelper::GetImpl());
+    auto* writer = dynamic_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
     PercentileTimer pt(tid);
     EXPECT_TRUE(writer->IsEmpty());
 
@@ -34,7 +34,7 @@ TEST_F(PercentileTimerTest, recordNegative)
 TEST_F(PercentileTimerTest, recordZero)
 {
     WriterTestHelper::InitializeWriter(WriterType::Memory);
-    auto *writer = dynamic_cast<MemoryWriter *>(WriterTestHelper::GetImpl());
+    auto* writer = dynamic_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
     PercentileTimer pt(tid);
     EXPECT_TRUE(writer->IsEmpty());
 

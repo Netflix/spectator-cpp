@@ -5,14 +5,14 @@
 
 class MonoCounterTest : public ::testing::Test
 {
-  protected:
+   protected:
     MeterId tid = MeterId("monotonic_counter_uint");
 };
 
 TEST_F(MonoCounterTest, set)
 {
     WriterTestHelper::InitializeWriter(WriterType::Memory);
-    auto *writer = dynamic_cast<MemoryWriter *>(WriterTestHelper::GetImpl());
+    auto* writer = dynamic_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
     MonotonicCounterUint mc(tid);
     EXPECT_TRUE(writer->IsEmpty());
 
@@ -23,7 +23,7 @@ TEST_F(MonoCounterTest, set)
 TEST_F(MonoCounterTest, setNegative)
 {
     WriterTestHelper::InitializeWriter(WriterType::Memory);
-    auto *writer = dynamic_cast<MemoryWriter *>(WriterTestHelper::GetImpl());
+    auto* writer = dynamic_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
     MonotonicCounterUint mc(tid);
     EXPECT_TRUE(writer->IsEmpty());
 

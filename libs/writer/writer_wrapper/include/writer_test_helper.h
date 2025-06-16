@@ -10,22 +10,16 @@
  */
 class WriterTestHelper
 {
-  public:
+   public:
     // Initialize the Writer for testing purposes
-    static void InitializeWriter(WriterType type, const std::string &param = "", int port = 0)
+    static void InitializeWriter(WriterType type, const std::string& param = "", int port = 0)
     {
         Writer::Initialize(type, param, port);
     }
 
     // Reset the Writer for testing purposes
-    static void ResetWriter()
-    {
-        Writer::Reset();
-    }
+    static void ResetWriter() { Writer::Reset(); }
 
     // Get the Writer's implementation for testing purposes
-    static BaseWriter *GetImpl()
-    {
-        return Writer::GetInstance().m_impl.get();
-    }
+    static BaseWriter* GetImpl() { return Writer::GetInstance().m_impl.get(); }
 };

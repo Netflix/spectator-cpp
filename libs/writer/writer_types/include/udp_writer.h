@@ -7,13 +7,13 @@
 
 class UDPWriter final : public BaseWriter
 {
-  public:
-    UDPWriter(const std::string &host, int port);
+   public:
+    UDPWriter(const std::string& host, int port);
     ~UDPWriter() override;
-    void Write(const std::string &message) override;
+    void Write(const std::string& message) override;
     void Close() override;
 
-  private:
+   private:
     std::string m_host;
     int m_port;
     std::unique_ptr<boost::asio::io_context> m_io_context;

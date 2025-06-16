@@ -5,14 +5,14 @@
 
 class MaxGaugeTest : public ::testing::Test
 {
-  protected:
+   protected:
     MeterId tid = MeterId("max_gauge");
 };
 
 TEST_F(MaxGaugeTest, Set)
 {
     WriterTestHelper::InitializeWriter(WriterType::Memory);
-    auto *writer = dynamic_cast<MemoryWriter *>(WriterTestHelper::GetImpl());
+    auto* writer = dynamic_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
     MaxGauge g(tid);
     EXPECT_TRUE(writer->IsEmpty());
     g.Set(0);

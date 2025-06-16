@@ -5,14 +5,14 @@
 
 class AgeGaugeTest : public ::testing::Test
 {
-  protected:
+   protected:
     MeterId tid = MeterId("age_gauge");
 };
 
 TEST_F(AgeGaugeTest, Now)
 {
     WriterTestHelper::InitializeWriter(WriterType::Memory);
-    auto *writer = dynamic_cast<MemoryWriter *>(WriterTestHelper::GetImpl());
+    auto* writer = dynamic_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
     AgeGauge g(tid);
     EXPECT_TRUE(writer->IsEmpty());
     g.Now();
@@ -22,7 +22,7 @@ TEST_F(AgeGaugeTest, Now)
 TEST_F(AgeGaugeTest, Set)
 {
     WriterTestHelper::InitializeWriter(WriterType::Memory);
-    auto *writer = dynamic_cast<MemoryWriter *>(WriterTestHelper::GetImpl());
+    auto* writer = dynamic_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
     AgeGauge g(tid);
     EXPECT_TRUE(writer->IsEmpty());
     g.Set(10);

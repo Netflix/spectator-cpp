@@ -5,14 +5,14 @@
 
 class GaugeTest : public ::testing::Test
 {
-  protected:
+   protected:
     MeterId tid = MeterId("gauge");
 };
 
 TEST_F(GaugeTest, Now)
 {
     WriterTestHelper::InitializeWriter(WriterType::Memory);
-    auto *writer = dynamic_cast<MemoryWriter *>(WriterTestHelper::GetImpl());
+    auto* writer = dynamic_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
     Gauge g(tid);
     EXPECT_TRUE(writer->IsEmpty());
     g.Set(1);
@@ -21,10 +21,10 @@ TEST_F(GaugeTest, Now)
 
 TEST_F(GaugeTest, TTL)
 {
-	WriterTestHelper::InitializeWriter(WriterType::Memory);
-    auto *writer = dynamic_cast<MemoryWriter *>(WriterTestHelper::GetImpl());
-	Gauge g(tid, 10);
-	EXPECT_TRUE(writer->IsEmpty());
-	g.Set(42);
-	EXPECT_EQ("g,10:gauge:42.000000", writer->LastLine());
+    WriterTestHelper::InitializeWriter(WriterType::Memory);
+    auto* writer = dynamic_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
+    Gauge g(tid, 10);
+    EXPECT_TRUE(writer->IsEmpty());
+    g.Set(42);
+    EXPECT_EQ("g,10:gauge:42.000000", writer->LastLine());
 }

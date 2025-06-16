@@ -10,10 +10,8 @@ static constexpr auto AGE_GAUGE_TYPE_SYMBOL = "A";
 
 class AgeGauge final : public Meter
 {
-  public:
-    explicit AgeGauge(const MeterId &meter_id) : Meter(meter_id, AGE_GAUGE_TYPE_SYMBOL)
-    {
-    }
+   public:
+    explicit AgeGauge(const MeterId& meter_id) : Meter(meter_id, AGE_GAUGE_TYPE_SYMBOL) {}
 
     void Now()
     {
@@ -21,9 +19,10 @@ class AgeGauge final : public Meter
         Writer::GetInstance().Write(line);
     }
 
-    void Set(const int &seconds)
+    void Set(const int& seconds)
     {
-        auto line = this->m_meterTypeSymbol + FIELD_SEPARATOR + this->m_id.GetSpectatordId() + FIELD_SEPARATOR + std::to_string(seconds);
+        auto line = this->m_meterTypeSymbol + FIELD_SEPARATOR + this->m_id.GetSpectatordId() + FIELD_SEPARATOR +
+                    std::to_string(seconds);
         Writer::GetInstance().Write(line);
     }
 };

@@ -78,8 +78,8 @@ TEST(MeterIdTest, Tags)
 TEST(MeterIdTest, TagsDefensiveCopy)
 {
     MeterId id1("foo", {{"a", "1"}});
-    auto tags                                             = id1.GetTags();
-    tags["b"]                                             = "2";
+    auto tags = id1.GetTags();
+    tags["b"] = "2";
     std::unordered_map<std::string, std::string> expected = {{"a", "1"}, {"b", "2"}};
     EXPECT_EQ(expected, tags);
     std::unordered_map<std::string, std::string> expected_original = {{"a", "1"}};

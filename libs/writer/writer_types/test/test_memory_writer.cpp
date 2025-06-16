@@ -31,7 +31,7 @@ TEST(MemoryWriterTest, GetMessages)
     writer.Write("First message");
     writer.Write("Second message");
 
-    const auto &messages = writer.GetMessages();
+    const auto& messages = writer.GetMessages();
     EXPECT_EQ(messages.size(), 2);
     EXPECT_EQ(messages[0], "First message");
     EXPECT_EQ(messages[1], "Second message");

@@ -35,7 +35,7 @@ void clear_uds_messages()
     uds_messages.clear();
 }
 
-void add_uds_message(const std::string &message)
+void add_uds_message(const std::string& message)
 {
     std::lock_guard<std::mutex> lock(uds_messages_mutex);
     uds_messages.push_back(message);
@@ -124,7 +124,7 @@ try
             // Close the connection
             socket.close();
         }
-        catch (const std::exception &e)
+        catch (const std::exception& e)
         {
             std::cerr << "Exception handling client: " << e.what() << std::endl;
         }
@@ -135,7 +135,7 @@ try
     // Clean up the socket file on exit
     std::filesystem::remove(socket_path);
 }
-catch (const std::exception &e)
+catch (const std::exception& e)
 {
     std::cerr << "Exception in UDS server: " << e.what() << std::endl;
     return;

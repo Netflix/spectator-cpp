@@ -11,7 +11,7 @@ struct ProtocolLine
     MeterId id;
     std::string value;
 
-    bool operator==(const ProtocolLine &other) const
+    bool operator==(const ProtocolLine& other) const
     {
         return symbol == other.symbol && id == other.id && value == other.value;
     }
@@ -29,7 +29,7 @@ struct ProtocolLine
         {
             ss << ",";
             bool first = true;
-            for (const auto &[key, value] : sorted_tags)
+            for (const auto& [key, value] : sorted_tags)
             {
                 if (!first)
                 {
@@ -47,4 +47,4 @@ struct ProtocolLine
     }
 };
 
-std::optional<ProtocolLine> ParseProtocolLine(const std::string &line);
+std::optional<ProtocolLine> ParseProtocolLine(const std::string& line);

@@ -2,30 +2,28 @@
 
 #include <libs/logger/logger.h>
 
-
 #include <boost/asio.hpp>
 #include <boost/system/error_code.hpp>
 #include <iostream>
 
 namespace local = boost::asio::local;
 
-UDSWriter::UDSWriter(const std::string &socketPath)
-    : m_socketPath(socketPath), m_ioContext(std::make_unique<boost::asio::io_context>()), m_socket(nullptr),
+UDSWriter::UDSWriter(const std::string& socketPath)
+    : m_socketPath(socketPath),
+      m_ioContext(std::make_unique<boost::asio::io_context>()),
+      m_socket(nullptr),
       m_isOpen(false)
 {
     connect();
 }
 
-UDSWriter::~UDSWriter()
-{
-    Close();
-}
+UDSWriter::~UDSWriter() { Close(); }
 
 bool UDSWriter::connect()
 {
     if (m_isOpen)
     {
-        return true; // Already connected
+        return true;  // Already connected
     }
 
     try
@@ -52,7 +50,7 @@ bool UDSWriter::connect()
         Logger::debug("UDS Writer: Connected to {}", m_socketPath);
         return true;
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
         Logger::error("UDS Writer: Exception while connecting - {}", e.what());
         m_isOpen = false;
@@ -60,7 +58,7 @@ bool UDSWriter::connect()
     }
 }
 
-void UDSWriter::Write(const std::string &message)
+void UDSWriter::Write(const std::string& message)
 {
     if (!m_isOpen && !connect())
     {
@@ -76,17 +74,17 @@ void UDSWriter::Write(const std::string &message)
         if (ec)
         {
             Logger::error("UDS Writer: Failed to send message - {}", ec.message());
-            m_isOpen = false; // Mark as disconnected on error
+            m_isOpen = false;  // Mark as disconnected on error
         }
         else
         {
             Logger::debug("UDS Writer: Sent message ({} bytes)", message.size());
         }
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
         Logger::error("UDS Writer: Exception while sending message - {}", e.what());
-        m_isOpen = false; // Mark as disconnected on exception
+        m_isOpen = false;  // Mark as disconnected on exception
     }
 }
 
@@ -105,7 +103,7 @@ void UDSWriter::Close()
                 Logger::warn("UDS Writer: Error closing socket - {}", ec.message());
             }
         }
-        catch (const std::exception &e)
+        catch (const std::exception& e)
         {
             Logger::warn("UDS Writer: Exception while closing socket - {}", e.what());
         }

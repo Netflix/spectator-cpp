@@ -5,14 +5,14 @@
 
 class DistSummaryTest : public ::testing::Test
 {
-  protected:
+   protected:
     MeterId tid = MeterId("dist_summary");
 };
 
 TEST_F(DistSummaryTest, record)
 {
     WriterTestHelper::InitializeWriter(WriterType::Memory);
-    auto *writer = dynamic_cast<MemoryWriter *>(WriterTestHelper::GetImpl());
+    auto* writer = dynamic_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
     DistributionSummary ds(tid);
     EXPECT_TRUE(writer->IsEmpty());
 
@@ -23,7 +23,7 @@ TEST_F(DistSummaryTest, record)
 TEST_F(DistSummaryTest, recordNegative)
 {
     WriterTestHelper::InitializeWriter(WriterType::Memory);
-    auto *writer = dynamic_cast<MemoryWriter *>(WriterTestHelper::GetImpl());
+    auto* writer = dynamic_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
     DistributionSummary ds(tid);
     EXPECT_TRUE(writer->IsEmpty());
 
@@ -34,7 +34,7 @@ TEST_F(DistSummaryTest, recordNegative)
 TEST_F(DistSummaryTest, recordZero)
 {
     WriterTestHelper::InitializeWriter(WriterType::Memory);
-    auto *writer = dynamic_cast<MemoryWriter *>(WriterTestHelper::GetImpl());
+    auto* writer = dynamic_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
     DistributionSummary ds(tid);
     EXPECT_TRUE(writer->IsEmpty());
 

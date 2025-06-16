@@ -21,19 +21,19 @@ enum class WriterType
 struct WriterTypes
 {
     static constexpr auto Memory = "memory";
-    static constexpr auto UDP    = "udp";
-    static constexpr auto Unix   = "unix";
+    static constexpr auto UDP = "udp";
+    static constexpr auto Unix = "unix";
 
     // URL prefixes
-    static constexpr auto UDPURL  = "udp://";
+    static constexpr auto UDPURL = "udp://";
     static constexpr auto UnixURL = "unix://";
 };
 
 struct DefaultLocations
 {
     static constexpr auto NoLocation = "";
-    static constexpr auto UDP        = "udp://127.0.0.1:1234";
-    static constexpr auto UDS        = "unix:///run/spectatord/spectatord.unix";
+    static constexpr auto UDP = "udp://127.0.0.1:1234";
+    static constexpr auto UDS = "unix:///run/spectatord/spectatord.unix";
 };
 
 inline const std::map<std::string_view, std::pair<WriterType, std::string_view>> TypeToLocationMap = {
@@ -42,13 +42,17 @@ inline const std::map<std::string_view, std::pair<WriterType, std::string_view>>
     {WriterTypes::Unix, {WriterType::Unix, DefaultLocations::UDS}},
 };
 
-inline std::string WriterTypeToString(WriterType type) 
+inline std::string WriterTypeToString(WriterType type)
 {
     switch (type)
     {
-        case WriterType::Memory: return WriterTypes::Memory;
-        case WriterType::UDP: return WriterTypes::UDP;
-        case WriterType::Unix: return WriterTypes::Unix;
-        default: return "Unknown";
+        case WriterType::Memory:
+            return WriterTypes::Memory;
+        case WriterType::UDP:
+            return WriterTypes::UDP;
+        case WriterType::Unix:
+            return WriterTypes::Unix;
+        default:
+            return "Unknown";
     }
 }

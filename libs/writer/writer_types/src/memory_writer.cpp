@@ -2,7 +2,7 @@
 
 #include <libs/logger/logger.h>
 
-void MemoryWriter::Write(const std::string &message)
+void MemoryWriter::Write(const std::string& message)
 {
     this->m_messages.push_back(message);
     Logger::debug("MemoryWriter::Writing: {}", message);
@@ -20,7 +20,7 @@ void MemoryWriter::Clear()
     Logger::debug("MemoryWriter::Cleared messages");
 }
 
-const std::string &MemoryWriter::LastLine() const noexcept
+const std::string& MemoryWriter::LastLine() const noexcept
 {
     static const std::string emptyString = "";
 

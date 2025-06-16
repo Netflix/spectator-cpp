@@ -2,15 +2,15 @@
 
 #include <gtest/gtest.h>
 
-#include "../test_utils/udp_server/udp_server.h" // Include our new header for UDP server interaction
+#include "../test_utils/udp_server/udp_server.h"  // Include our new header for UDP server interaction
 #include <thread>
 #include <chrono>
-#include <algorithm> // For std::find
+#include <algorithm>  // For std::find
 
 // Test fixture for UDP Writer tests
 class UDPWriterTest : public ::testing::Test
 {
-  protected:
+   protected:
     void SetUp() override
     {
         // Set the server to run
@@ -66,7 +66,7 @@ TEST_F(UDPWriterTest, SendMessage)
 
     // Check that our message is in the vector
     bool message_found = false;
-    for (const auto &msg : messages)
+    for (const auto& msg : messages)
     {
         if (msg == test_message)
         {
@@ -78,7 +78,6 @@ TEST_F(UDPWriterTest, SendMessage)
 
 TEST_F(UDPWriterTest, CloseAndReopen)
 {
-
     UDPWriter writer("127.0.0.1", 1234);
     std::string message1 = "Initial message";
     writer.Write(message1);
@@ -110,14 +109,13 @@ TEST_F(UDPWriterTest, CloseAndReopen)
 
 TEST_F(UDPWriterTest, SendMultipleMessages)
 {
-
     UDPWriter writer("127.0.0.1", 1234);
 
     // Define test messages
     std::vector<std::string> test_messages = {"Message 1", "Message 2", "Message 3"};
 
     // Send several messages in succession
-    for (const auto &msg : test_messages)
+    for (const auto& msg : test_messages)
     {
         writer.Write(msg);
     }

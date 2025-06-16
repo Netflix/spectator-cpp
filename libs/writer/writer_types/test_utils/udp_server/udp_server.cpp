@@ -31,7 +31,7 @@ void clear_messages()
     messages.clear();
 }
 
-void add_message(const std::string &message)
+void add_message(const std::string& message)
 {
     std::lock_guard<std::mutex> lock(messages_mutex);
     messages.push_back(message);
@@ -55,7 +55,7 @@ try
         socket.bind(endpoint);
         std::cout << "Socket bound to IPv4 localhost (127.0.0.1):" << port << std::endl;
     }
-    catch (const std::exception &e)
+    catch (const std::exception& e)
     {
         std::cerr << "Error binding socket: " << e.what() << "\n";
         throw;
@@ -92,7 +92,7 @@ try
             std::cout << "Received from " << sender_endpoint << ": " << message << std::endl;
             std::cout << "Total messages stored: " << current_messages.size() << std::endl;
         }
-        catch (const boost::system::system_error &e)
+        catch (const boost::system::system_error& e)
         {
             if (e.code() == boost::asio::error::would_block)
             {
@@ -108,7 +108,7 @@ try
     }
     std::cout << "UDP server shutting down..." << std::endl;
 }
-catch (const std::exception &e)
+catch (const std::exception& e)
 {
     std::cerr << "Exception in UDP server: " << e.what() << "\n";
     return;

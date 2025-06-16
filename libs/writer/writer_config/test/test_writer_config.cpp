@@ -9,44 +9,43 @@
 // Enhanced helper to temporarily modify an environment variable for testing
 class EnvironmentVariableGuard
 {
-public:
-
-    EnvironmentVariableGuard(const std::string& name) : m_name(name) 
+   public:
+    EnvironmentVariableGuard(const std::string& name) : m_name(name)
     {
-        if (const char* value = std::getenv(name.c_str())) 
+        if (const char* value = std::getenv(name.c_str()))
         {
             m_originalValue = value;
         }
     }
 
-    void setValue(const std::string& value) 
-    {
-        setenv(m_name.c_str(), value.c_str(), 1);
-    }
+    void setValue(const std::string& value) { setenv(m_name.c_str(), value.c_str(), 1); }
 
     void unsetValue() { unsetenv(m_name.c_str()); }
 
-    ~EnvironmentVariableGuard() 
+    ~EnvironmentVariableGuard()
     {
-        if (m_originalValue.has_value()) { setenv(m_name.c_str(), m_originalValue->c_str(), 1); } 
-        else { unsetenv(m_name.c_str()); }
+        if (m_originalValue.has_value())
+        {
+            setenv(m_name.c_str(), m_originalValue->c_str(), 1);
+        }
+        else
+        {
+            unsetenv(m_name.c_str());
+        }
     }
 
-private:
+   private:
     std::string m_name;
     std::optional<std::string> m_originalValue;
 };
 
-class WriterConfigTest : public ::testing::Test {
-protected:
+class WriterConfigTest : public ::testing::Test
+{
+   protected:
     EnvironmentVariableGuard envGuard{"SPECTATOR_OUTPUT_LOCATION"};
 
-    void SetUp() override 
-    {
-        envGuard.unsetValue();
-    }
+    void SetUp() override { envGuard.unsetValue(); }
 };
-
 
 TEST_F(WriterConfigTest, BasicWriterTypes)
 {
@@ -72,7 +71,6 @@ TEST_F(WriterConfigTest, BasicWriterTypes)
     }
 }
 
-
 TEST_F(WriterConfigTest, URLBasedWriterTypes)
 {
     // Test UDP URL
@@ -96,11 +94,11 @@ TEST_F(WriterConfigTest, EnvironmentVariableOverride)
 {
     {
         envGuard.setValue(WriterTypes::Memory);
-        WriterConfig config(WriterTypes::UDP); // This should be ignored due to env var
+        WriterConfig config(WriterTypes::UDP);  // This should be ignored due to env var
         EXPECT_EQ(config.GetType(), WriterType::Memory);
         EXPECT_EQ(config.GetLocation(), DefaultLocations::NoLocation);
     }
-    
+
     {
         envGuard.unsetValue();
         WriterConfig config(WriterTypes::Memory);
@@ -116,13 +114,12 @@ TEST_F(WriterConfigTest, InvalidWriterType)
 
     {
         envGuard.setValue("invalid_env_value");
-        EXPECT_THROW({WriterConfig config(WriterTypes::Memory);}, std::runtime_error);
+        EXPECT_THROW({ WriterConfig config(WriterTypes::Memory); }, std::runtime_error);
     }
 }
 
 TEST_F(WriterConfigTest, EdgeCases)
 {
-
     // Test with just URL scheme but no path
     {
         WriterConfig config("udp://");

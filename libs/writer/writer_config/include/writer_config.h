@@ -8,14 +8,14 @@
 
 class WriterConfig
 {
-	public:
-		WriterConfig(const std::string &type);
+   public:
+    WriterConfig(const std::string& type);
 
-		const WriterType &GetType() const noexcept { return m_type; };
+    const WriterType& GetType() const noexcept { return m_type; };
 
-		const std::string &GetLocation() const noexcept { return m_location;};
+    const std::string& GetLocation() const noexcept { return m_location; };
 
-	private:
-		WriterType m_type;
-		std::string m_location;
+   private:
+    WriterType m_type;
+    std::string m_location;
 };

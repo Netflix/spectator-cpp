@@ -8,13 +8,13 @@
 
 class UDSWriter final : public BaseWriter
 {
-  public:
-    UDSWriter(const std::string &socketPath);
+   public:
+    UDSWriter(const std::string& socketPath);
     ~UDSWriter() override;
-    void Write(const std::string &message) override;
+    void Write(const std::string& message) override;
     void Close() override;
 
-  private:
+   private:
     std::string m_socketPath;
     std::unique_ptr<boost::asio::io_context> m_ioContext;
     std::unique_ptr<boost::asio::local::stream_protocol::socket> m_socket;

@@ -4,7 +4,7 @@
 #include <vector>
 
 // Utility: split a string by a delimiter
-std::vector<std::string> split(const std::string &str, char delimiter)
+std::vector<std::string> split(const std::string& str, char delimiter)
 {
     std::vector<std::string> tokens;
     std::stringstream ss(str);
@@ -16,11 +16,11 @@ std::vector<std::string> split(const std::string &str, char delimiter)
     return tokens;
 }
 
-std::optional<ProtocolLine> ParseProtocolLine(const std::string &line)
+std::optional<ProtocolLine> ParseProtocolLine(const std::string& line)
 {
-	char symbol{};
+    char symbol{};
     std::string name{};
-	std::unordered_map<std::string, std::string> tags{};
+    std::unordered_map<std::string, std::string> tags{};
     std::string value{};
 
     auto mainParts = split(line, ':');

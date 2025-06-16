@@ -5,12 +5,12 @@
 #include <optional>
 
 // Enhanced helper to temporarily modify an environment variable for testing
-class EnvironmentVariableGuard {
-public:
-    
-    EnvironmentVariableGuard(const std::string& name) : m_name(name) 
+class EnvironmentVariableGuard
+{
+   public:
+    EnvironmentVariableGuard(const std::string& name) : m_name(name)
     {
-        if (const char* value = std::getenv(name.c_str())) 
+        if (const char* value = std::getenv(name.c_str()))
         {
             m_originalValue = value;
         }
@@ -20,24 +20,32 @@ public:
 
     void unsetValue() { unsetenv(m_name.c_str()); }
 
-    ~EnvironmentVariableGuard() 
+    ~EnvironmentVariableGuard()
     {
-        if (m_originalValue.has_value()) { setenv(m_name.c_str(), m_originalValue->c_str(), 1); } 
-        else { unsetenv(m_name.c_str()); }
+        if (m_originalValue.has_value())
+        {
+            setenv(m_name.c_str(), m_originalValue->c_str(), 1);
+        }
+        else
+        {
+            unsetenv(m_name.c_str());
+        }
     }
 
-private:
+   private:
     std::string m_name;
     std::optional<std::string> m_originalValue;
 };
 
-class ConfigTest : public ::testing::Test {
-protected:
+class ConfigTest : public ::testing::Test
+{
+   protected:
     // Create guards for each environment variable
     EnvironmentVariableGuard containerGuard{"TITUS_CONTAINER_NAME"};
     EnvironmentVariableGuard processGuard{"TITUS_PROCESS_NAME"};
-    
-    void SetUp() override {
+
+    void SetUp() override
+    {
         // Ensure environment variables are unset before each test
         containerGuard.unsetValue();
         processGuard.unsetValue();
@@ -45,7 +53,8 @@ protected:
 };
 
 // Test initialization with different writer configs
-TEST_F(ConfigTest, WriterConfigInitialization) {
+TEST_F(ConfigTest, WriterConfigInitialization)
+{
     // Test with memory writer
     {
         WriterConfig writerConfig(WriterTypes::Memory);
@@ -77,7 +86,8 @@ TEST_F(ConfigTest, WriterConfigInitialization) {
 }
 
 // Test extra tags handling
-TEST_F(ConfigTest, ExtraTags) {
+TEST_F(ConfigTest, ExtraTags)
+{
     WriterConfig writerConfig(WriterTypes::Memory);
 
     // Empty tags
@@ -88,12 +98,8 @@ TEST_F(ConfigTest, ExtraTags) {
 
     // Valid tags
     {
-        std::unordered_map<std::string, std::string> tags = 
-        {
-            {"app", "test-app"}, 
-            {"env", "testing"}, 
-            {"region", "us-east-1"}
-        };
+        std::unordered_map<std::string, std::string> tags = {
+            {"app", "test-app"}, {"env", "testing"}, {"region", "us-east-1"}};
 
         Config config(writerConfig, tags);
 
@@ -105,12 +111,8 @@ TEST_F(ConfigTest, ExtraTags) {
 
     // Invalid tags (empty keys or values should be ignored)
     {
-        std::unordered_map<std::string, std::string> tags = 
-        {
-            {"valid", "value"}, 
-            {"", "empty-key"}, 
-            {"empty-value", ""}
-        };
+        std::unordered_map<std::string, std::string> tags = {
+            {"valid", "value"}, {"", "empty-key"}, {"empty-value", ""}};
 
         Config config(writerConfig, tags);
 
@@ -122,7 +124,8 @@ TEST_F(ConfigTest, ExtraTags) {
 }
 
 // Test environment variable integration
-TEST_F(ConfigTest, EnvironmentVariables) {
+TEST_F(ConfigTest, EnvironmentVariables)
+{
     WriterConfig writerConfig(WriterTypes::Memory);
 
     // No environment variables - already unset in SetUp()
@@ -135,7 +138,7 @@ TEST_F(ConfigTest, EnvironmentVariables) {
     {
         containerGuard.setValue("test-container");
         // Process already unset from SetUp()
-        
+
         Config config(writerConfig);
 
         EXPECT_EQ(config.GetExtraTags().size(), 1);
@@ -167,7 +170,8 @@ TEST_F(ConfigTest, EnvironmentVariables) {
 }
 
 // Test merging of environment variables and explicit tags
-TEST_F(ConfigTest, MergingTags) {
+TEST_F(ConfigTest, MergingTags)
+{
     WriterConfig writerConfig(WriterTypes::Memory);
 
     // Environment variables with additional tags
@@ -175,11 +179,7 @@ TEST_F(ConfigTest, MergingTags) {
         containerGuard.setValue("test-container");
         processGuard.setValue("test-process");
 
-        std::unordered_map<std::string, std::string> tags = 
-        {
-            {"custom", "value"}, 
-            {"env", "test"}
-        };
+        std::unordered_map<std::string, std::string> tags = {{"custom", "value"}, {"env", "test"}};
 
         Config config(writerConfig, tags);
 
@@ -195,9 +195,7 @@ TEST_F(ConfigTest, MergingTags) {
         containerGuard.setValue("test-container");
         processGuard.unsetValue();
 
-        std::unordered_map<std::string, std::string> tags = {
-            {"nf.container", "override-container"}
-        };
+        std::unordered_map<std::string, std::string> tags = {{"nf.container", "override-container"}};
 
         Config config(writerConfig, tags);
 

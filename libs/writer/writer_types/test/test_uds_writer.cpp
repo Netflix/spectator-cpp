@@ -10,7 +10,7 @@
 // Test fixture for UDS Writer tests
 class UDSWriterTest : public ::testing::Test
 {
-  protected:
+   protected:
     void SetUp() override
     {
         // Set the server to run
@@ -66,7 +66,7 @@ TEST_F(UDSWriterTest, SendMessage)
 
     // Check that our message is in the vector
     bool message_found = false;
-    for (const auto &msg : messages)
+    for (const auto& msg : messages)
     {
         if (msg == test_message)
         {
@@ -117,7 +117,7 @@ TEST_F(UDSWriterTest, SendMultipleMessages)
     std::vector<std::string> test_messages = {"Message 1", "Message 2", "Message 3"};
 
     // Send messages one by one, with a separate connection for each
-    for (const auto &msg : test_messages)
+    for (const auto& msg : test_messages)
     {
         writer.Write(msg);
         // Wait for the message to be processed

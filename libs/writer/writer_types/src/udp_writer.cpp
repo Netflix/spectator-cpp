@@ -4,7 +4,7 @@
 
 #include <boost/system/error_code.hpp>
 
-UDPWriter::UDPWriter(const std::string &host, int port) : m_host(host), m_port(port)
+UDPWriter::UDPWriter(const std::string& host, int port) : m_host(host), m_port(port)
 {
     try
     {
@@ -19,19 +19,16 @@ UDPWriter::UDPWriter(const std::string &host, int port) : m_host(host), m_port(p
         boost::asio::ip::udp::resolver resolver(*m_io_context);
         m_endpoint = *resolver.resolve(boost::asio::ip::udp::v4(), m_host, std::to_string(m_port)).begin();
     }
-    catch (const boost::system::system_error &e)
+    catch (const boost::system::system_error& e)
     {
         Logger::error("UDPWriter: Failed to initialize connection: {}", e.what());
         Close();
     }
 }
 
-UDPWriter::~UDPWriter()
-{
-    Close();
-}
+UDPWriter::~UDPWriter() { Close(); }
 
-void UDPWriter::Write(const std::string &message)
+void UDPWriter::Write(const std::string& message)
 try
 {
     if (m_socket == nullptr || m_socket->is_open() == false)
@@ -52,7 +49,7 @@ try
         Logger::warn("UDPWriter: Sent only {} bytes out of {} bytes", sent, message.size());
     }
 }
-catch (const std::exception &e)
+catch (const std::exception& e)
 {
     Logger::error("UDPWriter: Exception during write: {}", e.what());
 }
@@ -60,7 +57,6 @@ catch (const std::exception &e)
 void UDPWriter::Close()
 try
 {
-
     if (m_socket && m_socket->is_open())
     {
         boost::system::error_code ec;
@@ -75,7 +71,7 @@ try
     m_socket.reset();
     m_io_context.reset();
 }
-catch (const std::exception &e)
+catch (const std::exception& e)
 {
     Logger::error("UDPWriter: Exception during close: {}", e.what());
 }

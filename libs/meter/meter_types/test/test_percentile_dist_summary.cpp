@@ -5,14 +5,14 @@
 
 class PercentileDistSummaryTest : public ::testing::Test
 {
-  protected:
+   protected:
     MeterId tid = MeterId("percentile_dist_summary");
 };
 
 TEST_F(PercentileDistSummaryTest, record)
 {
     WriterTestHelper::InitializeWriter(WriterType::Memory);
-    auto *writer = dynamic_cast<MemoryWriter *>(WriterTestHelper::GetImpl());
+    auto* writer = dynamic_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
     PercentileDistributionSummary pds(tid);
     EXPECT_TRUE(writer->IsEmpty());
 
@@ -23,7 +23,7 @@ TEST_F(PercentileDistSummaryTest, record)
 TEST_F(PercentileDistSummaryTest, recordNegative)
 {
     WriterTestHelper::InitializeWriter(WriterType::Memory);
-    auto *writer = dynamic_cast<MemoryWriter *>(WriterTestHelper::GetImpl());
+    auto* writer = dynamic_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
     PercentileDistributionSummary pds(tid);
     EXPECT_TRUE(writer->IsEmpty());
 
@@ -34,7 +34,7 @@ TEST_F(PercentileDistSummaryTest, recordNegative)
 TEST_F(PercentileDistSummaryTest, recordZero)
 {
     WriterTestHelper::InitializeWriter(WriterType::Memory);
-    auto *writer = dynamic_cast<MemoryWriter *>(WriterTestHelper::GetImpl());
+    auto* writer = dynamic_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
     PercentileDistributionSummary pds(tid);
     EXPECT_TRUE(writer->IsEmpty());
 

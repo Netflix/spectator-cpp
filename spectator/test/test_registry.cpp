@@ -13,7 +13,7 @@ TEST(RegistryTest, Close)
     auto c = r.counter("counter");
     c.Increment();
 
-    auto memoryWriter = static_cast<MemoryWriter *>(WriterTestHelper::GetImpl());
+    auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
     EXPECT_EQ("c:counter:1.000000", memoryWriter->LastLine());
 
     memoryWriter->Close();
@@ -23,10 +23,10 @@ TEST(RegistryTest, Close)
 TEST(RegistryTest, AgeGauge)
 {
     Config config(WriterConfig(WriterTypes::Memory));
-    auto r            = Registry(config);
-    auto g1           = r.age_gauge("age_gauge");
-    auto g2           = r.age_gauge("age_gauge", {{"my-tags", "bar"}});
-    auto memoryWriter = static_cast<MemoryWriter *>(WriterTestHelper::GetImpl());
+    auto r = Registry(config);
+    auto g1 = r.age_gauge("age_gauge");
+    auto g2 = r.age_gauge("age_gauge", {{"my-tags", "bar"}});
+    auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
     EXPECT_TRUE(memoryWriter->IsEmpty());
 
@@ -40,23 +40,24 @@ TEST(RegistryTest, AgeGauge)
 TEST(RegistryTest, AgeGaugeWithId)
 {
     Config config(WriterConfig(WriterTypes::Memory), {{"extra-tags", "foo"}});
-    auto r            = Registry(config);
-    auto memoryWriter = static_cast<MemoryWriter *>(WriterTestHelper::GetImpl());
+    auto r = Registry(config);
+    auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
     auto g = r.age_gauge_with_id(r.new_id("age_gauge", {{"my-tags", "bar"}}));
     EXPECT_TRUE(memoryWriter->IsEmpty());
 
     g.Set(0);
-    EXPECT_EQ("A:age_gauge,extra-tags=foo,my-tags=bar:0", ParseProtocolLine(memoryWriter->LastLine()).value().to_string());
+    EXPECT_EQ("A:age_gauge,extra-tags=foo,my-tags=bar:0",
+              ParseProtocolLine(memoryWriter->LastLine()).value().to_string());
 }
 
 TEST(RegistryTest, Counter)
 {
     Config config(WriterConfig(WriterTypes::Memory));
-    auto r            = Registry(config);
-    auto c1           = r.counter("counter");
-    auto c2           = r.counter("counter", {{"my-tags", "bar"}});
-    auto memoryWriter = static_cast<MemoryWriter *>(WriterTestHelper::GetImpl());
+    auto r = Registry(config);
+    auto c1 = r.counter("counter");
+    auto c2 = r.counter("counter", {{"my-tags", "bar"}});
+    auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
     EXPECT_TRUE(memoryWriter->IsEmpty());
 
@@ -79,27 +80,30 @@ TEST(RegistryTest, Counter)
 TEST(RegistryTest, CounterWithId)
 {
     Config config(WriterConfig(WriterTypes::Memory), {{"extra-tags", "foo"}});
-    auto r            = Registry(config);
-    auto memoryWriter = static_cast<MemoryWriter *>(WriterTestHelper::GetImpl());
+    auto r = Registry(config);
+    auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
     auto c = r.counter_with_id(r.new_id("counter", {{"my-tags", "bar"}}));
     EXPECT_TRUE(memoryWriter->IsEmpty());
 
     c.Increment();
-    EXPECT_EQ("c:counter,extra-tags=foo,my-tags=bar:1.000000", ParseProtocolLine(memoryWriter->LastLine()).value().to_string());
+    EXPECT_EQ("c:counter,extra-tags=foo,my-tags=bar:1.000000",
+              ParseProtocolLine(memoryWriter->LastLine()).value().to_string());
 
     c.Increment(2);
-    EXPECT_EQ("c:counter,extra-tags=foo,my-tags=bar:2.000000", ParseProtocolLine(memoryWriter->LastLine()).value().to_string());
+    EXPECT_EQ("c:counter,extra-tags=foo,my-tags=bar:2.000000",
+              ParseProtocolLine(memoryWriter->LastLine()).value().to_string());
 
     r.counter("counter", {{"my-tags", "bar"}}).Increment(3);
-    EXPECT_EQ("c:counter,extra-tags=foo,my-tags=bar:3.000000", ParseProtocolLine(memoryWriter->LastLine()).value().to_string());
+    EXPECT_EQ("c:counter,extra-tags=foo,my-tags=bar:3.000000",
+              ParseProtocolLine(memoryWriter->LastLine()).value().to_string());
 }
 
 TEST(RegistryTest, DistributionSummary)
 {
     Config config(WriterConfig(WriterTypes::Memory));
-    auto r            = Registry(config);
-    auto memoryWriter = static_cast<MemoryWriter *>(WriterTestHelper::GetImpl());
+    auto r = Registry(config);
+    auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
     auto d = r.distribution_summary("distribution_summary");
     EXPECT_TRUE(memoryWriter->IsEmpty());
@@ -111,21 +115,22 @@ TEST(RegistryTest, DistributionSummary)
 TEST(RegistryTest, DistributionSummaryWithId)
 {
     Config config(WriterConfig(WriterTypes::Memory), {{"extra-tags", "foo"}});
-    auto r            = Registry(config);
-    auto memoryWriter = static_cast<MemoryWriter *>(WriterTestHelper::GetImpl());
+    auto r = Registry(config);
+    auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
     auto d = r.distribution_summary_with_id(r.new_id("distribution_summary", {{"my-tags", "bar"}}));
     EXPECT_TRUE(memoryWriter->IsEmpty());
 
     d.Record(42);
-    EXPECT_EQ("d:distribution_summary,extra-tags=foo,my-tags=bar:42", ParseProtocolLine(memoryWriter->LastLine()).value().to_string());
+    EXPECT_EQ("d:distribution_summary,extra-tags=foo,my-tags=bar:42",
+              ParseProtocolLine(memoryWriter->LastLine()).value().to_string());
 }
 
 TEST(RegistryTest, Gauge)
 {
     Config config(WriterConfig(WriterTypes::Memory));
-    auto r            = Registry(config);
-    auto memoryWriter = static_cast<MemoryWriter *>(WriterTestHelper::GetImpl());
+    auto r = Registry(config);
+    auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
     auto g = r.gauge("gauge");
     EXPECT_TRUE(memoryWriter->IsEmpty());
@@ -137,14 +142,15 @@ TEST(RegistryTest, Gauge)
 TEST(RegistryTest, GaugeWithId)
 {
     Config config(WriterConfig(WriterTypes::Memory), {{"extra-tags", "foo"}});
-    auto r            = Registry(config);
-    auto memoryWriter = static_cast<MemoryWriter *>(WriterTestHelper::GetImpl());
+    auto r = Registry(config);
+    auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
     auto g = r.gauge_with_id(r.new_id("gauge", {{"my-tags", "bar"}}));
     EXPECT_TRUE(memoryWriter->IsEmpty());
 
     g.Set(42);
-    EXPECT_EQ("g:gauge,extra-tags=foo,my-tags=bar:42.000000", ParseProtocolLine(memoryWriter->LastLine()).value().to_string());
+    EXPECT_EQ("g:gauge,extra-tags=foo,my-tags=bar:42.000000",
+              ParseProtocolLine(memoryWriter->LastLine()).value().to_string());
 }
 
 TEST(RegistryTest, GaugeWithIdWithTtlSeconds)
@@ -175,8 +181,8 @@ TEST(RegistryTest, GaugeWithIdWithTtlSeconds)
 TEST(RegistryTest, MaxGauge)
 {
     Config config(WriterConfig(WriterTypes::Memory));
-    auto r            = Registry(config);
-    auto memoryWriter = static_cast<MemoryWriter *>(WriterTestHelper::GetImpl());
+    auto r = Registry(config);
+    auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
     auto g = r.max_gauge("max_gauge");
     EXPECT_TRUE(memoryWriter->IsEmpty());
@@ -188,21 +194,22 @@ TEST(RegistryTest, MaxGauge)
 TEST(RegistryTest, MaxGaugeWithId)
 {
     Config config(WriterConfig(WriterTypes::Memory), {{"extra-tags", "foo"}});
-    auto r            = Registry(config);
-    auto memoryWriter = static_cast<MemoryWriter *>(WriterTestHelper::GetImpl());
+    auto r = Registry(config);
+    auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
     auto g = r.max_gauge_with_id(r.new_id("max_gauge", {{"my-tags", "bar"}}));
     EXPECT_TRUE(memoryWriter->IsEmpty());
 
     g.Set(42);
-    EXPECT_EQ("m:max_gauge,extra-tags=foo,my-tags=bar:42.000000", ParseProtocolLine(memoryWriter->LastLine()).value().to_string());
+    EXPECT_EQ("m:max_gauge,extra-tags=foo,my-tags=bar:42.000000",
+              ParseProtocolLine(memoryWriter->LastLine()).value().to_string());
 }
 
 TEST(RegistryTest, MonotonicCounter)
 {
     Config config(WriterConfig(WriterTypes::Memory));
-    auto r            = Registry(config);
-    auto memoryWriter = static_cast<MemoryWriter *>(WriterTestHelper::GetImpl());
+    auto r = Registry(config);
+    auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
     auto c = r.monotonic_counter("monotonic_counter");
     EXPECT_TRUE(memoryWriter->IsEmpty());
@@ -214,21 +221,22 @@ TEST(RegistryTest, MonotonicCounter)
 TEST(RegistryTest, MonotonicCounterWithId)
 {
     Config config(WriterConfig(WriterTypes::Memory), {{"extra-tags", "foo"}});
-    auto r            = Registry(config);
-    auto memoryWriter = static_cast<MemoryWriter *>(WriterTestHelper::GetImpl());
+    auto r = Registry(config);
+    auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
     auto c = r.monotonic_counter_with_id(r.new_id("monotonic_counter", {{"my-tags", "bar"}}));
     EXPECT_TRUE(memoryWriter->IsEmpty());
 
     c.Set(42);
-    EXPECT_EQ("C:monotonic_counter,extra-tags=foo,my-tags=bar:42.000000", ParseProtocolLine(memoryWriter->LastLine()).value().to_string());
+    EXPECT_EQ("C:monotonic_counter,extra-tags=foo,my-tags=bar:42.000000",
+              ParseProtocolLine(memoryWriter->LastLine()).value().to_string());
 }
 
 TEST(RegistryTest, MonotonicCounterUint)
 {
     Config config(WriterConfig(WriterTypes::Memory));
-    auto r            = Registry(config);
-    auto memoryWriter = static_cast<MemoryWriter *>(WriterTestHelper::GetImpl());
+    auto r = Registry(config);
+    auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
     auto c = r.monotonic_counter_uint("monotonic_counter_uint");
     EXPECT_TRUE(memoryWriter->IsEmpty());
@@ -240,25 +248,26 @@ TEST(RegistryTest, MonotonicCounterUint)
 TEST(RegistryTest, MonotonicCounterUintWithId)
 {
     Config config(WriterConfig(WriterTypes::Memory), {{"extra-tags", "foo"}});
-    auto r            = Registry(config);
-    auto memoryWriter = static_cast<MemoryWriter *>(WriterTestHelper::GetImpl());
+    auto r = Registry(config);
+    auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
     auto c = r.monotonic_counter_uint_with_id(r.new_id("monotonic_counter_uint", {{"my-tags", "bar"}}));
     EXPECT_TRUE(memoryWriter->IsEmpty());
 
     c.Set(42);
-    EXPECT_EQ("U:monotonic_counter_uint,extra-tags=foo,my-tags=bar:42", ParseProtocolLine(memoryWriter->LastLine()).value().to_string());
+    EXPECT_EQ("U:monotonic_counter_uint,extra-tags=foo,my-tags=bar:42",
+              ParseProtocolLine(memoryWriter->LastLine()).value().to_string());
 }
 
 TEST(RegistryTest, NewId)
 {
     Config config1(WriterConfig(WriterTypes::Memory));
-    auto r1  = Registry(config1);
+    auto r1 = Registry(config1);
     auto id1 = r1.new_id("id");
     EXPECT_EQ("MeterId(name=id, tags={})", id1.to_string());
 
     Config config2(WriterConfig(WriterTypes::Memory), {{"extra-tags", "foo"}});
-    auto r2  = Registry(config2);
+    auto r2 = Registry(config2);
     auto id2 = r2.new_id("id");
     EXPECT_EQ("MeterId(name=id, tags={'extra-tags': 'foo'})", id2.to_string());
 }
@@ -266,8 +275,8 @@ TEST(RegistryTest, NewId)
 TEST(RegistryTest, PctDistributionSummary)
 {
     Config config(WriterConfig(WriterTypes::Memory));
-    auto r            = Registry(config);
-    auto memoryWriter = static_cast<MemoryWriter *>(WriterTestHelper::GetImpl());
+    auto r = Registry(config);
+    auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
     auto d = r.pct_distribution_summary("pct_distribution_summary");
     EXPECT_TRUE(memoryWriter->IsEmpty());
@@ -279,21 +288,22 @@ TEST(RegistryTest, PctDistributionSummary)
 TEST(RegistryTest, PctDistributionSummaryWithId)
 {
     Config config(WriterConfig(WriterTypes::Memory), {{"extra-tags", "foo"}});
-    auto r            = Registry(config);
-    auto memoryWriter = static_cast<MemoryWriter *>(WriterTestHelper::GetImpl());
+    auto r = Registry(config);
+    auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
     auto d = r.pct_distribution_summary_with_id(r.new_id("pct_distribution_summary", {{"my-tags", "bar"}}));
     EXPECT_TRUE(memoryWriter->IsEmpty());
 
     d.Record(42);
-    EXPECT_EQ("D:pct_distribution_summary,extra-tags=foo,my-tags=bar:42", ParseProtocolLine(memoryWriter->LastLine()).value().to_string());
+    EXPECT_EQ("D:pct_distribution_summary,extra-tags=foo,my-tags=bar:42",
+              ParseProtocolLine(memoryWriter->LastLine()).value().to_string());
 }
 
 TEST(RegistryTest, PctTimer)
 {
     Config config(WriterConfig(WriterTypes::Memory));
-    auto r            = Registry(config);
-    auto memoryWriter = static_cast<MemoryWriter *>(WriterTestHelper::GetImpl());
+    auto r = Registry(config);
+    auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
     auto t = r.pct_timer("pct_timer");
     EXPECT_TRUE(memoryWriter->IsEmpty());
@@ -305,21 +315,22 @@ TEST(RegistryTest, PctTimer)
 TEST(RegistryTest, PctTimerWithId)
 {
     Config config(WriterConfig(WriterTypes::Memory), {{"extra-tags", "foo"}});
-    auto r            = Registry(config);
-    auto memoryWriter = static_cast<MemoryWriter *>(WriterTestHelper::GetImpl());
+    auto r = Registry(config);
+    auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
     auto t = r.pct_timer_with_id(r.new_id("pct_timer", {{"my-tags", "bar"}}));
     EXPECT_TRUE(memoryWriter->IsEmpty());
 
     t.Record(42);
-    EXPECT_EQ("T:pct_timer,extra-tags=foo,my-tags=bar:42.000000", ParseProtocolLine(memoryWriter->LastLine()).value().to_string());
+    EXPECT_EQ("T:pct_timer,extra-tags=foo,my-tags=bar:42.000000",
+              ParseProtocolLine(memoryWriter->LastLine()).value().to_string());
 }
 
 TEST(RegistryTest, Timer)
 {
     Config config(WriterConfig(WriterTypes::Memory));
-    auto r            = Registry(config);
-    auto memoryWriter = static_cast<MemoryWriter *>(WriterTestHelper::GetImpl());
+    auto r = Registry(config);
+    auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
     auto t = r.timer("timer");
     EXPECT_TRUE(memoryWriter->IsEmpty());
@@ -331,12 +342,13 @@ TEST(RegistryTest, Timer)
 TEST(RegistryTest, TimerWithId)
 {
     Config config(WriterConfig(WriterTypes::Memory), {{"extra-tags", "foo"}});
-    auto r            = Registry(config);
-    auto memoryWriter = static_cast<MemoryWriter *>(WriterTestHelper::GetImpl());
+    auto r = Registry(config);
+    auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
     auto t = r.timer_with_id(r.new_id("timer", {{"my-tags", "bar"}}));
     EXPECT_TRUE(memoryWriter->IsEmpty());
 
     t.Record(42);
-    EXPECT_EQ("t:timer,extra-tags=foo,my-tags=bar:42.000000", ParseProtocolLine(memoryWriter->LastLine()).value().to_string());
+    EXPECT_EQ("t:timer,extra-tags=foo,my-tags=bar:42.000000",
+              ParseProtocolLine(memoryWriter->LastLine()).value().to_string());
 }
