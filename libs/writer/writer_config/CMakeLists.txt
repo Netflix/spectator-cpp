@@ -1,6 +1,6 @@
 add_library(spectator-writer-config STATIC
-    src/writer_config.cpp
-    include/writer_config.h
+    writer_config.cpp
+    writer_config.h
 )
 
 target_include_directories(spectator-writer-config
@@ -16,7 +16,7 @@ target_link_libraries(spectator-writer-config
 )
 
 add_executable(test_writer_config 
-    test/test_writer_config.cpp)
+    test_writer_config.cpp)
 
 target_link_libraries(test_writer_config
     PRIVATE

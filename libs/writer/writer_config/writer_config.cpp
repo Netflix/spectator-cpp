@@ -1,4 +1,4 @@
-#include <libs/writer/writer_config/include/writer_config.h>
+#include <libs/writer/writer_config/writer_config.h>
 
 struct WriterConfigConstants
 {
