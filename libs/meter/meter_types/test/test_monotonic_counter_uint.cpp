@@ -1,5 +1,5 @@
 #include <libs/meter/meter_types/include/monotonic_counter_uint.h>
-#include <libs/writer/writer_wrapper/include/writer_test_helper.h>
+#include <libs/writer/writer_wrapper/writer_test_helper.h>
 
 #include <gtest/gtest.h>
 

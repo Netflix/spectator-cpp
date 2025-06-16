@@ -1,4 +1,4 @@
-#include <libs/writer/writer_wrapper/include/Writer.h>
+#include <libs/writer/writer_wrapper/writer.h>
 
 #include <libs/writer/writer_types/include/writer_types.h>
 #include <libs/logger/logger.h>

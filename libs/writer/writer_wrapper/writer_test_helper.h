@@ -1,6 +1,6 @@
 #pragma once
 
-#include <libs/writer/writer_wrapper/include/Writer.h>
+#include <libs/writer/writer_wrapper/writer.h>
 
 /**
  * WriterTestHelper - A utility class to help with testing Writer functionality

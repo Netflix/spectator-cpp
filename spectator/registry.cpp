@@ -1,4 +1,4 @@
-#include <spectator/include/registry.h>
+#include <spectator/registry.h>
 
 Registry::Registry(const Config& config) : m_config(config) { Writer::Initialize(config.GetWriterType()); }
 

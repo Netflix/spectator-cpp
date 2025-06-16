@@ -1,5 +1,5 @@
 add_library(registry
-    src/registry.cpp
+    registry.cpp
 )
 target_include_directories(registry
     PUBLIC
@@ -14,7 +14,7 @@ target_link_libraries(registry
     spectator-writer-wrapper
     
 )
-add_executable(registry-test test/test_registry.cpp)
+add_executable(registry-test test_registry.cpp)
 target_link_libraries(registry-test PRIVATE
     GTest::gtest 
     GTest::gtest_main

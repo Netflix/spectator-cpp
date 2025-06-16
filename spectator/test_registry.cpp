@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 #include <cstdint>
 
-#include "../include/registry.h"
-#include <libs/writer/writer_wrapper/include/writer_test_helper.h>
+#include <spectator/registry.h>
+#include <libs/writer/writer_wrapper/writer_test_helper.h>
 
 #include <libs/utils/include/util.h>
 

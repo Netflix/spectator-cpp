@@ -1,5 +1,5 @@
 add_library(spectator-writer-wrapper
-    src/Writer.cpp
+    writer.cpp
 )
 
 target_link_libraries(spectator-writer-wrapper
