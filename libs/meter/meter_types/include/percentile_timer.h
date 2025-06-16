@@ -1,6 +1,6 @@
 #pragma once
 
-#include <libs/meter/meter_types/include/base/meter.h>
+#include <libs/meter/meter_types/include/meter.h>
 #include <libs/meter/meter_id/meter_id.h>
 #include <libs/writer/writer_wrapper/include/Writer.h>
 
