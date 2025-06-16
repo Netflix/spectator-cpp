@@ -1,4 +1,4 @@
-#include <libs/config/include/config.h>
+#include <libs/config/config.h>
 
 struct ConfigConstants
 {

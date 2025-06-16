@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
-#include <libs/config/include/config.h>
+#include <libs/config/config.h>
 #include <optional>
 
 // Enhanced helper to temporarily modify an environment variable for testing

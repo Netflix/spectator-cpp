@@ -1,5 +1,5 @@
 add_library(spectator-config 
-    src/config.cpp
+    config.cpp
 )
 
 target_include_directories(spectator-config
@@ -12,7 +12,7 @@ target_link_libraries(spectator-config
 )
 
 add_executable(config-tests
-    test/test_config.cpp
+    test_config.cpp
 )
 
 target_link_libraries(config-tests PRIVATE 
