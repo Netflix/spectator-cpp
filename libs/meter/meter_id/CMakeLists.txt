@@ -1,5 +1,5 @@
 add_library(spectator-meter-id
-    src/meter_id.cpp
+    meter_id.cpp
 )
 
 target_include_directories(spectator-meter-id
@@ -8,7 +8,7 @@ target_include_directories(spectator-meter-id
 )
 
 add_executable(MeterID-test
-    test/test_meter_id.cpp
+    test_meter_id.cpp
 )
 
 target_link_libraries(MeterID-test PRIVATE

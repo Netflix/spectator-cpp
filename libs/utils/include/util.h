@@ -1,10 +1,13 @@
+# pragma once
+
 #include <optional>
 #include <string>
 #include <unordered_map>
 #include <sstream>
 #include <map>
 
-#include <libs/meter/meter_id/include/meter_id.h>
+#include <libs/meter/meter_id/meter_id.h>
+
 struct ProtocolLine
 {
     char symbol;
