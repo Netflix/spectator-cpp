@@ -8,12 +8,7 @@ struct ConfigConstants
     static constexpr auto envVarProcess = "TITUS_PROCESS_NAME";
 };
 
-Config::Config(const WriterConfig& writerConfig, const std::unordered_map<std::string, std::string>& extraTags)
-    : m_extraTags(CalculateTags(extraTags)), m_writerConfig(writerConfig)
-{
-}
-
-std::unordered_map<std::string, std::string> Config::CalculateTags(
+std::unordered_map<std::string, std::string> CalculateTags(
     const std::unordered_map<std::string, std::string>& tags)
 {
     std::unordered_map<std::string, std::string> valid_tags;
@@ -39,4 +34,9 @@ std::unordered_map<std::string, std::string> Config::CalculateTags(
     }
 
     return valid_tags;
+}
+
+Config::Config(const WriterConfig& writerConfig, const std::unordered_map<std::string, std::string>& extraTags)
+    : m_extraTags(CalculateTags(extraTags)), m_writerConfig(writerConfig)
+{
 }

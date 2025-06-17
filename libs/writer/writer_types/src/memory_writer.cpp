@@ -22,7 +22,7 @@ void MemoryWriter::Clear()
 
 const std::string& MemoryWriter::LastLine() const noexcept
 {
-    static const std::string emptyString = "";
+    static const std::string emptyString{};
 
     if (true == m_messages.empty())
     {

@@ -22,9 +22,6 @@ class Config
     const WriterType& GetWriterType() const noexcept { return m_writerConfig.GetType(); }
 
    private:
-    std::unordered_map<std::string, std::string> CalculateTags(
-        const std::unordered_map<std::string, std::string>& tags);
-
     std::unordered_map<std::string, std::string> m_extraTags;
     WriterConfig m_writerConfig;
 };

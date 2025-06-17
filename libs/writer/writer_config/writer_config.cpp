@@ -1,5 +1,7 @@
 #include <libs/writer/writer_config/writer_config.h>
 
+#include <libs/logger/logger.h>
+
 struct WriterConfigConstants
 {
     static constexpr auto RuntimeErrorMessage = "Invalid writer type: ";

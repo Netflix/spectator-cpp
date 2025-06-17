@@ -146,7 +146,6 @@ void Writer::BufferedWrite(const std::string& message)
         return;
     }
 
-    unsigned int currentBufferSize = instance.buffer.size();
     {
         std::unique_lock<std::mutex> lock(instance.writeMutex);
         // TODO: Optimize memory alloc to not exceed allocated size
