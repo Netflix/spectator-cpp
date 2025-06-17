@@ -91,11 +91,11 @@ size_t std::hash<MeterId>::operator()(const MeterId& id) const
     for (const auto& tag : id.GetTags())
     {
         // Combine key and value hashes
-        size_t pair_hash = std::hash<std::string>{}(tag.first) ^ (std::hash<std::string>{}(tag.second) << 1);
+        size_t pair_hash = std::hash<std::string>{}(tag.first) ^ std::hash<std::string>{}(tag.second) << 1;
         // Combine with the accumulated tags hash
         tags_hash ^= pair_hash + 0x9e3779b9 + (tags_hash << 6) + (tags_hash >> 2);
     }
 
     // Combine name hash and tags hash
-    return name_hash ^ (tags_hash << 1);
+    return name_hash ^ tags_hash << 1;
 }

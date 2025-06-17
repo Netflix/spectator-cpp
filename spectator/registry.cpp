@@ -16,10 +16,7 @@ MeterId Registry::new_id(const std::string& name, const std::unordered_map<std::
     {
         return new_meter_id;
     }
-    else
-    {
-        return new_meter_id.WithTags(this->m_config.GetExtraTags());
-    }
+    return new_meter_id.WithTags(this->m_config.GetExtraTags());
 }
 
 AgeGauge Registry::age_gauge(const std::string& name, const std::unordered_map<std::string, std::string>& tags) const

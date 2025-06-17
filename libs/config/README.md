@@ -4,7 +4,7 @@
 
 The `Config` class serves as the configuration object for the Registry class, which manages how metrics are sent to SpectatorD.
 The `Config` constructor takes two parameters. The first parameter is required and is a `WriterConfig` object. This object defines
-how metrics will be sent to `SpectatorD`. The second parameter `extraTags` is a unordered map of strings allowing you to provide additional tags to 
+how metrics will be sent to `SpectatorD`. The second parameter `extraTags` is an unordered map of strings allowing you to provide additional tags to 
 all of your metrics. Extra tags are additional key-value pairs attached to all metrics and will be merged with environment-derived tags.
 
 ## Usage
@@ -37,5 +37,5 @@ If the following environment variables are set and not empty, there key and valu
 
 ### Warning
 
-If the environment variable `SPECTATOR_OUTPUT_LOCATION` is set this will override the value specefied in the `WriterConfig`
+If the environment variable `SPECTATOR_OUTPUT_LOCATION` is set this will override the value specified in the `WriterConfig`
 read the `WriterConfig` readme.md for more details.

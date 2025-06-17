@@ -1,4 +1,3 @@
-# filepath: /home/ebadeaux/Saturday/spec2-cpp/CMakeLists.txt
 cmake_minimum_required(VERSION 3.15)
 project(spectator-cpp VERSION 2.0 LANGUAGES CXX)
 
