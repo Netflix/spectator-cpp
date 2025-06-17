@@ -8,7 +8,7 @@
 
 TEST(RegistryTest, Close)
 {
-    Config config(WriterConfig(WriterTypes::Memory));
+    auto config = Config(WriterConfig(WriterTypes::Memory));
     auto r = Registry(config);
     auto c = r.counter("counter");
     c.Increment();
@@ -22,7 +22,7 @@ TEST(RegistryTest, Close)
 
 TEST(RegistryTest, AgeGauge)
 {
-    Config config(WriterConfig(WriterTypes::Memory));
+    auto config = Config(WriterConfig(WriterTypes::Memory));
     auto r = Registry(config);
     auto g1 = r.age_gauge("age_gauge");
     auto g2 = r.age_gauge("age_gauge", {{"my-tags", "bar"}});
@@ -53,7 +53,7 @@ TEST(RegistryTest, AgeGaugeWithId)
 
 TEST(RegistryTest, Counter)
 {
-    Config config(WriterConfig(WriterTypes::Memory));
+    auto config = Config(WriterConfig(WriterTypes::Memory));
     auto r = Registry(config);
     auto c1 = r.counter("counter");
     auto c2 = r.counter("counter", {{"my-tags", "bar"}});
@@ -101,7 +101,7 @@ TEST(RegistryTest, CounterWithId)
 
 TEST(RegistryTest, DistributionSummary)
 {
-    Config config(WriterConfig(WriterTypes::Memory));
+    auto config = Config(WriterConfig(WriterTypes::Memory));
     auto r = Registry(config);
     auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
@@ -128,7 +128,7 @@ TEST(RegistryTest, DistributionSummaryWithId)
 
 TEST(RegistryTest, Gauge)
 {
-    Config config(WriterConfig(WriterTypes::Memory));
+    auto config = Config(WriterConfig(WriterTypes::Memory));
     auto r = Registry(config);
     auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
@@ -180,7 +180,7 @@ TEST(RegistryTest, GaugeWithIdWithTtlSeconds)
 
 TEST(RegistryTest, MaxGauge)
 {
-    Config config(WriterConfig(WriterTypes::Memory));
+    auto config = Config(WriterConfig(WriterTypes::Memory));
     auto r = Registry(config);
     auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
@@ -207,7 +207,7 @@ TEST(RegistryTest, MaxGaugeWithId)
 
 TEST(RegistryTest, MonotonicCounter)
 {
-    Config config(WriterConfig(WriterTypes::Memory));
+    auto config = Config(WriterConfig(WriterTypes::Memory));
     auto r = Registry(config);
     auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
@@ -234,7 +234,7 @@ TEST(RegistryTest, MonotonicCounterWithId)
 
 TEST(RegistryTest, MonotonicCounterUint)
 {
-    Config config(WriterConfig(WriterTypes::Memory));
+    auto config = Config(WriterConfig(WriterTypes::Memory));
     auto r = Registry(config);
     auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
@@ -261,7 +261,7 @@ TEST(RegistryTest, MonotonicCounterUintWithId)
 
 TEST(RegistryTest, NewId)
 {
-    Config config1(WriterConfig(WriterTypes::Memory));
+    auto config1 = Config(WriterConfig(WriterTypes::Memory));
     auto r1 = Registry(config1);
     auto id1 = r1.new_id("id");
     EXPECT_EQ("MeterId(name=id, tags={})", id1.to_string());
@@ -274,7 +274,7 @@ TEST(RegistryTest, NewId)
 
 TEST(RegistryTest, PctDistributionSummary)
 {
-    Config config(WriterConfig(WriterTypes::Memory));
+    auto config = Config(WriterConfig(WriterTypes::Memory));
     auto r = Registry(config);
     auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
@@ -301,7 +301,7 @@ TEST(RegistryTest, PctDistributionSummaryWithId)
 
 TEST(RegistryTest, PctTimer)
 {
-    Config config(WriterConfig(WriterTypes::Memory));
+    auto config = Config(WriterConfig(WriterTypes::Memory));
     auto r = Registry(config);
     auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
@@ -328,7 +328,7 @@ TEST(RegistryTest, PctTimerWithId)
 
 TEST(RegistryTest, Timer)
 {
-    Config config(WriterConfig(WriterTypes::Memory));
+    auto config = Config(WriterConfig(WriterTypes::Memory));
     auto r = Registry(config);
     auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
