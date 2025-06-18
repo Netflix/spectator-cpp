@@ -10,7 +10,7 @@
 class EnvironmentVariableGuard
 {
    public:
-    EnvironmentVariableGuard(const std::string& name) : m_name(name)
+    explicit EnvironmentVariableGuard(const std::string& name) : m_name(name)
     {
         if (const char* value = std::getenv(name.c_str()))
         {
@@ -18,9 +18,9 @@ class EnvironmentVariableGuard
         }
     }
 
-    void setValue(const std::string& value) { setenv(m_name.c_str(), value.c_str(), 1); }
+    void setValue(const std::string& value) const { setenv(m_name.c_str(), value.c_str(), 1); }
 
-    void unsetValue() { unsetenv(m_name.c_str()); }
+    void unsetValue() const { unsetenv(m_name.c_str()); }
 
     ~EnvironmentVariableGuard()
     {

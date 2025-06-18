@@ -21,7 +21,7 @@ class UDSWriterTest : public testing::Test
 
         // Start the UDS server in a separate thread
         server_thread = std::thread(
-            []()
+            []
             {
                 // This calls our server function directly
                 listen_for_uds_messages();

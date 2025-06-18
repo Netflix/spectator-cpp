@@ -3,8 +3,6 @@
 #include <libs/logger/logger.h>
 
 #include <boost/asio.hpp>
-#include <boost/system/error_code.hpp>
-#include <iostream>
 
 namespace local = boost::asio::local;
 

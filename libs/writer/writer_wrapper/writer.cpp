@@ -4,7 +4,7 @@
 #include <libs/logger/logger.h>
 #include <stdexcept>
 
-static const char NEW_LINE = '\n';
+static constexpr auto NEW_LINE = '\n';
 
 Writer::~Writer()
 {
@@ -182,7 +182,7 @@ void Writer::Write(const std::string& message)
     try
     {
         // Call the member function using the pointer-to-member syntax
-        (instance.*(instance.writeImpl))(message);
+        (instance.*instance.writeImpl)(message);
         Logger::debug("Message written successfully: {}", message);
     }
     catch (const std::exception& e)

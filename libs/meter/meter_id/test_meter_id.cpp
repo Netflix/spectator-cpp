@@ -40,7 +40,7 @@ TEST(MeterIdTest, LookupTags)
 
 TEST(MeterIdTest, Name)
 {
-    MeterId id1("foo", {{"a", "1"}});
+    const MeterId id1("foo", {{"a", "1"}});
     EXPECT_EQ("foo", id1.GetName());
 }
 
@@ -70,7 +70,7 @@ TEST(MeterIdTest, ToString)
 
 TEST(MeterIdTest, Tags)
 {
-    MeterId id1("foo", {{"a", "1"}});
+    const MeterId id1("foo", {{"a", "1"}});
     const std::unordered_map<std::string, std::string> expected = {{"a", "1"}};
     EXPECT_EQ(expected, id1.GetTags());
 }

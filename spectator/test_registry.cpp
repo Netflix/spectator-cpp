@@ -43,7 +43,7 @@ TEST(RegistryTest, AgeGaugeWithId)
     auto r = Registry(config);
     auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
-    auto g = r.age_gauge_with_id(r.new_id("age_gauge", {{"my-tags", "bar"}}));
+    auto g = Registry::age_gauge_with_id(r.new_id("age_gauge", {{"my-tags", "bar"}}));
     EXPECT_TRUE(memoryWriter->IsEmpty());
 
     g.Set(0);
@@ -83,7 +83,7 @@ TEST(RegistryTest, CounterWithId)
     auto r = Registry(config);
     auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
-    auto c = r.counter_with_id(r.new_id("counter", {{"my-tags", "bar"}}));
+    auto c = Registry::counter_with_id(r.new_id("counter", {{"my-tags", "bar"}}));
     EXPECT_TRUE(memoryWriter->IsEmpty());
 
     c.Increment();
@@ -118,7 +118,7 @@ TEST(RegistryTest, DistributionSummaryWithId)
     auto r = Registry(config);
     auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
-    auto d = r.distribution_summary_with_id(r.new_id("distribution_summary", {{"my-tags", "bar"}}));
+    auto d = Registry::distribution_summary_with_id(r.new_id("distribution_summary", {{"my-tags", "bar"}}));
     EXPECT_TRUE(memoryWriter->IsEmpty());
 
     d.Record(42);
@@ -145,7 +145,7 @@ TEST(RegistryTest, GaugeWithId)
     auto r = Registry(config);
     auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
-    auto g = r.gauge_with_id(r.new_id("gauge", {{"my-tags", "bar"}}));
+    auto g = Registry::gauge_with_id(r.new_id("gauge", {{"my-tags", "bar"}}));
     EXPECT_TRUE(memoryWriter->IsEmpty());
 
     g.Set(42);
@@ -197,7 +197,7 @@ TEST(RegistryTest, MaxGaugeWithId)
     auto r = Registry(config);
     auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
-    auto g = r.max_gauge_with_id(r.new_id("max_gauge", {{"my-tags", "bar"}}));
+    auto g = Registry::max_gauge_with_id(r.new_id("max_gauge", {{"my-tags", "bar"}}));
     EXPECT_TRUE(memoryWriter->IsEmpty());
 
     g.Set(42);
@@ -224,7 +224,7 @@ TEST(RegistryTest, MonotonicCounterWithId)
     auto r = Registry(config);
     auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
-    auto c = r.monotonic_counter_with_id(r.new_id("monotonic_counter", {{"my-tags", "bar"}}));
+    auto c = Registry::monotonic_counter_with_id(r.new_id("monotonic_counter", {{"my-tags", "bar"}}));
     EXPECT_TRUE(memoryWriter->IsEmpty());
 
     c.Set(42);
@@ -251,7 +251,7 @@ TEST(RegistryTest, MonotonicCounterUintWithId)
     auto r = Registry(config);
     auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
-    auto c = r.monotonic_counter_uint_with_id(r.new_id("monotonic_counter_uint", {{"my-tags", "bar"}}));
+    auto c = Registry::monotonic_counter_uint_with_id(r.new_id("monotonic_counter_uint", {{"my-tags", "bar"}}));
     EXPECT_TRUE(memoryWriter->IsEmpty());
 
     c.Set(42);
@@ -291,7 +291,7 @@ TEST(RegistryTest, PctDistributionSummaryWithId)
     auto r = Registry(config);
     auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
-    auto d = r.pct_distribution_summary_with_id(r.new_id("pct_distribution_summary", {{"my-tags", "bar"}}));
+    auto d = Registry::pct_distribution_summary_with_id(r.new_id("pct_distribution_summary", {{"my-tags", "bar"}}));
     EXPECT_TRUE(memoryWriter->IsEmpty());
 
     d.Record(42);
@@ -318,7 +318,7 @@ TEST(RegistryTest, PctTimerWithId)
     auto r = Registry(config);
     auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
-    auto t = r.pct_timer_with_id(r.new_id("pct_timer", {{"my-tags", "bar"}}));
+    auto t = Registry::pct_timer_with_id(r.new_id("pct_timer", {{"my-tags", "bar"}}));
     EXPECT_TRUE(memoryWriter->IsEmpty());
 
     t.Record(42);
@@ -345,7 +345,7 @@ TEST(RegistryTest, TimerWithId)
     auto r = Registry(config);
     auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
-    auto t = r.timer_with_id(r.new_id("timer", {{"my-tags", "bar"}}));
+    auto t = Registry::timer_with_id(r.new_id("timer", {{"my-tags", "bar"}}));
     EXPECT_TRUE(memoryWriter->IsEmpty());
 
     t.Record(42);

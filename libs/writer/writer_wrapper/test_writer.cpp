@@ -26,7 +26,7 @@ class WriterWrapperUDSWriterTest : public testing::Test
 
         // Start the UDS server in a separate thread
         server_thread = std::thread(
-            []()
+            []
             {
                 // This calls our server function directly
                 listen_for_uds_messages();
@@ -60,9 +60,9 @@ TEST_F(WriterWrapperUDSWriterTest, MultithreadedWrite)
     WriterTestHelper::InitializeWriter(WriterType::Unix, unixUrl, 0, 30);
 
     // Number of threads and counters to create
-    const int numThreads = 4;
-    const int countersPerThread = 3;
-    const int incrementsPerCounter = 5;
+    constexpr auto numThreads = 4;
+    constexpr auto countersPerThread = 3;
+    constexpr auto  incrementsPerCounter = 5;
 
     // Function for worker threads
     auto worker = [&](int threadId)

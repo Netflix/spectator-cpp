@@ -1,6 +1,5 @@
 #include "uds_server.h"
 #include <boost/beast/core.hpp>
-#include <boost/beast/websocket.hpp>
 #include <boost/asio.hpp>
 #include <boost/asio/local/stream_protocol.hpp>
 #include <iostream>
@@ -8,7 +7,6 @@
 #include <vector>
 #include <string>
 #include <thread>
-#include <chrono>
 #include <mutex>
 #include <atomic>
 #include <filesystem>
@@ -89,7 +87,7 @@ try
             socket.non_blocking(true);
 
             // Buffer for reading data
-            std::array<char, 2048> buffer;
+            std::array<char, 2048> buffer{};
             while (uds_server_running)
             {
                 // We need to handle both data availability and potential errors

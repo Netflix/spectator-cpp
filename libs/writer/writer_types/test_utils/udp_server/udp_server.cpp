@@ -5,7 +5,6 @@
 #include <vector>
 #include <string>
 #include <thread>
-#include <chrono>
 #include <mutex>
 #include <atomic>
 
@@ -42,7 +41,7 @@ void add_message(const std::string& message)
 void listen_for_udp_messages()
 try
 {
-    const unsigned short port = 1234;
+    constexpr auto port = 1234;
 
     boost::asio::io_context io_context;
 
@@ -61,7 +60,7 @@ try
         throw;
     }
 
-    std::array<char, 2048> buffer;
+    std::array<char, 2048> buffer{};
     boost::asio::ip::udp::endpoint sender_endpoint;
 
     std::cout << "UDP server listening on 127.0.0.1:" << port << " (IPv4 localhost)\n";

@@ -25,11 +25,11 @@ std::unordered_map<std::string, std::string> CalculateTags(
         valid_tags[ConfigConstants::process] = process_name;
     }
 
-    for (const auto& kv : tags)
+    for (const auto& [fst, snd] : tags)
     {
-        if (kv.first.empty() == false && kv.second.empty() == false)
+        if (fst.empty() == false && snd.empty() == false)
         {
-            valid_tags[kv.first] = kv.second;
+            valid_tags[fst] = snd;
         }
     }
 

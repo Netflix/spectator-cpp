@@ -10,8 +10,7 @@ struct WriterConfigConstants
 std::pair<WriterType, std::string> GetWriterConfigFromString(const std::string& type)
 {
     // Check exact matches first
-    auto it = TypeToLocationMap.find(type);
-    if (it != TypeToLocationMap.end())
+    if (const auto it = TypeToLocationMap.find(type); it != TypeToLocationMap.end())
     {
         return {it->second.first, std::string(it->second.second)};
     }
@@ -31,8 +30,7 @@ std::pair<WriterType, std::string> GetWriterConfigFromString(const std::string& 
 
 WriterConfig::WriterConfig(const std::string& type)
 {
-    const char* envLocation = std::getenv("SPECTATOR_OUTPUT_LOCATION");
-    if (envLocation != nullptr)
+    if (const char* envLocation = std::getenv("SPECTATOR_OUTPUT_LOCATION"); envLocation != nullptr)
     {
         Logger::debug("Using environment variable SPECTATOR_OUTPUT_LOCATION: {}", envLocation);
         const std::string envValue(envLocation);
@@ -50,7 +48,7 @@ WriterConfig::WriterConfig(const std::string& type)
     Logger::debug("WriterConfig initialized with type: {}, location: {}", WriterTypeToString(m_type), m_location);
 }
 
-WriterConfig::WriterConfig(const std::string& type, unsigned int bufferSize)
+WriterConfig::WriterConfig(const std::string& type, const unsigned int bufferSize)
     : WriterConfig(type)  // Constructor delegation
 {
     m_bufferSize = bufferSize;

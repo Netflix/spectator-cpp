@@ -2,8 +2,6 @@
 
 #include <libs/logger/logger.h>
 
-#include <boost/system/error_code.hpp>
-
 UDPWriter::UDPWriter(const std::string& host, int port) : m_host(host), m_port(port)
 {
     try

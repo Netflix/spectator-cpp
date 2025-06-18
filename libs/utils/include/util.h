@@ -19,7 +19,7 @@ struct ProtocolLine
         return symbol == other.symbol && id == other.id && value == other.value;
     }
 
-    std::string to_string() const
+    [[nodiscard]] std::string to_string() const
     {
         std::stringstream ss;
         ss << symbol << ":" << id.GetName();

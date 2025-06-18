@@ -29,9 +29,9 @@ std::string ToSpectatorId(const std::string& name, const std::unordered_map<std:
     ss << ReplaceInvalidChars(name);
     if (!tags.empty())
     {
-        for (const auto& tag : tags)
+        for (const auto& [fst, snd] : tags)
         {
-            ss << "," << ReplaceInvalidChars(tag.first) << "=" << ReplaceInvalidChars(tag.second);
+            ss << "," << ReplaceInvalidChars(fst) << "=" << ReplaceInvalidChars(snd);
         }
     }
     return ss.str();
@@ -53,9 +53,9 @@ MeterId MeterId::WithTag(const std::string& key, const std::string& value) const
 MeterId MeterId::WithTags(const std::unordered_map<std::string, std::string>& additional_tags) const
 {
     auto new_tags = m_tags;
-    for (const auto& pair : additional_tags)
+    for (const auto& [fst, snd] : additional_tags)
     {
-        new_tags[pair.first] = pair.second;
+        new_tags[fst] = snd;
     }
     return MeterId(m_name, new_tags);
 }
@@ -67,13 +67,13 @@ std::string MeterId::to_string() const
     std::ostringstream ss;
     ss << "MeterId(name=" << m_name << ", tags={";
     bool first = true;
-    for (const auto& pair : m_tags)
+    for (const auto& [fst, snd] : m_tags)
     {
         if (!first)
         {
             ss << ", ";
         }
-        ss << "'" << pair.first << "': '" << pair.second << "'";
+        ss << "'" << fst << "': '" << snd << "'";
         first = false;
     }
     ss << "})";
@@ -84,14 +84,14 @@ std::string MeterId::to_string() const
 size_t std::hash<MeterId>::operator()(const MeterId& id) const
 {
     // Hash the name first
-    size_t name_hash = std::hash<std::string>{}(id.GetName());
+    const size_t name_hash = std::hash<std::string>{}(id.GetName());
 
     // Hash the tags
     size_t tags_hash = 0;
-    for (const auto& tag : id.GetTags())
+    for (const auto& [fst, snd] : id.GetTags())
     {
         // Combine key and value hashes
-        size_t pair_hash = std::hash<std::string>{}(tag.first) ^ std::hash<std::string>{}(tag.second) << 1;
+        const size_t pair_hash = std::hash<std::string>{}(fst) ^ std::hash<std::string>{}(snd) << 1;
         // Combine with the accumulated tags hash
         tags_hash ^= pair_hash + 0x9e3779b9 + (tags_hash << 6) + (tags_hash >> 2);
     }

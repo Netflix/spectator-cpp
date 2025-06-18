@@ -23,58 +23,58 @@ class Registry
     AgeGauge age_gauge(const std::string& name, const std::unordered_map<std::string, std::string>& tags =
                                                     std::unordered_map<std::string, std::string>()) const;
 
-    AgeGauge age_gauge_with_id(const MeterId& meter_id);
+    static AgeGauge age_gauge_with_id(const MeterId& meter_id);
 
     Counter counter(const std::string& name, const std::unordered_map<std::string, std::string>& tags =
                                                  std::unordered_map<std::string, std::string>()) const;
 
-    Counter counter_with_id(const MeterId& meter_id);
+    static Counter counter_with_id(const MeterId& meter_id);
 
     DistributionSummary distribution_summary(
         const std::string& name,
         const std::unordered_map<std::string, std::string>& tags = std::unordered_map<std::string, std::string>()) const;
 
-    DistributionSummary distribution_summary_with_id(const MeterId& meter_id);
+    static DistributionSummary distribution_summary_with_id(const MeterId& meter_id);
 
     Gauge gauge(
         const std::string& name,
         const std::unordered_map<std::string, std::string>& tags = std::unordered_map<std::string, std::string>(),
         const std::optional<int>& ttl_seconds = std::nullopt) const;
 
-    Gauge gauge_with_id(const MeterId& meter_id, const std::optional<int>& ttl_seconds = std::nullopt);
+    static Gauge gauge_with_id(const MeterId& meter_id, const std::optional<int>& ttl_seconds = std::nullopt);
 
     MaxGauge max_gauge(const std::string& name, const std::unordered_map<std::string, std::string>& tags =
                                                     std::unordered_map<std::string, std::string>()) const;
 
-    MaxGauge max_gauge_with_id(const MeterId& meter_id);
+    static MaxGauge max_gauge_with_id(const MeterId& meter_id);
 
     MonotonicCounter monotonic_counter(
         const std::string& name,
         const std::unordered_map<std::string, std::string>& tags = std::unordered_map<std::string, std::string>()) const;
 
-    MonotonicCounter monotonic_counter_with_id(const MeterId& meter_id);
+    static MonotonicCounter monotonic_counter_with_id(const MeterId& meter_id);
 
     MonotonicCounterUint monotonic_counter_uint(
         const std::string& name,
         const std::unordered_map<std::string, std::string>& tags = std::unordered_map<std::string, std::string>()) const;
 
-    MonotonicCounterUint monotonic_counter_uint_with_id(const MeterId& meter_id);
+    static MonotonicCounterUint monotonic_counter_uint_with_id(const MeterId& meter_id);
 
     PercentileDistributionSummary pct_distribution_summary(
         const std::string& name,
         const std::unordered_map<std::string, std::string>& tags = std::unordered_map<std::string, std::string>()) const;
 
-    PercentileDistributionSummary pct_distribution_summary_with_id(const MeterId& meter_id);
+    static PercentileDistributionSummary pct_distribution_summary_with_id(const MeterId& meter_id);
 
     PercentileTimer pct_timer(const std::string& name, const std::unordered_map<std::string, std::string>& tags =
                                                            std::unordered_map<std::string, std::string>()) const;
 
-    PercentileTimer pct_timer_with_id(const MeterId& meter_id);
+    static PercentileTimer pct_timer_with_id(const MeterId& meter_id);
 
     Timer timer(const std::string& name, const std::unordered_map<std::string, std::string>& tags =
                                              std::unordered_map<std::string, std::string>()) const;
 
-    Timer timer_with_id(const MeterId& meter_id);
+    static Timer timer_with_id(const MeterId& meter_id);
 
    private:
     Config m_config;

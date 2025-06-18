@@ -9,7 +9,7 @@
 class Writer final : public Singleton<Writer>
 {
    public:
-    virtual ~Writer();
+    ~Writer() override;
 
    private:
     friend class Singleton<Writer>;

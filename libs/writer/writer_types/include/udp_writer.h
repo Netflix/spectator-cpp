@@ -2,7 +2,6 @@
 
 #include <libs/writer/writer_types/include/base_writer.h>
 #include <string>
-#include <memory>
 #include <boost/asio.hpp>
 
 class UDPWriter final : public BaseWriter
