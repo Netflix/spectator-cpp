@@ -22,4 +22,4 @@ endif()
 # Add subdirectories
 add_subdirectory(libs)
 add_subdirectory(spectator)
-
+add_subdirectory(performance_tests)
