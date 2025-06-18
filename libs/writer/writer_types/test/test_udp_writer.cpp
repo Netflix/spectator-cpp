@@ -49,7 +49,7 @@ class UDPWriterTest : public testing::Test
 TEST_F(UDPWriterTest, SendMessage)
 {
     // Create a UDP writer that will connect to localhost:1234
-    UDPWriter writer("127.0.0.1", 1234);
+    UDPWriter writer("127.0.0.1", 12345);
 
     // Define our test message
     const std::string test_message = "Hello from UDP Writer Test";
@@ -79,7 +79,7 @@ TEST_F(UDPWriterTest, SendMessage)
 
 TEST_F(UDPWriterTest, CloseAndReopen)
 {
-    UDPWriter writer("127.0.0.1", 1234);
+    UDPWriter writer("127.0.0.1", 12345);
     std::string message1 = "Initial message";
     writer.Write(message1);
 
@@ -95,7 +95,7 @@ TEST_F(UDPWriterTest, CloseAndReopen)
     writer.Close();
 
     // Create a new writer
-    UDPWriter writer2("127.0.0.1", 1234);
+    UDPWriter writer2("127.0.0.1", 12345);
     std::string message2 = "Message after reopening";
     writer2.Write(message2);
 
@@ -110,7 +110,7 @@ TEST_F(UDPWriterTest, CloseAndReopen)
 
 TEST_F(UDPWriterTest, SendMultipleMessages)
 {
-    UDPWriter writer("127.0.0.1", 1234);
+    UDPWriter writer("127.0.0.1", 12345);
 
     // Define test messages
     const std::vector<std::string> test_messages = {"Message 1", "Message 2", "Message 3"};

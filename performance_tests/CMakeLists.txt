@@ -1,3 +1,2 @@
 add_executable(udp_performance_test udp_test.cpp)
 target_link_libraries(udp_performance_test PRIVATE registry)
-add_test(NAME udp_performance_test COMMAND udp_performance_test)

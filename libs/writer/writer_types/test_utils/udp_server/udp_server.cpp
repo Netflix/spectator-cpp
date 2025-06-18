@@ -41,7 +41,7 @@ void add_message(const std::string& message)
 void listen_for_udp_messages()
 try
 {
-    constexpr auto port = 1234;
+    constexpr auto port = 12345;
 
     boost::asio::io_context io_context;
 
