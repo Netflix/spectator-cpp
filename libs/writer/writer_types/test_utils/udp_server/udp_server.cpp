@@ -47,7 +47,7 @@ try
     boost::asio::io_context io_context;
 
     // Create an IPv4 socket bound to localhost (127.0.0.1) and port 1234
-    boost::asio::ip::udp::endpoint endpoint(boost::asio::ip::address::from_string("127.0.0.1"), port);
+    const boost::asio::ip::udp::endpoint endpoint(boost::asio::ip::address::from_string("127.0.0.1"), port);
     boost::asio::ip::udp::socket socket(io_context, boost::asio::ip::udp::v4());
 
     try
@@ -73,7 +73,7 @@ try
     {
         try
         {
-            std::size_t bytes_received = socket.receive_from(boost::asio::buffer(buffer), sender_endpoint);
+            const std::size_t bytes_received = socket.receive_from(boost::asio::buffer(buffer), sender_endpoint);
 
             if (bytes_received == buffer.size())
             {

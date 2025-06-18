@@ -35,7 +35,7 @@ WriterConfig::WriterConfig(const std::string& type)
     if (envLocation != nullptr)
     {
         Logger::debug("Using environment variable SPECTATOR_OUTPUT_LOCATION: {}", envLocation);
-        std::string envValue(envLocation);
+        const std::string envValue(envLocation);
         auto [writer_type, location] = GetWriterConfigFromString(envValue);
         m_type = writer_type;
         m_location = location;
@@ -50,7 +50,7 @@ WriterConfig::WriterConfig(const std::string& type)
     Logger::debug("WriterConfig initialized with type: {}, location: {}", WriterTypeToString(m_type), m_location);
 }
 
-WriterConfig::WriterConfig(const std::string& type, const unsigned int bufferSize)
+WriterConfig::WriterConfig(const std::string& type, unsigned int bufferSize)
     : WriterConfig(type)  // Constructor delegation
 {
     m_bufferSize = bufferSize;

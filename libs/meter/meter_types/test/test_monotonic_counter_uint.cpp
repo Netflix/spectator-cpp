@@ -3,7 +3,7 @@
 
 #include <gtest/gtest.h>
 
-class MonoCounterTest : public ::testing::Test
+class MonoCounterTest : public testing::Test
 {
    protected:
     MeterId tid = MeterId("monotonic_counter_uint");
@@ -12,7 +12,7 @@ class MonoCounterTest : public ::testing::Test
 TEST_F(MonoCounterTest, set)
 {
     WriterTestHelper::InitializeWriter(WriterType::Memory);
-    auto* writer = dynamic_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
+    const auto* writer = dynamic_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
     MonotonicCounterUint mc(tid);
     EXPECT_TRUE(writer->IsEmpty());
 
@@ -23,7 +23,7 @@ TEST_F(MonoCounterTest, set)
 TEST_F(MonoCounterTest, setNegative)
 {
     WriterTestHelper::InitializeWriter(WriterType::Memory);
-    auto* writer = dynamic_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
+    const auto* writer = dynamic_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
     MonotonicCounterUint mc(tid);
     EXPECT_TRUE(writer->IsEmpty());
 

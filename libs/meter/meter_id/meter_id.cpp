@@ -21,17 +21,17 @@ std::unordered_map<std::string, std::string> ValidateTags(const std::unordered_m
     return validTags;
 }
 
-std::string RepleaceInvalidChars(const std::string& s) { return std::regex_replace(s, INVALID_CHARS, "_"); }
+std::string ReplaceInvalidChars(const std::string& s) { return std::regex_replace(s, INVALID_CHARS, "_"); }
 
 std::string ToSpectatorId(const std::string& name, const std::unordered_map<std::string, std::string>& tags)
 {
     std::ostringstream ss;
-    ss << RepleaceInvalidChars(name);
+    ss << ReplaceInvalidChars(name);
     if (!tags.empty())
     {
         for (const auto& tag : tags)
         {
-            ss << "," << RepleaceInvalidChars(tag.first) << "=" << RepleaceInvalidChars(tag.second);
+            ss << "," << ReplaceInvalidChars(tag.first) << "=" << ReplaceInvalidChars(tag.second);
         }
     }
     return ss.str();

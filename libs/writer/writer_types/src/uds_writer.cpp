@@ -35,7 +35,7 @@ bool UDSWriter::connect()
         }
 
         // Connect to the UDS server
-        local::stream_protocol::endpoint endpoint(m_socketPath);
+        const local::stream_protocol::endpoint endpoint(m_socketPath);
 
         boost::system::error_code ec;
         m_socket->connect(endpoint, ec);

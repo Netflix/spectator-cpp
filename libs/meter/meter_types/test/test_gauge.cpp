@@ -3,7 +3,7 @@
 
 #include <gtest/gtest.h>
 
-class GaugeTest : public ::testing::Test
+class GaugeTest : public testing::Test
 {
    protected:
     MeterId tid = MeterId("gauge");
@@ -12,7 +12,7 @@ class GaugeTest : public ::testing::Test
 TEST_F(GaugeTest, Now)
 {
     WriterTestHelper::InitializeWriter(WriterType::Memory);
-    auto* writer = dynamic_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
+    const auto* writer = dynamic_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
     Gauge g(tid);
     EXPECT_TRUE(writer->IsEmpty());
     g.Set(1);
@@ -22,7 +22,7 @@ TEST_F(GaugeTest, Now)
 TEST_F(GaugeTest, TTL)
 {
     WriterTestHelper::InitializeWriter(WriterType::Memory);
-    auto* writer = dynamic_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
+    const auto* writer = dynamic_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
     Gauge g(tid, 10);
     EXPECT_TRUE(writer->IsEmpty());
     g.Set(42);

@@ -55,7 +55,7 @@ try
     boost::asio::io_context io_context;
 
     // Create and open a Unix domain socket
-    boost::asio::local::stream_protocol::endpoint endpoint(socket_path);
+    const boost::asio::local::stream_protocol::endpoint endpoint(socket_path);
     boost::asio::local::stream_protocol::acceptor acceptor(io_context, endpoint);
 
     std::cout << "UDS server listening on " << socket_path << std::endl;
@@ -81,11 +81,8 @@ try
                     std::this_thread::sleep_for(std::chrono::milliseconds(50));
                     continue;
                 }
-                else
-                {
-                    std::cerr << "Error accepting connection: " << ec.message() << std::endl;
-                    continue;
-                }
+                std::cerr << "Error accepting connection: " << ec.message() << std::endl;
+                continue;
             }
 
             // Connection accepted, set to non-blocking to avoid hanging
@@ -115,7 +112,7 @@ try
                     // Connection closed cleanly by peer
                     break;
                 }
-                else if (read_ec)
+                if (read_ec)
                 {
                     std::cerr << "Error reading from socket: " << read_ec.message() << std::endl;
                     break;

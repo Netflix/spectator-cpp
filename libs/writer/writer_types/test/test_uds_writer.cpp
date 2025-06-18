@@ -8,7 +8,7 @@
 #include <algorithm>
 
 // Test fixture for UDS Writer tests
-class UDSWriterTest : public ::testing::Test
+class UDSWriterTest : public testing::Test
 {
    protected:
     void SetUp() override
@@ -52,7 +52,7 @@ TEST_F(UDSWriterTest, SendMessage)
     UDSWriter writer("/tmp/test_uds_socket");
 
     // Define our test message
-    std::string test_message = "Hello from UDS Writer Test";
+    const std::string test_message = "Hello from UDS Writer Test";
 
     // Send a test message
     writer.Write(test_message);
@@ -61,7 +61,7 @@ TEST_F(UDSWriterTest, SendMessage)
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     // Get current messages and verify the message was received
-    auto messages = get_uds_messages();
+    const auto messages = get_uds_messages();
     ASSERT_FALSE(messages.empty());
 
     // Check that our message is in the vector
@@ -81,7 +81,7 @@ TEST_F(UDSWriterTest, SendMessage)
 TEST_F(UDSWriterTest, CloseAndReopen)
 {
     UDSWriter writer("/tmp/test_uds_socket");
-    std::string message1 = "Initial message";
+    const std::string message1 = "Initial message";
     writer.Write(message1);
 
     // Wait for message processing
@@ -97,7 +97,7 @@ TEST_F(UDSWriterTest, CloseAndReopen)
 
     // Create a new writer
     UDSWriter writer2("/tmp/test_uds_socket");
-    std::string message2 = "Message after reopening";
+    const std::string message2 = "Message after reopening";
     writer2.Write(message2);
 
     // Wait for message processing
@@ -114,7 +114,7 @@ TEST_F(UDSWriterTest, SendMultipleMessages)
     UDSWriter writer("/tmp/test_uds_socket");
 
     // Define test messages
-    std::vector<std::string> test_messages = {"Message 1", "Message 2", "Message 3"};
+    const std::vector<std::string> test_messages = {"Message 1", "Message 2", "Message 3"};
 
     // Send messages one by one, with a separate connection for each
     for (const auto& msg : test_messages)
@@ -126,7 +126,7 @@ TEST_F(UDSWriterTest, SendMultipleMessages)
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
 
     // Get received messages and verify
-    auto received_messages = get_uds_messages();
+    const auto received_messages = get_uds_messages();
 
     // Verify we received the number of messages we sent
     ASSERT_EQ(received_messages.size(), test_messages.size());

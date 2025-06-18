@@ -37,7 +37,7 @@ class EnvironmentVariableGuard
     std::optional<std::string> m_originalValue;
 };
 
-class ConfigTest : public ::testing::Test
+class ConfigTest : public testing::Test
 {
    protected:
     // Create guards for each environment variable

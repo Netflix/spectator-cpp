@@ -39,7 +39,7 @@ class EnvironmentVariableGuard
     std::optional<std::string> m_originalValue;
 };
 
-class WriterConfigTest : public ::testing::Test
+class WriterConfigTest : public testing::Test
 {
    protected:
     EnvironmentVariableGuard envGuard{"SPECTATOR_OUTPUT_LOCATION"};
@@ -51,21 +51,21 @@ TEST_F(WriterConfigTest, BasicWriterTypes)
 {
     // Test "memory" type
     {
-        WriterConfig config(WriterTypes::Memory);
+        const WriterConfig config(WriterTypes::Memory);
         EXPECT_EQ(config.GetType(), WriterType::Memory);
         EXPECT_EQ(config.GetLocation(), DefaultLocations::NoLocation);
     }
 
     // Test "udp" type
     {
-        WriterConfig config(WriterTypes::UDP);
+        const WriterConfig config(WriterTypes::UDP);
         EXPECT_EQ(config.GetType(), WriterType::UDP);
         EXPECT_EQ(config.GetLocation(), DefaultLocations::UDP);
     }
 
     // Test "unix" type
     {
-        WriterConfig config(WriterTypes::Unix);
+        const WriterConfig config(WriterTypes::Unix);
         EXPECT_EQ(config.GetType(), WriterType::Unix);
         EXPECT_EQ(config.GetLocation(), DefaultLocations::UDS);
     }
@@ -76,7 +76,7 @@ TEST_F(WriterConfigTest, URLBasedWriterTypes)
     // Test UDP URL
     {
         const std::string udpUrl = std::string(WriterTypes::UDPURL) + "192.168.1.100:8125";
-        WriterConfig config(udpUrl);
+        const WriterConfig config(udpUrl);
         EXPECT_EQ(config.GetType(), WriterType::UDP);
         EXPECT_EQ(config.GetLocation(), udpUrl);
     }
@@ -84,7 +84,7 @@ TEST_F(WriterConfigTest, URLBasedWriterTypes)
     // Test Unix domain socket URL
     {
         const std::string unixUrl = std::string(WriterTypes::UnixURL) + "/var/run/custom/socket.sock";
-        WriterConfig config(unixUrl);
+        const WriterConfig config(unixUrl);
         EXPECT_EQ(config.GetType(), WriterType::Unix);
         EXPECT_EQ(config.GetLocation(), unixUrl);
     }
@@ -93,7 +93,7 @@ TEST_F(WriterConfigTest, URLBasedWriterTypes)
 TEST_F(WriterConfigTest, BufferingConstructor)
 {
     
-    WriterConfig config(WriterTypes::UDP, 2048);
+    const WriterConfig config(WriterTypes::UDP, 2048);
     EXPECT_EQ(config.GetType(), WriterType::UDP);
     EXPECT_EQ(config.GetBufferSize(), 2048);
     EXPECT_TRUE(config.IsBufferingEnabled());
@@ -114,7 +114,7 @@ TEST_F(WriterConfigTest, EdgeCases)
 {
     // Test with just URL scheme but no path
     {
-        WriterConfig config("udp://");
+        const WriterConfig config("udp://");
         EXPECT_EQ(config.GetType(), WriterType::UDP);
         EXPECT_EQ(config.GetLocation(), "udp://");
     }

@@ -23,7 +23,7 @@ std::optional<ProtocolLine> ParseProtocolLine(const std::string& line)
     std::unordered_map<std::string, std::string> tags{};
     std::string value{};
 
-    auto mainParts = split(line, ':');
+    const auto mainParts = split(line, ':');
 
     if (mainParts.size() < 3)
     {

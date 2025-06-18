@@ -3,7 +3,7 @@
 
 #include <gtest/gtest.h>
 
-class TimerTest : public ::testing::Test
+class TimerTest : public testing::Test
 {
    protected:
     MeterId tid = MeterId("timer");
@@ -12,7 +12,7 @@ class TimerTest : public ::testing::Test
 TEST_F(TimerTest, record)
 {
     WriterTestHelper::InitializeWriter(WriterType::Memory);
-    auto* writer = dynamic_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
+    const auto* writer = dynamic_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
     Timer t(tid);
     EXPECT_TRUE(writer->IsEmpty());
 
@@ -23,7 +23,7 @@ TEST_F(TimerTest, record)
 TEST_F(TimerTest, recordNegative)
 {
     WriterTestHelper::InitializeWriter(WriterType::Memory);
-    auto* writer = dynamic_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
+    const auto* writer = dynamic_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
     Timer t(tid);
     EXPECT_TRUE(writer->IsEmpty());
 
@@ -34,7 +34,7 @@ TEST_F(TimerTest, recordNegative)
 TEST_F(TimerTest, recordZero)
 {
     WriterTestHelper::InitializeWriter(WriterType::Memory);
-    auto* writer = dynamic_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
+    const auto* writer = dynamic_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
     Timer t(tid);
     EXPECT_TRUE(writer->IsEmpty());
 

@@ -8,7 +8,7 @@
 #include <algorithm>  // For std::find
 
 // Test fixture for UDP Writer tests
-class UDPWriterTest : public ::testing::Test
+class UDPWriterTest : public testing::Test
 {
    protected:
     void SetUp() override
@@ -52,7 +52,7 @@ TEST_F(UDPWriterTest, SendMessage)
     UDPWriter writer("127.0.0.1", 1234);
 
     // Define our test message
-    std::string test_message = "Hello from UDP Writer Test";
+    const std::string test_message = "Hello from UDP Writer Test";
 
     // Send a test message
     writer.Write(test_message);
@@ -61,7 +61,7 @@ TEST_F(UDPWriterTest, SendMessage)
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     // Get current messages and verify the message was received
-    auto messages = get_messages();
+    const auto messages = get_messages();
     ASSERT_FALSE(messages.empty());
 
     // Check that our message is in the vector
@@ -74,6 +74,7 @@ TEST_F(UDPWriterTest, SendMessage)
             break;
         }
     }
+    ASSERT_TRUE(message_found);
 }
 
 TEST_F(UDPWriterTest, CloseAndReopen)
@@ -112,7 +113,7 @@ TEST_F(UDPWriterTest, SendMultipleMessages)
     UDPWriter writer("127.0.0.1", 1234);
 
     // Define test messages
-    std::vector<std::string> test_messages = {"Message 1", "Message 2", "Message 3"};
+    const std::vector<std::string> test_messages = {"Message 1", "Message 2", "Message 3"};
 
     // Send several messages in succession
     for (const auto& msg : test_messages)
@@ -124,7 +125,7 @@ TEST_F(UDPWriterTest, SendMultipleMessages)
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     // Get received messages and verify
-    auto received_messages = get_messages();
+    const auto received_messages = get_messages();
 
     // Verify we received at least the number of messages we sent
     ASSERT_EQ(received_messages.size(), test_messages.size());

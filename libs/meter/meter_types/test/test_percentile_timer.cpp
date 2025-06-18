@@ -3,7 +3,7 @@
 
 #include <gtest/gtest.h>
 
-class PercentileTimerTest : public ::testing::Test
+class PercentileTimerTest : public testing::Test
 {
    protected:
     MeterId tid = MeterId("percentile_timer");
@@ -12,7 +12,7 @@ class PercentileTimerTest : public ::testing::Test
 TEST_F(PercentileTimerTest, record)
 {
     WriterTestHelper::InitializeWriter(WriterType::Memory);
-    auto* writer = dynamic_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
+    const auto* writer = dynamic_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
     PercentileTimer pt(tid);
     EXPECT_TRUE(writer->IsEmpty());
 
@@ -23,7 +23,7 @@ TEST_F(PercentileTimerTest, record)
 TEST_F(PercentileTimerTest, recordNegative)
 {
     WriterTestHelper::InitializeWriter(WriterType::Memory);
-    auto* writer = dynamic_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
+    const auto* writer = dynamic_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
     PercentileTimer pt(tid);
     EXPECT_TRUE(writer->IsEmpty());
 
@@ -34,7 +34,7 @@ TEST_F(PercentileTimerTest, recordNegative)
 TEST_F(PercentileTimerTest, recordZero)
 {
     WriterTestHelper::InitializeWriter(WriterType::Memory);
-    auto* writer = dynamic_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
+    const auto* writer = dynamic_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
     PercentileTimer pt(tid);
     EXPECT_TRUE(writer->IsEmpty());
 

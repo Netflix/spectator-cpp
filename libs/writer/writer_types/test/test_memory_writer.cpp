@@ -3,7 +3,7 @@
 
 TEST(MemoryWriterTest, IsEmpty)
 {
-    auto writer = MemoryWriter();
+    const auto writer = MemoryWriter();
     EXPECT_TRUE(writer.IsEmpty());
 }
 

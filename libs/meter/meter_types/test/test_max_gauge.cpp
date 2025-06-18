@@ -3,7 +3,7 @@
 
 #include <gtest/gtest.h>
 
-class MaxGaugeTest : public ::testing::Test
+class MaxGaugeTest : public testing::Test
 {
    protected:
     MeterId tid = MeterId("max_gauge");
@@ -12,7 +12,7 @@ class MaxGaugeTest : public ::testing::Test
 TEST_F(MaxGaugeTest, Set)
 {
     WriterTestHelper::InitializeWriter(WriterType::Memory);
-    auto* writer = dynamic_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
+    const auto* writer = dynamic_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
     MaxGauge g(tid);
     EXPECT_TRUE(writer->IsEmpty());
     g.Set(0);

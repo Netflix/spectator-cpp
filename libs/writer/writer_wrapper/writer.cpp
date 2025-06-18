@@ -94,7 +94,7 @@ void Writer::Reset()
 
 void Writer::TryToSend(const std::string& message)
 {
-    auto& instance = GetInstance();
+    const auto& instance = GetInstance();
 
     if (!instance.m_impl)
     {
@@ -193,7 +193,7 @@ void Writer::Write(const std::string& message)
 
 void Writer::Close()
 {
-    auto& instance = GetInstance();
+    const auto& instance = GetInstance();
 
     if (!instance.m_impl)
     {

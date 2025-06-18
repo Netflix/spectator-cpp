@@ -4,35 +4,35 @@
 
 TEST(MeterIdTest, EqualsSameName)
 {
-    MeterId id1("foo");
-    MeterId id2("foo");
+    const MeterId id1("foo");
+    const MeterId id2("foo");
     EXPECT_EQ(id1, id2);
 }
 
 TEST(MeterIdTest, EqualsSameTags)
 {
-    MeterId id1("foo", {{"a", "1"}, {"b", "2"}, {"c", "3"}});
-    MeterId id2("foo", {{"c", "3"}, {"b", "2"}, {"a", "1"}});
+    const MeterId id1("foo", {{"a", "1"}, {"b", "2"}, {"c", "3"}});
+    const MeterId id2("foo", {{"c", "3"}, {"b", "2"}, {"a", "1"}});
     EXPECT_EQ(id1, id2);
 }
 
 TEST(MeterIdTest, HashSameTags)
 {
-    MeterId id1("foo", {{"a", "1"}, {"b", "2"}, {"c", "3"}});
-    MeterId id2("foo", {{"c", "3"}, {"b", "2"}, {"a", "1"}});
+    const MeterId id1("foo", {{"a", "1"}, {"b", "2"}, {"c", "3"}});
+    const MeterId id2("foo", {{"c", "3"}, {"b", "2"}, {"a", "1"}});
     EXPECT_EQ(std::hash<MeterId>{}(id1), std::hash<MeterId>{}(id2));
 }
 
 TEST(MeterIdTest, IllegalCharsAreReplaced)
 {
-    MeterId id("test`!@#$%^&*()-=~_+[]{}\\|;:'\",<.>/?foo");
+    const MeterId id("test`!@#$%^&*()-=~_+[]{}\\|;:'\",<.>/?foo");
     EXPECT_EQ("test______^____-_~______________.___foo", id.GetSpectatordId());
 }
 
 TEST(MeterIdTest, LookupTags)
 {
-    MeterId id1("foo", {{"a", "1"}, {"b", "2"}, {"c", "3"}});
-    MeterId id2("foo", {{"c", "3"}, {"b", "2"}, {"a", "1"}});
+    const MeterId id1("foo", {{"a", "1"}, {"b", "2"}, {"c", "3"}});
+    const MeterId id2("foo", {{"c", "3"}, {"b", "2"}, {"a", "1"}});
     std::unordered_map<MeterId, std::string> d;
     d[id1] = "test";
     EXPECT_EQ("test", d[id2]);
@@ -71,7 +71,7 @@ TEST(MeterIdTest, ToString)
 TEST(MeterIdTest, Tags)
 {
     MeterId id1("foo", {{"a", "1"}});
-    std::unordered_map<std::string, std::string> expected = {{"a", "1"}};
+    const std::unordered_map<std::string, std::string> expected = {{"a", "1"}};
     EXPECT_EQ(expected, id1.GetTags());
 }
 

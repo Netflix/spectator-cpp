@@ -13,7 +13,7 @@
 #include "../writer_types/test_utils/uds_server/uds_server.h"
 
 // Test fixture for UDS Writer tests
-class WriterWrapperUDSWriterTest : public ::testing::Test
+class WriterWrapperUDSWriterTest : public testing::Test
 {
    protected:
     void SetUp() override
