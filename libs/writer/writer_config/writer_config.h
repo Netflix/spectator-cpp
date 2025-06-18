@@ -19,6 +19,6 @@ class WriterConfig
    private:
     WriterType m_type;
     std::string m_location;
-    unsigned int m_bufferSize;
+    unsigned int m_bufferSize = 0;
     bool m_isBufferingEnabled = false;
 };

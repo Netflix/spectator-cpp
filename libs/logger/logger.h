@@ -17,6 +17,7 @@ class Logger final : public Singleton<Logger>
 {
    private:
     spdlog::logger* m_logger;  // Use raw pointer, not unique_ptr
+    inline static bool s_loggingEnabled = false;  // Static flag to control logging (C++17 inline initialization)
 
     friend class Singleton<Logger>;
 
@@ -48,35 +49,47 @@ class Logger final : public Singleton<Logger>
    public:
     static spdlog::logger* GetLogger() { return GetInstance().m_logger; }
 
-    static void debug(const std::string& msg) { GetLogger()->debug(msg); }
+    static void debug(const std::string& msg)
+    {
+        if (s_loggingEnabled) GetLogger()->debug(msg);
+    }
 
-    static void info(const std::string& msg) { GetLogger()->info(msg); }
+    static void info(const std::string& msg)
+    {
+        if (s_loggingEnabled) GetLogger()->info(msg);
+    }
 
-    static void warn(const std::string& msg) { GetLogger()->warn(msg); }
+    static void warn(const std::string& msg)
+    {
+        if (s_loggingEnabled) GetLogger()->warn(msg);
+    }
 
-    static void error(const std::string& msg) { GetLogger()->error(msg); }
+    static void error(const std::string& msg)
+    {
+        if (s_loggingEnabled) GetLogger()->error(msg);
+    }
 
     template <typename... Args>
     static void debug(fmt::format_string<Args...> fmt, Args&&... args)
     {
-        GetLogger()->debug(fmt, std::forward<Args>(args)...);
+        if (s_loggingEnabled) GetLogger()->debug(fmt, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
     static void info(fmt::format_string<Args...> fmt, Args&&... args)
     {
-        GetLogger()->info(fmt, std::forward<Args>(args)...);
+        if (s_loggingEnabled) GetLogger()->info(fmt, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
     static void warn(fmt::format_string<Args...> fmt, Args&&... args)
     {
-        GetLogger()->warn(fmt, std::forward<Args>(args)...);
+        if (s_loggingEnabled) GetLogger()->warn(fmt, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
     static void error(fmt::format_string<Args...> fmt, Args&&... args)
     {
-        GetLogger()->error(fmt, std::forward<Args>(args)...);
+        if (s_loggingEnabled) GetLogger()->error(fmt, std::forward<Args>(args)...);
     }
 };

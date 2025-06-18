@@ -26,8 +26,7 @@ UDPWriter::UDPWriter(const std::string& host, int port) : m_host(host), m_port(p
 
 UDPWriter::~UDPWriter() { Close(); }
 
-void UDPWriter::Write(const std::string& message)
-try
+void UDPWriter::Write(const std::string& message) try
 {
     if (m_socket == nullptr || m_socket->is_open() == false)
     {
@@ -52,8 +51,7 @@ catch (const std::exception& e)
     Logger::error("UDPWriter: Exception during write: {}", e.what());
 }
 
-void UDPWriter::Close()
-try
+void UDPWriter::Close() try
 {
     if (m_socket && m_socket->is_open())
     {

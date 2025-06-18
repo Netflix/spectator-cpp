@@ -43,8 +43,11 @@ int main()
     double total_elapsed = elapsed();
     double rate_per_second = iterations / total_elapsed;
     
-    Logger::info("Iterations completed: {}", iterations);
-    Logger::info("Total elapsed time: {:.2f} seconds", total_elapsed);
-    Logger::info("Rate: {:.2f} iterations/second", rate_per_second);              
+    //Logger::info("Iterations completed: {}", iterations);
+    //Logger::info("Total elapsed time: {:.2f} seconds", total_elapsed);
+    //Logger::info("Rate: {:.2f} iterations/second", rate_per_second);
+    std::cout << "Iterations completed: " << iterations << std::endl;
+    std::cout << "Total elapsed time: " << std::fixed << std::setprecision(2) << total_elapsed << " seconds" << std::endl;
+    std::cout << "Rate: " << std::fixed << std::setprecision(2) << rate_per_second << " iterations/second" << std::endl;
     return 0;
 }

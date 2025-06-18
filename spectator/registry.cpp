@@ -1,6 +1,47 @@
 #include <spectator/registry.h>
 
-Registry::Registry(const Config& config) : m_config(config) { Writer::Initialize(config.GetWriterType()); }
+
+std::pair<std::string, int> ParseUdpAddress(const std::string& address) 
+{
+
+    std::regex pattern("udp://([0-9.]+):(\\d+)");
+    std::smatch matches;
+        
+    if (!std::regex_match(address, matches, pattern) || matches.size() != 3)
+    {
+        throw std::runtime_error("Invalid UDP address format");
+    }
+            
+    std::string ip = matches[1].str();
+    int port = std::stoi(matches[2]);
+        
+        // Optional: Validate port range
+    if (port < 0 || port > 65535)
+        throw std::runtime_error("Port number out of valid range (0-65535)");
+            
+    return {ip, port};
+}
+
+Registry::Registry(const Config& config) : m_config(config) 
+{
+    if (config.GetWriterType() == WriterType::Memory)
+    {
+        Logger::info("Registry initializing Memory Writer");
+        Writer::Initialize(config.GetWriterType()); 
+    }
+    else if (config.GetWriterType() == WriterType::UDP)
+    {
+        auto [ip, port] = ParseUdpAddress(this->m_config.GetWriterLocation());
+        Logger::info("Registry initializing UDP Writer at {}:{}", ip, port);
+        Writer::Initialize(config.GetWriterType(), ip, port); 
+
+    }
+    else if (config.GetWriterType() == WriterType::Unix)
+    {
+        Logger::info("Registry initializing UDS Writer at {null}:{null}");
+        //Writer::Initialize(config.GetWriterType()); 
+    }    
+}
 
 Registry::~Registry()
 {
