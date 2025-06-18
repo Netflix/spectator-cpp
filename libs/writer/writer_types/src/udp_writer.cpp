@@ -26,6 +26,7 @@ UDPWriter::UDPWriter(const std::string& host, int port) : m_host(host), m_port(p
 
 UDPWriter::~UDPWriter() { Close(); }
 
+/*
 void UDPWriter::Write(const std::string& message) try
 {
     if (m_socket == nullptr || m_socket->is_open() == false)
@@ -49,6 +50,40 @@ void UDPWriter::Write(const std::string& message) try
 catch (const std::exception& e)
 {
     Logger::error("UDPWriter: Exception during write: {}", e.what());
+}
+*/
+
+void UDPWriter::Write(const std::string& message) try
+{
+    if (m_socket == nullptr || m_socket->is_open() == false)
+    {
+        Logger::error("UDPWriter: Socket not initialized or closed");
+        return;
+    }
+
+    // Store the message in a shared pointer to ensure it lives until the async operation completes
+    std::shared_ptr<std::string> message_ptr = std::make_shared<std::string>(message);
+    
+    m_socket->async_send_to(
+        boost::asio::buffer(*message_ptr), m_endpoint,
+        [this, message_ptr](const boost::system::error_code& error, std::size_t bytes_transferred) {
+            this->handle_send(error, bytes_transferred, *message_ptr);
+        });
+    
+    // Run the io_context to process the async operation
+    m_io_context->poll();
+}
+catch (const std::exception& e)
+{
+    Logger::error("UDPWriter: Exception during write: {}", e.what());
+}
+
+void UDPWriter::handle_send(const boost::system::error_code& error, std::size_t bytes_transferred, const std::string& message) {
+    if (!error) {
+        Logger::info("UDPWriter: Message sent successfully, bytes transferred: {}", bytes_transferred);
+    } else {
+        Logger::error("UDPWriter: Error sending message: {}", error.message());
+    }
 }
 
 void UDPWriter::Close() try

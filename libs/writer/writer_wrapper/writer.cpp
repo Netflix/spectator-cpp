@@ -95,13 +95,6 @@ void Writer::Reset()
 void Writer::TryToSend(const std::string& message)
 {
     const auto& instance = GetInstance();
-
-    if (!instance.m_impl)
-    {
-        Logger::error("Attempted to send with uninitialized writer implementation");
-        return;
-    }
-
     try
     {
         instance.m_impl->Write(message);
@@ -139,12 +132,6 @@ void Writer::ThreadSend()
 void Writer::BufferedWrite(const std::string& message)
 {
     auto& instance = GetInstance();
-
-    if (!instance.m_impl)
-    {
-        Logger::error("Attempted to write with uninitialized writer implementation");
-        return;
-    }
 
     {
         std::unique_lock<std::mutex> lock(instance.writeMutex);

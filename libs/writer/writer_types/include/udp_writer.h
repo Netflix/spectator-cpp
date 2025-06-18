@@ -13,6 +13,7 @@ class UDPWriter final : public BaseWriter
     void Close() override;
 
    private:
+    void handle_send(const boost::system::error_code& error, std::size_t bytes_transferred, const std::string& message);
     std::string m_host;
     int m_port;
     std::unique_ptr<boost::asio::io_context> m_io_context;
