@@ -29,14 +29,15 @@ bool UDSWriter::connect()
         // Create a new socket if needed
         if (!m_socket)
         {
-            m_socket = std::make_unique<local::stream_protocol::socket>(*m_ioContext);
+            m_socket = std::make_unique<local::datagram_protocol::socket>(*m_ioContext);
         }
 
-        // Connect to the UDS server
-        const local::stream_protocol::endpoint endpoint(m_socketPath);
-
+        // Open the socket and prepare the endpoint
         boost::system::error_code ec;
-        m_socket->connect(endpoint, ec);
+        m_socket->open(local::datagram_protocol(), ec);
+        
+        // Set up the server endpoint
+        m_endpoint = local::datagram_protocol::endpoint(m_socketPath);
 
         if (ec)
         {
@@ -67,7 +68,7 @@ void UDSWriter::Write(const std::string& message)
     try
     {
         boost::system::error_code ec;
-        boost::asio::write(*m_socket, boost::asio::buffer(message), ec);
+        size_t sent = m_socket->send_to(boost::asio::buffer(message), m_endpoint, 0, ec);
 
         if (ec)
         {
@@ -76,7 +77,7 @@ void UDSWriter::Write(const std::string& message)
         }
         else
         {
-            Logger::debug("UDS Writer: Sent message ({} bytes)", message.size());
+            Logger::debug("UDS Writer: Sent message ({} bytes)", sent);
         }
     }
     catch (const std::exception& e)
@@ -93,7 +94,6 @@ void UDSWriter::Close()
         try
         {
             boost::system::error_code ec;
-            m_socket->shutdown(local::stream_protocol::socket::shutdown_both, ec);
             m_socket->close(ec);
 
             if (ec)

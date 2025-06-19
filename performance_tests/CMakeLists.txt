@@ -1,5 +1,2 @@
-add_executable(udp_performance_test udp_test.cpp)
-target_link_libraries(udp_performance_test PRIVATE registry)
-
-add_executable(uds_performance_test uds_test.cpp)
-target_link_libraries(uds_performance_test PRIVATE registry)
+add_executable(performance_test performance_test.cpp)
+target_link_libraries(performance_test PRIVATE registry)

@@ -1,7 +1,7 @@
 #include "uds_server.h"
 #include <boost/beast/core.hpp>
 #include <boost/asio.hpp>
-#include <boost/asio/local/stream_protocol.hpp>
+#include <boost/asio/local/datagram_protocol.hpp>
 #include <iostream>
 #include <array>
 #include <vector>
@@ -52,92 +52,79 @@ try
 
     boost::asio::io_context io_context;
 
-    // Create and open a Unix domain socket
-    const boost::asio::local::stream_protocol::endpoint endpoint(socket_path);
-    boost::asio::local::stream_protocol::acceptor acceptor(io_context, endpoint);
+    // Create and open a Unix domain datagram socket
+    const boost::asio::local::datagram_protocol::endpoint endpoint(socket_path);
+    boost::asio::local::datagram_protocol::socket socket(io_context);
+    
+    boost::system::error_code ec;
+    socket.open(boost::asio::local::datagram_protocol(), ec);
+    if (ec)
+    {
+        std::cerr << "Error opening socket: " << ec.message() << std::endl;
+        return;
+    }
+    
+    socket.bind(endpoint, ec);
+    if (ec)
+    {
+        std::cerr << "Error binding to endpoint: " << ec.message() << std::endl;
+        return;
+    }
 
-    std::cout << "UDS server listening on " << socket_path << std::endl;
+    // Set to non-blocking mode
+    socket.non_blocking(true);
 
+    std::cout << "UDS datagram server listening on " << socket_path << std::endl;
+
+    // Buffer for reading data
+    std::array<char, 2048> buffer{};
     while (uds_server_running)
     {
-        // Create a socket for the client connection
-        boost::asio::local::stream_protocol::socket socket(io_context);
-
         try
         {
-            // Set acceptor to non-blocking so we can check the run flag
-            acceptor.non_blocking(true);
-
-            boost::system::error_code ec;
-            acceptor.accept(socket, ec);
-
-            if (ec)
-            {
-                if (ec == boost::asio::error::would_block)
-                {
-                    // No connection available, wait a bit and try again
-                    std::this_thread::sleep_for(std::chrono::milliseconds(50));
-                    continue;
-                }
-                std::cerr << "Error accepting connection: " << ec.message() << std::endl;
+            // Client endpoint to receive the sender's address
+            boost::asio::local::datagram_protocol::endpoint sender_endpoint;
+            boost::system::error_code read_ec;
+            std::size_t bytes_read = 0;
+            
+            // Try to receive a datagram
+            bytes_read = socket.receive_from(boost::asio::buffer(buffer), sender_endpoint, 0, read_ec);
+                
+            // Handle the case where no data is available
+            if (read_ec == boost::asio::error::would_block) {
+                // No data available, wait a bit and try again
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
                 continue;
             }
-
-            // Connection accepted, set to non-blocking to avoid hanging
-            socket.non_blocking(true);
-
-            // Buffer for reading data
-            std::array<char, 2048> buffer{};
-            while (uds_server_running)
+            
+            if (read_ec)
             {
-                // We need to handle both data availability and potential errors
-                boost::system::error_code read_ec;
-                std::size_t bytes_read = 0;
-                
-                // Try to read data even if none is immediately available
-                // This allows us to detect connection closure properly
-                bytes_read = socket.read_some(boost::asio::buffer(buffer), read_ec);
-                
-                // Handle the case where no data is available
-                if (read_ec == boost::asio::error::would_block) {
-                    // No data available, wait a bit and try again
-                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
-                    continue;
-                }
-
-                if (read_ec == boost::asio::error::eof)
-                {
-                    // Connection closed cleanly by peer
-                    break;
-                }
-                if (read_ec)
-                {
-                    std::cerr << "Error reading from socket: " << read_ec.message() << std::endl;
-                    break;
-                }
-
-                if (bytes_read == buffer.size())
-                {
-                    std::cout << "Warning: Received data might have been truncated (buffer full)" << std::endl;
-                }
-
-                // Create string from received data and store it
-                std::string message(buffer.data(), bytes_read);
-                add_uds_message(message);
-                auto current_messages = get_uds_messages();
-                std::cout << "Received message: " << message << std::endl;
-                std::cout << "Total messages stored: " << current_messages.size() << std::endl;
+                std::cerr << "Error reading from socket: " << read_ec.message() << std::endl;
+                continue; // Continue to next iteration instead of breaking, as each datagram is independent
             }
-            // Close the connection
-            socket.close();
+
+            if (bytes_read == buffer.size())
+            {
+                std::cout << "Warning: Received data might have been truncated (buffer full)" << std::endl;
+            }
+
+            // Create string from received data and store it
+            std::string message(buffer.data(), bytes_read);
+            add_uds_message(message);
+            auto current_messages = get_uds_messages();
+            std::cout << "Received datagram: " << message << std::endl;
+            std::cout << "Total messages stored: " << current_messages.size() << std::endl;
         }
         catch (const std::exception& e)
         {
-            std::cerr << "Exception handling client: " << e.what() << std::endl;
+            std::cerr << "Exception in datagram server: " << e.what() << std::endl;
         }
     }
 
-    std::cout << "UDS server shutting down..." << std::endl;
+    std::cout << "UDS datagram server shutting down..." << std::endl;
+
+    // Close the socket
+    socket.close();
 
     // Clean up the socket file on exit
     std::filesystem::remove(socket_path);
