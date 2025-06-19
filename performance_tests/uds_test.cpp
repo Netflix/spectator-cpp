@@ -31,13 +31,13 @@ int main(int argc, char* argv[])
     Logger::info("Starting UDP performance test with buffering {}", bufferingEnabled ? "enabled" : "disabled");
     
     // Configure the registry with or without buffering based on the command line argument
-    auto writerConfig = WriterConfig(WriterTypes::UDP);
+    auto writerConfig = WriterConfig(WriterTypes::Unix);
     if (bufferingEnabled)
     {
-        writerConfig = WriterConfig(WriterTypes::UDP, 4096);
+        writerConfig = WriterConfig(WriterTypes::Unix, 4096);
     }
     auto r = Registry(Config(writerConfig));
-    std::unordered_map<std::string, std::string> tags = { {"location", "udp"}, {"version", "correct-horse-battery-staple"}};
+    std::unordered_map<std::string, std::string> tags = { {"location", "unix"}, {"version", "correct-horse-battery-staple"}};
 
     // Set maximum duration to 2 minutes
     constexpr int max_duration_seconds = 2 * 60;
@@ -54,7 +54,7 @@ int main(int argc, char* argv[])
         
     while (true)
     {
-        r.counter("udp_test_counter", tags).Increment();
+        r.counter("unix_test_counter", tags).Increment();
         iterations++;
         
         if (iterations % 500000 == 0)

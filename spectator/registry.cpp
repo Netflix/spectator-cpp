@@ -3,7 +3,6 @@
 
 std::pair<std::string, int> ParseUdpAddress(const std::string& address) 
 {
-
     std::regex pattern("udp://([0-9.]+):(\\d+)");
     std::smatch matches;
         
@@ -22,6 +21,19 @@ std::pair<std::string, int> ParseUdpAddress(const std::string& address)
     return {ip, port};
 }
 
+std::string ParseUnixAddress(const std::string& address) 
+{
+    std::regex pattern("unix://(.*)");
+    std::smatch matches;
+        
+    if (!std::regex_match(address, matches, pattern) || matches.size() != 2)
+    {
+        throw std::runtime_error("Invalid Unix address format");
+    }
+            
+    return matches[1].str();
+}
+
 Registry::Registry(const Config& config) : m_config(config) 
 {
     if (config.GetWriterType() == WriterType::Memory)
@@ -33,13 +45,13 @@ Registry::Registry(const Config& config) : m_config(config)
     {
         auto [ip, port] = ParseUdpAddress(this->m_config.GetWriterLocation());
         Logger::info("Registry initializing UDP Writer at {}:{}", ip, port);
-        Writer::Initialize(config.GetWriterType(), ip, port); 
-
+        Writer::Initialize(config.GetWriterType(), ip, port, this->m_config.GetWriterBufferSize()); 
     }
     else if (config.GetWriterType() == WriterType::Unix)
     {
+        auto socketPath = ParseUnixAddress(this->m_config.GetWriterLocation());
         Logger::info("Registry initializing UDS Writer at {null}:{null}");
-        //Writer::Initialize(config.GetWriterType()); 
+        Writer::Initialize(config.GetWriterType(), socketPath, 0, this->m_config.GetWriterBufferSize()); 
     }    
 }
 

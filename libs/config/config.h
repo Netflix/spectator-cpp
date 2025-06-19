@@ -20,6 +20,8 @@ class Config
 
     const std::string& GetWriterLocation() const noexcept { return m_writerConfig.GetLocation(); }
     const WriterType& GetWriterType() const noexcept { return m_writerConfig.GetType(); }
+    const unsigned int GetWriterBufferSize() const noexcept { return m_writerConfig.GetBufferSize(); }
+
 
    private:
     std::unordered_map<std::string, std::string> m_extraTags;
