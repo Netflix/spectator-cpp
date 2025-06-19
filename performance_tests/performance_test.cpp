@@ -6,6 +6,9 @@
 #include <unordered_map>
 #include <string>
 #include <cstdlib>
+#include <atomic>
+#include <thread>
+#include <vector>
 
 struct RunTimeConfig
 {
@@ -22,7 +25,6 @@ void PrintUsage()
     std::cerr << "  writer_type: udp or uds" << std::endl;
     std::cerr << "  buffering: 0 for disabled, 1 for enabled (default is 0)" << std::endl;
 }
-
 
 std::optional<RunTimeConfig> HandleArgs(int argc, char* argv[])
 {
@@ -87,7 +89,7 @@ int main(int argc, char* argv[])
     auto writerConfig = WriterConfig(config->writerType);
     if (config->bufferingEnabled)
     {
-        writerConfig = WriterConfig(config->writerType, 32000);
+        writerConfig = WriterConfig(config->writerType, 4096);
     }
     auto r = Registry(Config(writerConfig));
     std::unordered_map<std::string, std::string> tags = { 
@@ -98,32 +100,67 @@ int main(int argc, char* argv[])
     // Set maximum duration to 2 minutes
     constexpr int max_duration_seconds = 2 * 60;
     
-    // Track iterations and timing
-    unsigned long long iterations = 0;
+    // Track iterations and timing with atomic counter for thread safety
+    std::atomic<unsigned long long> iterations{0};
     auto start_time = std::chrono::steady_clock::now();
     double total_elapsed{};
-    while (true)
+    
+    unsigned int num_threads = 4;
+    num_threads = std::max(1u, std::min(16u, num_threads));
+    
+    std::cout << "Running performance test with " << num_threads << " threads..." << std::endl;
+    
+    // Flag to signal threads to stop
+    std::atomic<bool> should_stop{false};
+    
+    // Thread function
+    auto thread_func = [&r, &config, &tags, &iterations, &should_stop]()
     {
-        r.counter(config->counterName, tags).Increment();
-        iterations++;
-        
-        if (iterations % 500000 == 0)
+        while (should_stop == false)
         {
-            auto now = std::chrono::steady_clock::now();
-            auto elapsed = std::chrono::duration<double>(now - start_time).count();
-            if (elapsed > max_duration_seconds)
-            {
-                total_elapsed = elapsed;
-                break;
-            }
+            r.counter(config->counterName, tags).Increment();
+            iterations.fetch_add(1, std::memory_order_relaxed);
+        }
+    };
+    
+    // Create and start threads
+    std::vector<std::thread> threads;
+    for (unsigned int i = 0; i < num_threads; ++i)
+    {
+        threads.emplace_back(thread_func);
+    }
+    
+    // Monitor progress
+    while (true) 
+    {
+        std::this_thread::sleep_for(std::chrono::seconds(6));
+        auto now = std::chrono::steady_clock::now();
+        auto elapsed = std::chrono::duration<double>(now - start_time).count();
+        
+        if (elapsed > max_duration_seconds)
+        {
+            total_elapsed = elapsed;
+            should_stop = true;
+            break;
         }
     }
     
-    double rate_per_second = iterations / total_elapsed;
+    // Wait for all threads to finish
+    for (auto& t : threads)
+    {
+        if (t.joinable()) 
+        {
+            t.join();
+        }
+    }
+    
+    double rate_per_second = static_cast<double>(iterations) / total_elapsed;
     
     std::cout << "\nPerformance Test Summary:" << std::endl;
+    std::cout << "Threads used: " << num_threads << std::endl;
     std::cout << "Iterations completed: " << iterations << std::endl;
     std::cout << "Total elapsed time: " << std::fixed << std::setprecision(2) << total_elapsed << " seconds" << std::endl;
     std::cout << "Rate: " << std::fixed << std::setprecision(2) << rate_per_second << " iterations/second" << std::endl;
+    std::cout << "Rate per thread: " << std::fixed << std::setprecision(2) << rate_per_second / num_threads << " iterations/second/thread" << std::endl;
     return 0;
 }
