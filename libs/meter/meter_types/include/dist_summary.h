@@ -17,8 +17,7 @@ class DistributionSummary final : public Meter
     {
         if (amount >= 0)
         {
-            auto line = this->m_meterTypeSymbol + FIELD_SEPARATOR + this->m_id.GetSpectatordId() + FIELD_SEPARATOR +
-                        std::to_string(amount);
+            auto line = this->ConstructLine(amount);
             Writer::GetInstance().Write(line);
         }
     }

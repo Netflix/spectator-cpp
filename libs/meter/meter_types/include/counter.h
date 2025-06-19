@@ -17,8 +17,7 @@ class Counter final : public Meter
     {
         if (delta > 0)
         {
-            auto line = this->m_meterTypeSymbol + FIELD_SEPARATOR + this->m_id.GetSpectatordId() + FIELD_SEPARATOR +
-                        std::to_string(delta);
+            auto line = this->ConstructLine(delta);
             Writer::GetInstance().Write(line);
         }
     }

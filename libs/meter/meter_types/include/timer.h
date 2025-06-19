@@ -17,8 +17,7 @@ class Timer final : public Meter
     {
         if (seconds >= 0)
         {
-            auto line = this->m_meterTypeSymbol + FIELD_SEPARATOR + this->m_id.GetSpectatordId() + FIELD_SEPARATOR +
-                        std::to_string(seconds);
+            auto line = this->ConstructLine(seconds);
             Writer::GetInstance().Write(line);
         }
     }

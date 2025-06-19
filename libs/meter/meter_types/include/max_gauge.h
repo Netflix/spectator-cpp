@@ -15,8 +15,7 @@ class MaxGauge final : public Meter
 
     void Set(const double& value)
     {
-        auto line = this->m_meterTypeSymbol + FIELD_SEPARATOR + this->m_id.GetSpectatordId() + FIELD_SEPARATOR +
-                    std::to_string(value);
+        auto line = this->ConstructLine(value);
         Writer::GetInstance().Write(line);
     }
 };
