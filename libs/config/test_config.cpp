@@ -202,4 +202,17 @@ TEST_F(ConfigTest, MergingTags)
         EXPECT_EQ(config.GetExtraTags().size(), 1);
         EXPECT_EQ(config.GetExtraTags().at("nf.container"), "override-container");
     }
+
+    {
+        containerGuard.setValue("        ");
+        processGuard.setValue("");
+
+        std::unordered_map<std::string, std::string> tags = {{"custom", "value"}, {"env", "test"}};
+
+        Config config(writerConfig, tags);
+
+        EXPECT_EQ(config.GetExtraTags().size(), 2);
+        EXPECT_EQ(config.GetExtraTags().at("custom"), "value");
+        EXPECT_EQ(config.GetExtraTags().at("env"), "test");
+    }
 }
