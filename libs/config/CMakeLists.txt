@@ -8,7 +8,9 @@ target_include_directories(spectator-config
 
 target_link_libraries(spectator-config
     PUBLIC
+    spectator-logger
     spectator-writer-config
+    spectator-utils
 )
 
 add_executable(config-tests

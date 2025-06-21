@@ -32,7 +32,7 @@ WriterConfig::WriterConfig(const std::string& type)
 {
     if (const char* envLocation = std::getenv("SPECTATOR_OUTPUT_LOCATION"); envLocation != nullptr)
     {
-        Logger::debug("Using environment variable SPECTATOR_OUTPUT_LOCATION: {}", envLocation);
+        Logger::info("Environment variable set, SPECTATOR_OUTPUT_LOCATION: {}", envLocation);
         const std::string envValue(envLocation);
         auto [writer_type, location] = GetWriterConfigFromString(envValue);
         m_type = writer_type;
@@ -40,12 +40,11 @@ WriterConfig::WriterConfig(const std::string& type)
     }
     else
     {
-        Logger::debug("Using provided type: {}", type);
         auto [writer_type, location] = GetWriterConfigFromString(type);
         m_type = writer_type;
         m_location = location;
     }
-    Logger::debug("WriterConfig initialized with type: {}, location: {}", WriterTypeToString(m_type), m_location);
+    Logger::info("WriterConfig initialized with type: {}, location: {}", WriterTypeToString(m_type), m_location);
 }
 
 WriterConfig::WriterConfig(const std::string& type, const unsigned int bufferSize)
@@ -53,5 +52,6 @@ WriterConfig::WriterConfig(const std::string& type, const unsigned int bufferSiz
 {
     m_bufferSize = bufferSize;
     m_isBufferingEnabled = true;
-    Logger::debug("WriterConfig buffering enabled with size: {}", m_bufferSize);
+    Logger::info("WriterConfig buffering enabled with size: {}", m_bufferSize);
+
 }

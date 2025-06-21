@@ -7,6 +7,11 @@ target_include_directories(spectator-meter-id
     ${CMAKE_SOURCE_DIR}
 )
 
+target_link_libraries(spectator-meter-id
+    PUBLIC
+    spectator-utils
+)
+
 add_executable(MeterID-test
     test_meter_id.cpp
 )

@@ -1,15 +1,11 @@
 #include <libs/meter/meter_id/meter_id.h>
 
+#include <libs/utils/include/util.h>
 #include <format>
 #include <sstream>
 
 // Define the static member
 const std::regex INVALID_CHARS("[^-._A-Za-z0-9~^]");
-
-bool IsEmptyOrWhitespace(const std::string& str)
-{
-    return str.empty() || std::all_of(str.begin(), str.end(), [](unsigned char c) { return std::isspace(c); });
-}
 
 std::unordered_map<std::string, std::string> ValidateTags(const std::unordered_map<std::string, std::string>& tags)
 {

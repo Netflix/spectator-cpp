@@ -17,7 +17,7 @@ class Logger final : public Singleton<Logger>
 {
    private:
     spdlog::logger* m_logger;  // Use raw pointer, not unique_ptr
-    inline static bool s_loggingEnabled = false;  // Static flag to control logging (C++17 inline initialization)
+    inline static bool s_loggingEnabled = true;  // Static flag to control logging (C++17 inline initialization)
 
     friend class Singleton<Logger>;
 

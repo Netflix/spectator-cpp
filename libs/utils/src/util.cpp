@@ -55,3 +55,8 @@ std::optional<ProtocolLine> ParseProtocolLine(const std::string& line)
     value = mainParts[2];
     return ProtocolLine{symbol, MeterId{name, tags}, value};
 }
+
+bool IsEmptyOrWhitespace(const std::string& str)
+{
+    return str.empty() || std::all_of(str.begin(), str.end(), [](unsigned char c) { return std::isspace(c); });
+}

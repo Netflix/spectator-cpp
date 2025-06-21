@@ -51,3 +51,5 @@ struct ProtocolLine
 };
 
 std::optional<ProtocolLine> ParseProtocolLine(const std::string& line);
+
+bool IsEmptyOrWhitespace(const std::string& str);
