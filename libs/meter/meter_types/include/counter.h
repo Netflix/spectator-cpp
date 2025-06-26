@@ -13,7 +13,7 @@ class Counter final : public Meter
    public:
     explicit Counter(const MeterId& meter_id) : Meter(meter_id, COUNTER_TYPE_SYMBOL) {}
 
-    void Increment(const double& delta = 1)
+    void Increment(const double& delta = 1) const
     {
         if (delta > 0)
         {

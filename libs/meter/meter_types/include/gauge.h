@@ -19,7 +19,7 @@ class Gauge final : public Meter
     {
     }
 
-    void Set(const double& value)
+    void Set(const double& value) const
     {
         auto line = this->ConstructLine(value);
         Writer::GetInstance().Write(line);

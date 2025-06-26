@@ -16,7 +16,7 @@ class PercentileDistributionSummary final : public Meter
     {
     }
 
-    void Record(const int& amount)
+    void Record(const int& amount) const 
     {
         if (amount >= 0)
         {

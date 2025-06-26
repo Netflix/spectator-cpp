@@ -19,6 +19,8 @@ class MeterId
 
     MeterId WithTags(const std::unordered_map<std::string, std::string>& additional_tags) const;
 
+    MeterId WithStat(const std::string& stat) const;
+
     bool operator==(const MeterId& other) const;
 
     std::string to_string() const;

@@ -13,7 +13,7 @@ class MaxGauge final : public Meter
    public:
     explicit MaxGauge(const MeterId& meter_id) : Meter(meter_id, MAX_GAUGE_TYPE_SYMBOL) {}
 
-    void Set(const double& value)
+    void Set(const double& value) const
     {
         auto line = this->ConstructLine(value);
         Writer::GetInstance().Write(line);

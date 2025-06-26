@@ -60,6 +60,11 @@ MeterId MeterId::WithTags(const std::unordered_map<std::string, std::string>& ad
     return MeterId(m_name, new_tags);
 }
 
+MeterId MeterId::WithStat(const std::string& stat) const
+{
+    return WithTag("statistic", stat);
+}
+
 bool MeterId::operator==(const MeterId& other) const { return m_name == other.m_name && m_tags == other.m_tags; }
 
 std::string MeterId::to_string() const
