@@ -12,7 +12,7 @@ option(BUILD_TESTS "Build the test suite" ON)
 # Find dependencies (handled by Conan)
 find_package(spdlog REQUIRED)
 find_package(GTest REQUIRED)
-find_package(Boost REQUIRED COMPONENTS system)
+find_package(Boost REQUIRED)
 
 # Build tests if enabled
 if(BUILD_TESTS)

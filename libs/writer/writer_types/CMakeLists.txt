@@ -14,6 +14,7 @@ target_include_directories(spectator-writer-types
 target_link_libraries(spectator-writer-types
     PUBLIC
     spectator-logger
+    Boost::boost
     Boost::system
 )
 

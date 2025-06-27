@@ -29,6 +29,8 @@ target_include_directories(registry
 target_link_libraries(registry
     PUBLIC
     spdlog::spdlog
+    Boost::boost
+    Boost::system
 )
 add_executable(registry-test test_registry.cpp)
 target_link_libraries(registry-test PRIVATE
