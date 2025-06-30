@@ -1,5 +1,5 @@
 
-#include <libs/writer/writer_types/include/uds_writer.h>
+#include <uds_writer.h>
 
 #include <gtest/gtest.h>
 #include "../test_utils/uds_server/uds_server.h"

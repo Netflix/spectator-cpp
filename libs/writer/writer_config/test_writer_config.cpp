@@ -1,4 +1,4 @@
-#include <libs/writer/writer_config/writer_config.h>
+#include <writer_config.h>
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>

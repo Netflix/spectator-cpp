@@ -6,7 +6,7 @@ add_library(spectator-utils STATIC
 
 target_include_directories(spectator-utils
     PUBLIC
-    ${CMAKE_SOURCE_DIR}
+    include
 )
 
 target_link_libraries(spectator-utils

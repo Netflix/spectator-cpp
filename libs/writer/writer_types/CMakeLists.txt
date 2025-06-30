@@ -8,7 +8,7 @@ add_library(spectator-writer-types
 
 target_include_directories(spectator-writer-types
     PUBLIC
-    ${CMAKE_SOURCE_DIR}
+    include
 )
 
 target_link_libraries(spectator-writer-types

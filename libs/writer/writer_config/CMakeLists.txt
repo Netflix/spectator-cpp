@@ -5,7 +5,7 @@ add_library(spectator-writer-config STATIC
 
 target_include_directories(spectator-writer-config
     PUBLIC
-    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 

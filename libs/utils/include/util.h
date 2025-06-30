@@ -6,7 +6,7 @@
 #include <sstream>
 #include <map>
 
-#include <libs/meter/meter_id/meter_id.h>
+#include <meter_id.h>
 
 struct ProtocolLine
 {

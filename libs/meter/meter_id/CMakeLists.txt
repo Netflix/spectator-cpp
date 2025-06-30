@@ -4,7 +4,7 @@ add_library(spectator-meter-id
 
 target_include_directories(spectator-meter-id
     PUBLIC
-    ${CMAKE_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 target_link_libraries(spectator-meter-id

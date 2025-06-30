@@ -1,6 +1,6 @@
-#include <libs/writer/writer_types/include/udp_writer.h>
+#include <udp_writer.h>
 
-#include <libs/logger/logger.h>
+#include <logger.h>
 
 UDPWriter::UDPWriter(const std::string& host, int port) : m_host(host), m_port(port)
 {

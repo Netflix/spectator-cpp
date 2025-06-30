@@ -1,7 +1,7 @@
-#include <libs/meter/meter_types/include/counter.h>
-#include <libs/logger/logger.h>
-#include <libs/meter/meter_id/meter_id.h>
-#include <libs/writer/writer_wrapper/writer_test_helper.h>
+#include <counter.h>
+#include <logger.h>
+#include <meter_id.h>
+#include <writer_test_helper.h>
 
 #include <gtest/gtest.h>
 #include <format>

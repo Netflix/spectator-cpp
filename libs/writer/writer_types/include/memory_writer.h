@@ -1,6 +1,6 @@
 #pragma once
 
-#include <libs/writer/writer_types/include/base_writer.h>
+#include <base_writer.h>
 #include <string>
 #include <vector>
 

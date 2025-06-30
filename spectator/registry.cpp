@@ -1,4 +1,4 @@
-#include <spectator/registry.h>
+#include <registry.h>
 
 
 std::pair<std::string, int> ParseUdpAddress(const std::string& address) 

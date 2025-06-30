@@ -1,4 +1,4 @@
-#include <libs/meter/meter_id/meter_id.h>
+#include <meter_id.h>
 
 #include <gtest/gtest.h>
 

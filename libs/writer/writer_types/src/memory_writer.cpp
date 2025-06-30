@@ -1,6 +1,6 @@
-#include <libs/writer/writer_types/include/memory_writer.h>
+#include <memory_writer.h>
 
-#include <libs/logger/logger.h>
+#include <logger.h>
 
 void MemoryWriter::Write(const std::string& message)
 {

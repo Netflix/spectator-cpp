@@ -3,7 +3,7 @@ add_library(spectator-config
 )
 
 target_include_directories(spectator-config
-    PUBLIC ${CMAKE_SOURCE_DIR}
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 target_link_libraries(spectator-config

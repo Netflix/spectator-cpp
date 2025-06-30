@@ -1,6 +1,6 @@
-#include <libs/writer/writer_config/writer_config.h>
+#include <writer_config.h>
 
-#include <libs/logger/logger.h>
+#include <logger.h>
 
 struct WriterConfigConstants
 {

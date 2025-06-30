@@ -1,4 +1,4 @@
-#include <libs/writer/writer_types/include/memory_writer.h>
+#include <memory_writer.h>
 #include <gtest/gtest.h>
 
 TEST(MemoryWriterTest, IsEmpty)

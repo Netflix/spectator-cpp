@@ -1,4 +1,4 @@
-#include <libs/writer/writer_types/include/udp_writer.h>
+#include <udp_writer.h>
 
 #include <gtest/gtest.h>
 

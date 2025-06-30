@@ -1,10 +1,10 @@
 #include <gtest/gtest.h>
 #include <cstdint>
 
-#include <spectator/registry.h>
-#include <libs/writer/writer_wrapper/writer_test_helper.h>
+#include <registry.h>
+#include <writer_test_helper.h>
 
-#include <libs/utils/include/util.h>
+#include <util.h>
 
 TEST(RegistryTest, Close)
 {

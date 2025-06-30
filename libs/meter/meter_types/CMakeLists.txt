@@ -2,7 +2,7 @@ add_library(spectator-meter-types INTERFACE)
 
 target_include_directories(spectator-meter-types
     INTERFACE
-    ${CMAKE_SOURCE_DIR}
+    include
 )
 
 # List all the test files

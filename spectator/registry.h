@@ -1,10 +1,10 @@
 #pragma once
 
-#include <libs/config/config.h>
-#include <libs/logger/logger.h>
-#include <libs/meter/meter_id/meter_id.h>
-#include <libs/meter/meter_types/include/meter_types.h>
-#include <libs/writer/writer_wrapper/writer.h>
+#include <config.h>
+#include <logger.h>
+#include <meter_id.h>
+#include <meter_types.h>
+#include <writer.h>
 
 #include <memory>
 #include <string>

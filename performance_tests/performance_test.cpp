@@ -1,4 +1,4 @@
-#include <spectator/registry.h>
+#include <registry.h>
 #include <chrono>
 #include <iostream>
 #include <iomanip>

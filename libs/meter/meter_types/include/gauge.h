@@ -1,8 +1,8 @@
 #pragma once
 
-#include <libs/meter/meter_types/include/meter.h>
-#include <libs/meter/meter_id/meter_id.h>
-#include <libs/writer/writer_wrapper/writer.h>
+#include <meter.h>
+#include <meter_id.h>
+#include <writer.h>
 
 #include <string>
 #include <optional>

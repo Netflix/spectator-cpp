@@ -14,7 +14,7 @@ add_library(registry
 
 target_include_directories(registry
     PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/..
+    ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/../libs/config
     ${CMAKE_CURRENT_SOURCE_DIR}/../libs/meter/meter_id
     ${CMAKE_CURRENT_SOURCE_DIR}/../libs/meter/meter_types/include

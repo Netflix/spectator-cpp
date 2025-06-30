@@ -1,7 +1,7 @@
-#include <libs/writer/writer_wrapper/writer.h>
+#include <writer.h>
 
-#include <libs/writer/writer_types/include/writer_types.h>
-#include <libs/logger/logger.h>
+#include <writer_types.h>
+#include <logger.h>
 #include <stdexcept>
 
 static constexpr auto NEW_LINE = '\n';

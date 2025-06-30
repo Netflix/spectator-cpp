@@ -1,7 +1,7 @@
 #pragma once
 
-#include <libs/utils/include/singleton.h>
-#include <libs/writer/writer_types/include/writer_types.h>
+#include <singleton.h>
+#include <writer_types.h>
 
 #include <memory>
 #include <string>

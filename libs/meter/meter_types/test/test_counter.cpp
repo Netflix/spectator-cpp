@@ -1,5 +1,5 @@
-#include <libs/meter/meter_types/include/counter.h>
-#include <libs/writer/writer_wrapper/writer_test_helper.h>
+#include <counter.h>
+#include <writer_test_helper.h>
 
 #include <gtest/gtest.h>
 

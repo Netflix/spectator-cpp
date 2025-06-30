@@ -1,6 +1,6 @@
 #pragma once
 
-#include <libs/writer/writer_types/include/writer_types.h>
+#include <writer_types.h>
 
 #include <string>
 #include <stdexcept>

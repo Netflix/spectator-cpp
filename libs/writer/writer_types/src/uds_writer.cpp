@@ -1,6 +1,6 @@
-#include <libs/writer/writer_types/include/uds_writer.h>
+#include <uds_writer.h>
 
-#include <libs/logger/logger.h>
+#include <logger.h>
 
 #include <boost/asio.hpp>
 

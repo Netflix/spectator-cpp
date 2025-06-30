@@ -1,8 +1,8 @@
-#include <libs/config/config.h>
+#include <config.h>
 
-#include <libs/writer/writer_types/include/writer_types.h>
-#include <libs/logger/logger.h>
-#include <libs/utils/include/util.h>
+#include <writer_types.h>
+#include <logger.h>
+#include <util.h>
 
 #include <algorithm>
 #include <cctype>

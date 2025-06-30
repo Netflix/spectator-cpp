@@ -1,6 +1,6 @@
-#include <libs/meter/meter_id/meter_id.h>
+#include <meter_id.h>
 
-#include <libs/utils/include/util.h>
+#include <util.h>
 #include <format>
 #include <sstream>
 
