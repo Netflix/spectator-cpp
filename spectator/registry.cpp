@@ -50,7 +50,7 @@ Registry::Registry(const Config& config) : m_config(config)
     else if (config.GetWriterType() == WriterType::Unix)
     {
         auto socketPath = ParseUnixAddress(this->m_config.GetWriterLocation());
-        Logger::info("Registry initializing UDS Writer at {null}:{null}");
+        Logger::info("Registry initializing UDS Writer at {}", socketPath);
         Writer::Initialize(config.GetWriterType(), socketPath, 0, this->m_config.GetWriterBufferSize()); 
     }    
 }
