@@ -19,6 +19,7 @@ Writer::~Writer()
             instance.sendingThread.join();
         }
     }
+    this->Close();
 }
 
 void Writer::Initialize(WriterType type, const std::string& param, int port, unsigned int bufferSize)
@@ -71,36 +72,9 @@ void Writer::Initialize(WriterType type, const std::string& param, int port, uns
     }
 }
 
-void Writer::Reset()
-{
-    auto& instance = GetInstance();
-
-    if (instance.m_impl)
-    {
-        try
-        {
-            instance.m_impl->Close();
-        }
-        catch (const std::exception& e)
-        {
-            Logger::error("Exception while closing writer during reset: {}", e.what());
-        }
-    }
-
-    instance.m_impl.reset();
-}
-
-
 void Writer::TryToSend(const std::string& message)
 {
     const auto& instance = GetInstance();
-
-    if (!instance.m_impl)
-    {
-        Logger::error("Attempted to send with uninitialized writer implementation");
-        return;
-    }
-
     instance.m_impl->Write(message);
 }
 
@@ -130,13 +104,6 @@ void Writer::ThreadSend()
 void Writer::BufferedWrite(const std::string& message)
 {
     auto& instance = GetInstance();
-
-    if (!instance.m_impl)
-    {
-        Logger::error("Attempted to write with uninitialized writer implementation");
-        return;
-    }
-
     {
         std::unique_lock<std::mutex> lock(instance.writeMutex);
         // TODO: Optimize memory alloc to not exceed allocated size

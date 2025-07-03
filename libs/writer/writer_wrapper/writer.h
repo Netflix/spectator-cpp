@@ -47,9 +47,6 @@ class Writer final : public Singleton<Writer>
     static BaseWriter* GetImpl() { return Writer::GetInstance().m_impl.get(); }
     static WriterType GetWriterType() { return GetInstance().m_currentType; }
 
-
-    static void Reset();
-
     std::unique_ptr<BaseWriter> m_impl;
     WriterType m_currentType = WriterType::Memory;  // Default type
     bool bufferingEnabled = false;

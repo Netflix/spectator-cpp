@@ -17,9 +17,6 @@ class WriterTestHelper
         Writer::Initialize(type, param, port, bufferSize);
     }
 
-    // Reset the Writer for testing purposes
-    static void ResetWriter() { Writer::Reset(); }
-
     // Get the Writer's implementation for testing purposes
     static BaseWriter* GetImpl() { return Writer::GetInstance().m_impl.get(); }
 };
