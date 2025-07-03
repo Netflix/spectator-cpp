@@ -46,7 +46,6 @@ bool UDSWriter::connect()
         }
 
         m_isOpen = true;
-        Logger::debug("UDS Writer: Connected to {}", m_socketPath);
         return true;
     }
     catch (const std::exception& e)
@@ -75,9 +74,9 @@ void UDSWriter::Write(const std::string& message)
             Logger::error("UDS Writer: Failed to send message - {}", ec.message());
             m_isOpen = false;  // Mark as disconnected on error
         }
-        else
+        if (sent < message.size())
         {
-            Logger::debug("UDS Writer: Sent message ({} bytes)", sent);
+            Logger::error("UDS Writer: Sent only {} bytes out of {} bytes", sent, message.size());
         }
     }
     catch (const std::exception& e)
@@ -98,15 +97,13 @@ void UDSWriter::Close()
 
             if (ec)
             {
-                Logger::warn("UDS Writer: Error closing socket - {}", ec.message());
+                Logger::error("UDS Writer: Error closing socket - {}", ec.message());
             }
         }
         catch (const std::exception& e)
         {
-            Logger::warn("UDS Writer: Exception while closing socket - {}", e.what());
+            Logger::error("UDS Writer: Exception while closing socket - {}", e.what());
         }
     }
-
     m_isOpen = false;
-    Logger::debug("UDS Writer: Connection closed");
 }

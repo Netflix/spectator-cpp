@@ -19,9 +19,9 @@ add_executable(config-tests
 
 target_link_libraries(config-tests PRIVATE 
     spectator-config 
+    spectator-writer-config
     GTest::gtest 
     GTest::gtest_main
-    spectator-writer-config
 )
 
 add_test(

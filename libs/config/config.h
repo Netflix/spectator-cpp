@@ -13,8 +13,8 @@ class Config
     ~Config() = default;
     Config(const Config& other) = default;
     Config& operator=(const Config& other) = delete;
-    Config(Config&& other) noexcept = delete;
-    Config& operator=(Config&& other) noexcept = delete;
+    Config(Config&& other) = delete;
+    Config& operator=(Config&& other) = delete;
 
     const std::unordered_map<std::string, std::string>& GetExtraTags() const noexcept { return m_extraTags; }
 

@@ -2,21 +2,15 @@
 
 # Spectator-cpp
 
-This implements a basic [Spectator](https://github.com/Netflix/spectator) library for instrumenting Go applications. It
+This implements a basic [Spectator](https://github.com/Netflix/spectator) library for instrumenting CPP applications. It
 consists of a thin client designed to send metrics through [spectatord](https://github.com/Netflix-Skunkworks/spectatord).
-
-## Instrumenting Code
-
-```C++
-
-```
 
 ## High-Volume Publishing
 
 By default, the library sends every meter change to the spectatord sidecar immediately. This involves a blocking
 `send` call and underlying system calls, and may not be the most efficient way to publish metrics in high-volume
-use cases. For this purpose a simple buffering functionality in `Publisher` is implemented, and it can be turned
-on by passing a buffer size to the `spectator::Config` constructor. It is important to note that, until this buffer
+use cases. For this purpose a simple buffering functionality is implemented, and it can be turned
+on by passing a buffer size to the `WriterConfig` constructor. It is important to note that, until this buffer
 fills up, the `Publisher` will not send any meters to the sidecar. Therefore, if your application doesn't emit
 meters at a high rate, you should either keep the buffer very small, or do not configure a buffer size at all,
 which will fall back to the "publish immediately" mode of operation.

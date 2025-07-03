@@ -17,7 +17,7 @@ class Registry
 {
    public:
     explicit Registry(const Config& config);
-    ~Registry();
+    ~Registry() = default;
 
     MeterId new_id(const std::string& name, const std::unordered_map<std::string, std::string>& tags = {}) const;
 

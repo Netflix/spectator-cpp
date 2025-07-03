@@ -1,6 +1,5 @@
 from conan import ConanFile
 
-
 class SpectatorCppConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     requires = (

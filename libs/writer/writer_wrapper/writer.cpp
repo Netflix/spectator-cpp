@@ -33,15 +33,15 @@ void Writer::Initialize(WriterType type, const std::string& param, int port, uns
         {
             case WriterType::Memory:
                 instance.m_impl = std::make_unique<MemoryWriter>();
-                Logger::info("Writer initialized as MemoryWriter");
+                Logger::info("WriterWrapper initialized as MemoryWriter");
                 break;
             case WriterType::UDP:
                 instance.m_impl = std::make_unique<UDPWriter>(param, port);
-                Logger::info("Writer initialized as UDPWriter with host: {} and port: {}", param, port);
+                Logger::info("WriterWrapper initialized as UDPWriter with host: {} and port: {}", param, port);
                 break;
             case WriterType::Unix:
                 instance.m_impl = std::make_unique<UDSWriter>(param);
-                Logger::info("Writer initialized as UnixWriter with socket path: {}", param);
+                Logger::info("WriterWrapper initialized as UnixWriter with socket path: {}", param);
                 break;
             default:
                 throw std::runtime_error("Unsupported writer type");
@@ -83,12 +83,11 @@ void Writer::Reset()
         }
         catch (const std::exception& e)
         {
-            Logger::warn("Exception while closing writer during reset: {}", e.what());
+            Logger::error("Exception while closing writer during reset: {}", e.what());
         }
     }
 
     instance.m_impl.reset();
-    Logger::info("Writer has been reset");
 }
 
 
@@ -102,15 +101,7 @@ void Writer::TryToSend(const std::string& message)
         return;
     }
 
-    try
-    {
-        instance.m_impl->Write(message);
-        Logger::debug("Message sent successfully: {}", message);
-    }
-    catch (const std::exception& e)
-    {
-        Logger::error("Failed to send message: {}", e.what());
-    }
+    instance.m_impl->Write(message);
 }
 
 void Writer::ThreadSend()
@@ -153,7 +144,7 @@ void Writer::BufferedWrite(const std::string& message)
             lock, [&instance] { return instance.buffer.size() < instance.bufferSize || instance.shutdown.load(); });
         if (instance.shutdown.load())
         {
-            Logger::warn("Write operation aborted due to shutdown signal");
+            Logger::info("Write operation aborted due to shutdown signal");
             return;
         }
         instance.buffer.append(message);
@@ -179,16 +170,8 @@ void Writer::Write(const std::string& message)
         return;
     }
 
-    try
-    {
-        // Call the member function using the pointer-to-member syntax
-        (instance.*instance.writeImpl)(message);
-        Logger::debug("Message written successfully: {}", message);
-    }
-    catch (const std::exception& e)
-    {
-        Logger::error("Failed to write message: {}", e.what());
-    }   
+    // Call the member function using the pointer-to-member syntax
+    (instance.*instance.writeImpl)(message);
 }
 
 void Writer::Close()
@@ -197,14 +180,13 @@ void Writer::Close()
 
     if (!instance.m_impl)
     {
-        Logger::debug("Close called on uninitialized writer");
+        Logger::error("Close called on uninitialized writer");
         return;
     }
 
     try
     {
         instance.m_impl->Close();
-        Logger::debug("Writer closed successfully");
     }
     catch (const std::exception& e)
     {

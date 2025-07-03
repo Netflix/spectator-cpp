@@ -43,7 +43,7 @@ void UDPWriter::Write(const std::string& message) try
     }
     else if (sent != message.size())
     {
-        Logger::warn("UDPWriter: Sent only {} bytes out of {} bytes", sent, message.size());
+        Logger::error("UDPWriter: Sent only {} bytes out of {} bytes", sent, message.size());
     }
 }
 catch (const std::exception& e)
@@ -59,7 +59,7 @@ void UDPWriter::Close() try
         m_socket->close(ec);
         if (ec)
         {
-            Logger::warn("UDPWriter: Error when closing socket: {}", ec.message());
+            Logger::error("UDPWriter: Error when closing socket: {}", ec.message());
         }
     }
 

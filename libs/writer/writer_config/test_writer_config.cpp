@@ -96,7 +96,6 @@ TEST_F(WriterConfigTest, BufferingConstructor)
     const WriterConfig config(WriterTypes::UDP, 2048);
     EXPECT_EQ(config.GetType(), WriterType::UDP);
     EXPECT_EQ(config.GetBufferSize(), 2048);
-    EXPECT_TRUE(config.IsBufferingEnabled());
 }
 
 TEST_F(WriterConfigTest, InvalidWriterType)

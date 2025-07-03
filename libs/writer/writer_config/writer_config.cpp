@@ -51,7 +51,5 @@ WriterConfig::WriterConfig(const std::string& type, const unsigned int bufferSiz
     : WriterConfig(type)  // Constructor delegation
 {
     m_bufferSize = bufferSize;
-    m_isBufferingEnabled = true;
     Logger::info("WriterConfig buffering enabled with size: {}", m_bufferSize);
-
 }

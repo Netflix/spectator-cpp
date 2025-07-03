@@ -13,11 +13,11 @@ std::pair<std::string, int> ParseUdpAddress(const std::string& address)
             
     std::string ip = matches[1].str();
     int port = std::stoi(matches[2]);
-        
-        // Optional: Validate port range
     if (port < 0 || port > 65535)
+    {
         throw std::runtime_error("Port number out of valid range (0-65535)");
-            
+    }
+
     return {ip, port};
 }
 
@@ -53,12 +53,6 @@ Registry::Registry(const Config& config) : m_config(config)
         Logger::info("Registry initializing UDS Writer at {null}:{null}");
         Writer::Initialize(config.GetWriterType(), socketPath, 0, this->m_config.GetWriterBufferSize()); 
     }    
-}
-
-Registry::~Registry()
-{
-    // No need to close Writer here as it's a singleton
-    // and will live beyond Registry instances
 }
 
 MeterId Registry::new_id(const std::string& name, const std::unordered_map<std::string, std::string>& tags) const

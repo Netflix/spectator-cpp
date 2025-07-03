@@ -9,10 +9,10 @@
 
 struct ConfigConstants
 {
-    static constexpr auto container = "nf.container";
-    static constexpr auto process = "nf.process";
-    static constexpr auto envVarContainer = "TITUS_CONTAINER_NAME";
-    static constexpr auto envVarProcess = "TITUS_PROCESS_NAME";
+    static constexpr auto Container = "nf.container";
+    static constexpr auto Process = "nf.process";
+    static constexpr auto EnvVarContainer = "TITUS_CONTAINER_NAME";
+    static constexpr auto EnvVarProcess = "TITUS_PROCESS_NAME";
 };
 
 std::unordered_map<std::string, std::string> CalculateTags(
@@ -20,15 +20,15 @@ std::unordered_map<std::string, std::string> CalculateTags(
 {
     std::unordered_map<std::string, std::string> valid_tags;
 
-    const char* container_name = std::getenv(ConfigConstants::envVarContainer);
-    const char* process_name = std::getenv(ConfigConstants::envVarProcess);
-    
+    const char* container_name = std::getenv(ConfigConstants::EnvVarContainer);
+    const char* process_name = std::getenv(ConfigConstants::EnvVarProcess);
+
     if (container_name != nullptr)
     {
         std::string container_str(container_name);
         if (IsEmptyOrWhitespace(container_str) == false)
         {
-            valid_tags[ConfigConstants::container] = container_str;
+            valid_tags[ConfigConstants::Container] = container_str;
         }
     }
 
@@ -37,7 +37,7 @@ std::unordered_map<std::string, std::string> CalculateTags(
         std::string process_str(process_name);
         if (IsEmptyOrWhitespace(process_str) == false)
         {
-            valid_tags[ConfigConstants::process] = process_str;
+            valid_tags[ConfigConstants::Process] = process_str;
         }
     }
 

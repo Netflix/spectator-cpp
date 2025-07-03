@@ -5,19 +5,16 @@
 void MemoryWriter::Write(const std::string& message)
 {
     this->m_messages.push_back(message);
-    Logger::debug("MemoryWriter::Writing: {}", message);
 }
 
 void MemoryWriter::Close()
 {
     this->Clear();
-    Logger::debug("MemoryWriter::Closed");
 }
 
 void MemoryWriter::Clear()
 {
     this->m_messages.clear();
-    Logger::debug("MemoryWriter::Cleared messages");
 }
 
 const std::string& MemoryWriter::LastLine() const noexcept

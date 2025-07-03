@@ -16,8 +16,7 @@ constexpr const char* kMainLogger = "spectator";
 class Logger final : public Singleton<Logger>
 {
    private:
-    spdlog::logger* m_logger;  // Use raw pointer, not unique_ptr
-    inline static bool s_loggingEnabled = true;  // Static flag to control logging (C++17 inline initialization)
+    std::shared_ptr<spdlog::logger> m_logger;
 
     friend class Singleton<Logger>;
 
@@ -25,13 +24,7 @@ class Logger final : public Singleton<Logger>
     {
         try
         {
-            spdlog::init_thread_pool(8192, 1);
-            auto sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-            auto shared_logger = std::make_shared<spdlog::async_logger>(kMainLogger, sink, spdlog::thread_pool(),
-                                                                        spdlog::async_overflow_policy::block);
-            shared_logger->set_level(spdlog::level::debug);
-            spdlog::register_logger(shared_logger);
-            m_logger = shared_logger.get();
+            m_logger = spdlog::create_async_nb<spdlog::sinks::ansicolor_stdout_sink_mt>(kMainLogger);
         }
         catch (const spdlog::spdlog_ex& ex)
         {
@@ -47,49 +40,49 @@ class Logger final : public Singleton<Logger>
     Logger& operator=(Logger&&) = delete;
 
    public:
-    static spdlog::logger* GetLogger() { return GetInstance().m_logger; }
+    static spdlog::logger* GetLogger() { return GetInstance().m_logger.get(); }
 
     static void debug(const std::string& msg)
     {
-        if (s_loggingEnabled) GetLogger()->debug(msg);
+        GetLogger()->debug(msg);
     }
 
     static void info(const std::string& msg)
     {
-        if (s_loggingEnabled) GetLogger()->info(msg);
+        GetLogger()->info(msg);
     }
 
     static void warn(const std::string& msg)
     {
-        if (s_loggingEnabled) GetLogger()->warn(msg);
+        GetLogger()->warn(msg);
     }
 
     static void error(const std::string& msg)
     {
-        if (s_loggingEnabled) GetLogger()->error(msg);
+        GetLogger()->error(msg);
     }
 
     template <typename... Args>
     static void debug(fmt::format_string<Args...> fmt, Args&&... args)
     {
-        if (s_loggingEnabled) GetLogger()->debug(fmt, std::forward<Args>(args)...);
+        GetLogger()->debug(fmt, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
     static void info(fmt::format_string<Args...> fmt, Args&&... args)
     {
-        if (s_loggingEnabled) GetLogger()->info(fmt, std::forward<Args>(args)...);
+        GetLogger()->info(fmt, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
     static void warn(fmt::format_string<Args...> fmt, Args&&... args)
     {
-        if (s_loggingEnabled) GetLogger()->warn(fmt, std::forward<Args>(args)...);
+        GetLogger()->warn(fmt, std::forward<Args>(args)...);
     }
 
     template <typename... Args>
     static void error(fmt::format_string<Args...> fmt, Args&&... args)
     {
-        if (s_loggingEnabled) GetLogger()->error(fmt, std::forward<Args>(args)...);
+        GetLogger()->error(fmt, std::forward<Args>(args)...);
     }
 };
