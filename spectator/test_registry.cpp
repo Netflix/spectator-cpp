@@ -155,28 +155,27 @@ TEST(RegistryTest, GaugeWithId)
 
 TEST(RegistryTest, GaugeWithIdWithTtlSeconds)
 {
-    // WriterConfig writerConfig(WriterTypes::Memory);
-    // Config config(writerConfig, {{"extra-tags", "foo"}});
-    // auto r = Registry(config);
-
-    // auto g = r.gauge_with_id(r.new_id("gauge", {{"my-tags", "bar"}}), 120);
-    // EXPECT_TRUE(memoryWriter->IsEmpty());
-
-    // g->Set(42);
-    // EXPECT_EQ("g,120:gauge,extra-tags=foo,my-tags=bar:42", memoryWriter->LastLine());
+    Config config(WriterConfig(WriterTypes::Memory), {{"extra-tags", "foo"}});
+    auto r = Registry(config);
+    auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
+    
+    auto g = Registry::gauge_with_id(r.new_id("gauge", {{"my-tags", "bar"}}), 120);
+    EXPECT_TRUE(memoryWriter->IsEmpty());
+    g.Set(42);
+    EXPECT_EQ("g,120:gauge,extra-tags=foo,my-tags=bar:42.000000\n", memoryWriter->LastLine());
 }
 
-// TEST_F(RegistryTest, GaugeWithTtlSeconds) {
-//     WriterConfig writerConfig(WriterTypes::Memory);
-//     Config config(writerConfig);
-//     auto r = Registry(config);
+TEST(RegistryTest, GaugeWithTtlSeconds) {
+    Config config(WriterConfig(WriterTypes::Memory));
+    auto r = Registry(config);
+    auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
-//     auto g = r.gauge("gauge", 120);
-//     EXPECT_TRUE(memoryWriter->IsEmpty());
+    auto g = r.gauge("gauge", {}, 120);
+    EXPECT_TRUE(memoryWriter->IsEmpty());
 
-//     g.Set(42);
-//     EXPECT_EQ("g,120:gauge:42", memoryWriter->LastLine());
-// }
+    g.Set(42);
+    EXPECT_EQ("g,120:gauge:42.000000\n", memoryWriter->LastLine());
+}
 
 TEST(RegistryTest, MaxGauge)
 {
