@@ -1,7 +1,10 @@
 .DS_Store
 .idea/
+.vscode/
 CMakeUserPresets.json
 cmake-build/
+cmake-build-debug/
+cmake-build-release/
 conan_provider.cmake
 spectator/valid_chars.inc
 venv/

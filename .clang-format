@@ -1,4 +1,3 @@
----
 Language:        Cpp
 # BasedOnStyle:  Google
 AccessModifierOffset: -1
@@ -20,22 +19,22 @@ AlwaysBreakTemplateDeclarations: Yes
 BinPackArguments: true
 BinPackParameters: true
 BraceWrapping:   
-  AfterClass:      false
-  AfterControlStatement: Never
-  AfterEnum:       false
-  AfterFunction:   false
-  AfterNamespace:  false
-  AfterObjCDeclaration: false
-  AfterStruct:     false
-  AfterUnion:      false
-  BeforeCatch:     false
-  BeforeElse:      false
+  AfterClass:      true
+  AfterControlStatement: true
+  AfterEnum:       true
+  AfterFunction:   true
+  AfterNamespace:  true
+  AfterObjCDeclaration: true
+  AfterStruct:     true
+  AfterUnion:      true
+  BeforeCatch:     true
+  BeforeElse:      true
   IndentBraces:    false
 BreakBeforeBinaryOperators: None
-BreakBeforeBraces: Attach
+BreakBeforeBraces: Allman
 BreakBeforeTernaryOperators: true
 BreakConstructorInitializersBeforeComma: false
-ColumnLimit:     100
+ColumnLimit:     120
 CommentPragmas:  '^ IWYU pragma:'
 ConstructorInitializerAllOnOneLineOrOnePerLine: true
 ConstructorInitializerIndentWidth: 4
@@ -53,7 +52,7 @@ IncludeCategories:
   - Regex:           '.*'
     Priority:        3
 IndentCaseLabels: true
-IndentWidth:     2
+IndentWidth:     4
 IndentWrappedFunctionNames: false
 KeepEmptyLinesAtTheStartOfBlocks: false
 MacroBlockBegin: ''
@@ -85,4 +84,3 @@ SpacesInSquareBrackets: false
 Standard:        Auto
 TabWidth:        8
 UseTab:          Never
-...

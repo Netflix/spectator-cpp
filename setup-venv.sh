@@ -15,7 +15,7 @@ $PYTHON3 -m venv venv
 source venv/bin/activate
 
 if [[ -f requirements.txt ]]; then
-    # use the virtualenv python
-    python -m pip install --upgrade pip wheel
-    python -m pip install --requirement requirements.txt
+  # use the virtualenv python
+  python -m pip install --upgrade pip wheel
+  python -m pip install --requirement requirements.txt
 fi
