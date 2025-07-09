@@ -1,6 +1,7 @@
 # Writer Module
 
-The Writer module provides a flexible system for metric data output in the Spectator C++ library. It consists of several components that handle different aspects of data writing.
+The Writer module provides a flexible system for metric data output in the Spectator C++ library. It consists of 
+several components that handle different aspects of data writing.
 
 ## Components
 
@@ -36,7 +37,8 @@ This component handles configuration of writers:
   WriterConfig config(WriterTypes::UDP);
   
   // Or with a URL-style location
-  WriterConfig config("udp://192.168.1.100:8125");
+  const std::string unixUrl = std::string(WriterTypes::UnixURL) + "/var/run/custom/socket.sock";
+  const WriterConfig config(unixUrl);
   
   // Environment variable overrides any provided value
   // SPECTATOR_OUTPUT_LOCATION=unix:///custom/path/socket.sock
@@ -72,7 +74,8 @@ These components work together to provide a flexible metric output system:
 
 ```cpp
 // Create a configuration
-WriterConfig writerConfig("udp://localhost:8125");
+const std::string udpUrl = std::string(WriterTypes::UDPURL) + "192.168.1.100:8125";
+const WriterConfig writerConfig(udpUrl);
 
 // Create a configuration object with the writer config
 Config config(writerConfig);

@@ -4,6 +4,7 @@
 #include <meter_id.h>
 #include <writer.h>
 
+#include <cstdint>
 #include <string>
 
 static constexpr auto PERCENTILE_DISTRIBUTION_SUMMARY_TYPE_SYMBOL = "D";
@@ -16,7 +17,7 @@ class PercentileDistributionSummary final : public Meter
     {
     }
 
-    void Record(const int& amount) const 
+    void Record(const int64_t& amount) const 
     {
         if (amount >= 0)
         {

@@ -19,7 +19,7 @@ class AgeGauge final : public Meter
         Writer::GetInstance().Write(line);
     }
 
-    void Set(const int& seconds) const
+    void Set(const double& seconds) const
     {
         auto line = this->ConstructLine(seconds);
         Writer::GetInstance().Write(line);

@@ -13,7 +13,7 @@ class DistributionSummary final : public Meter
    public:
     explicit DistributionSummary(const MeterId& meter_id) : Meter(meter_id, DisTRIBUTION_SUMMARY_TYPE_SYMBOL) {}
 
-    void Record(const int& amount) const
+    void Record(const double& amount) const
     {
         if (amount >= 0)
         {
