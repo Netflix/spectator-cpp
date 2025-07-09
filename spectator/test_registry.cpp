@@ -31,10 +31,10 @@ TEST(RegistryTest, AgeGauge)
     EXPECT_TRUE(memoryWriter->IsEmpty());
 
     g1.Set(1);
-    EXPECT_EQ("A:age_gauge:1\n", memoryWriter->LastLine());
+    EXPECT_EQ("A:age_gauge:1.000000\n", memoryWriter->LastLine());
 
     g2.Set(2);
-    EXPECT_EQ("A:age_gauge,my-tags=bar:2\n", memoryWriter->LastLine());
+    EXPECT_EQ("A:age_gauge,my-tags=bar:2.000000\n", memoryWriter->LastLine());
 }
 
 TEST(RegistryTest, AgeGaugeWithId)
@@ -47,7 +47,7 @@ TEST(RegistryTest, AgeGaugeWithId)
     EXPECT_TRUE(memoryWriter->IsEmpty());
 
     g.Set(0);
-    EXPECT_EQ("A:age_gauge,extra-tags=foo,my-tags=bar:0\n",
+    EXPECT_EQ("A:age_gauge,extra-tags=foo,my-tags=bar:0.000000\n",
               ParseProtocolLine(memoryWriter->LastLine()).value().to_string());
 }
 
@@ -109,7 +109,7 @@ TEST(RegistryTest, DistributionSummary)
     EXPECT_TRUE(memoryWriter->IsEmpty());
 
     d.Record(42);
-    EXPECT_EQ("d:distribution_summary:42\n", memoryWriter->LastLine());
+    EXPECT_EQ("d:distribution_summary:42.000000\n", memoryWriter->LastLine());
 }
 
 TEST(RegistryTest, DistributionSummaryWithId)
@@ -122,7 +122,7 @@ TEST(RegistryTest, DistributionSummaryWithId)
     EXPECT_TRUE(memoryWriter->IsEmpty());
 
     d.Record(42);
-    EXPECT_EQ("d:distribution_summary,extra-tags=foo,my-tags=bar:42\n",
+    EXPECT_EQ("d:distribution_summary,extra-tags=foo,my-tags=bar:42.000000\n",
               ParseProtocolLine(memoryWriter->LastLine()).value().to_string());
 }
 

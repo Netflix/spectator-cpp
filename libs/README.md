@@ -10,7 +10,7 @@ This directory contains all the core libraries that make up the Spectator-CPP fr
 | `logger` | Logging facilities used throughout the framework                                             |
 | `meter`  | Core metrics implementations including counters, gauges, timers, and meter identification    |
 | `utils`  | Utility classes and helpers including singleton patterns                                     |
-| `writer` | Output writers for metrics data (file, memory, UDP, Unix Domain Socket)                      |
+| `writer` | Output writers for metrics data (Memory, UDP, Unix Domain Socket)                      |
 
 ## Usage
 

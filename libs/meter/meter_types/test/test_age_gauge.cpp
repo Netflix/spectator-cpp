@@ -26,5 +26,5 @@ TEST_F(AgeGaugeTest, Set)
     AgeGauge g(tid);
     EXPECT_TRUE(writer->IsEmpty());
     g.Set(10);
-    EXPECT_EQ("A:age_gauge:10\n", writer->LastLine());
+    EXPECT_EQ("A:age_gauge:10.000000\n", writer->LastLine());
 }
