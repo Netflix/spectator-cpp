@@ -2,8 +2,8 @@
 
 # Spectator-cpp
 
-This implements a basic [Spectator](https://github.com/Netflix/spectator) library for instrumenting CPP applications. It
-consists of a thin client designed to send metrics through [spectatord](https://github.com/Netflix-Skunkworks/spectatord).
+This implements a basic [Spectator](https://github.com/Netflix/spectator) library for instrumenting CPP applications.
+It consists of a thin client designed to send metrics through [spectatord](https://github.com/Netflix-Skunkworks/spectatord).
 
 ## High-Volume Publishing
 

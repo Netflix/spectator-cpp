@@ -1,6 +1,7 @@
 # Writer Module
 
-The Writer module provides a flexible system for metric data output in the Spectator C++ library. It consists of several components that handle different aspects of data writing.
+The Writer module provides a flexible system for metric data output in the Spectator C++ library. It consists of 
+several components that handle different aspects of data writing.
 
 ## Components
 
