@@ -43,7 +43,7 @@ TEST(RegistryTest, AgeGaugeWithId)
     auto r = Registry(config);
     auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
-    auto g = Registry::CreateAgeGauge(r.CreateNewId("age_gauge", {{"my-tags", "bar"}}));
+    auto g = r.CreateAgeGauge(r.CreateNewId("age_gauge", {{"my-tags", "bar"}}));
     EXPECT_TRUE(memoryWriter->IsEmpty());
 
     g.Set(0);
@@ -83,7 +83,7 @@ TEST(RegistryTest, CounterWithId)
     auto r = Registry(config);
     auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
-    auto c = Registry::CreateCounter(r.CreateNewId("counter", {{"my-tags", "bar"}}));
+    auto c = r.CreateCounter(r.CreateNewId("counter", {{"my-tags", "bar"}}));
     EXPECT_TRUE(memoryWriter->IsEmpty());
 
     c.Increment();
@@ -118,7 +118,7 @@ TEST(RegistryTest, DistributionSummaryWithId)
     auto r = Registry(config);
     auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
-    auto d = Registry::CreateDistributionSummary(r.CreateNewId("distribution_summary", {{"my-tags", "bar"}}));
+    auto d = r.CreateDistributionSummary(r.CreateNewId("distribution_summary", {{"my-tags", "bar"}}));
     EXPECT_TRUE(memoryWriter->IsEmpty());
 
     d.Record(42);
@@ -145,7 +145,7 @@ TEST(RegistryTest, GaugeWithId)
     auto r = Registry(config);
     auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
-    auto g = Registry::CreateGauge(r.CreateNewId("gauge", {{"my-tags", "bar"}}));
+    auto g = r.CreateGauge(r.CreateNewId("gauge", {{"my-tags", "bar"}}));
     EXPECT_TRUE(memoryWriter->IsEmpty());
 
     g.Set(42);
@@ -159,7 +159,7 @@ TEST(RegistryTest, GaugeWithIdWithTtlSeconds)
     auto r = Registry(config);
     auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
     
-    auto g = Registry::CreateGauge(r.CreateNewId("gauge", {{"my-tags", "bar"}}), 120);
+    auto g = r.CreateGauge(r.CreateNewId("gauge", {{"my-tags", "bar"}}), 120);
     EXPECT_TRUE(memoryWriter->IsEmpty());
     g.Set(42);
     EXPECT_EQ("g,120:gauge,extra-tags=foo,my-tags=bar:42.000000\n", memoryWriter->LastLine());
@@ -196,7 +196,7 @@ TEST(RegistryTest, MaxGaugeWithId)
     auto r = Registry(config);
     auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
-    auto g = Registry::CreateMaxGauge(r.CreateNewId("max_gauge", {{"my-tags", "bar"}}));
+    auto g = r.CreateMaxGauge(r.CreateNewId("max_gauge", {{"my-tags", "bar"}}));
     EXPECT_TRUE(memoryWriter->IsEmpty());
 
     g.Set(42);
@@ -223,7 +223,7 @@ TEST(RegistryTest, MonotonicCounterWithId)
     auto r = Registry(config);
     auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
-    auto c = Registry::CreateMonotonicCounter(r.CreateNewId("monotonic_counter", {{"my-tags", "bar"}}));
+    auto c = r.CreateMonotonicCounter(r.CreateNewId("monotonic_counter", {{"my-tags", "bar"}}));
     EXPECT_TRUE(memoryWriter->IsEmpty());
 
     c.Set(42);
@@ -250,7 +250,7 @@ TEST(RegistryTest, MonotonicCounterUintWithId)
     auto r = Registry(config);
     auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
-    auto c = Registry::CreateMonotonicCounterUint(r.CreateNewId("monotonic_counter_uint", {{"my-tags", "bar"}}));
+    auto c = r.CreateMonotonicCounterUint(r.CreateNewId("monotonic_counter_uint", {{"my-tags", "bar"}}));
     EXPECT_TRUE(memoryWriter->IsEmpty());
 
     c.Set(42);
@@ -290,7 +290,7 @@ TEST(RegistryTest, PctDistributionSummaryWithId)
     auto r = Registry(config);
     auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
-    auto d = Registry::CreatePercentDistributionSummary(r.CreateNewId("pct_distribution_summary", {{"my-tags", "bar"}}));
+    auto d = r.CreatePercentDistributionSummary(r.CreateNewId("pct_distribution_summary", {{"my-tags", "bar"}}));
     EXPECT_TRUE(memoryWriter->IsEmpty());
 
     d.Record(42);
@@ -317,7 +317,7 @@ TEST(RegistryTest, PctTimerWithId)
     auto r = Registry(config);
     auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
-    auto t = Registry::CreatePercentTimer(r.CreateNewId("pct_timer", {{"my-tags", "bar"}}));
+    auto t = r.CreatePercentTimer(r.CreateNewId("pct_timer", {{"my-tags", "bar"}}));
     EXPECT_TRUE(memoryWriter->IsEmpty());
 
     t.Record(42);
@@ -344,7 +344,7 @@ TEST(RegistryTest, TimerWithId)
     auto r = Registry(config);
     auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
-    auto t = Registry::CreateTimer(r.CreateNewId("timer", {{"my-tags", "bar"}}));
+    auto t = r.CreateTimer(r.CreateNewId("timer", {{"my-tags", "bar"}}));
     EXPECT_TRUE(memoryWriter->IsEmpty());
 
     t.Record(42);
