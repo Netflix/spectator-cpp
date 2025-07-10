@@ -118,7 +118,7 @@ int main(int argc, char* argv[])
     {
         while (should_stop == false)
         {
-            r.counter(config->counterName, tags).Increment();
+            r.CreateCounter(config->counterName, tags).Increment();
             iterations.fetch_add(1, std::memory_order_relaxed);
         }
     };
