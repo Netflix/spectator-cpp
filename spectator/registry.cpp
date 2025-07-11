@@ -55,7 +55,7 @@ Registry::Registry(const Config& config) : m_config(config)
     }    
 }
 
-MeterId Registry::new_id(const std::string& name, const std::unordered_map<std::string, std::string>& tags) const
+MeterId Registry::CreateNewId(const std::string& name, const std::unordered_map<std::string, std::string>& tags) const
 {
     MeterId new_meter_id(name, tags);
 
@@ -66,89 +66,89 @@ MeterId Registry::new_id(const std::string& name, const std::unordered_map<std::
     return new_meter_id.WithTags(this->m_config.GetExtraTags());
 }
 
-AgeGauge Registry::age_gauge(const std::string& name, const std::unordered_map<std::string, std::string>& tags) const
+AgeGauge Registry::CreateAgeGauge(const std::string& name, const std::unordered_map<std::string, std::string>& tags) const
 {
-    return AgeGauge(new_id(name, tags));
+    return AgeGauge(CreateNewId(name, tags));
 }
 
-AgeGauge Registry::age_gauge_with_id(const MeterId& meter_id) { return AgeGauge(meter_id); }
+AgeGauge Registry::CreateAgeGauge(const MeterId& meter_id) const { return AgeGauge(meter_id); }
 
-Counter Registry::counter(const std::string& name, const std::unordered_map<std::string, std::string>& tags) const
+Counter Registry::CreateCounter(const std::string& name, const std::unordered_map<std::string, std::string>& tags) const
 {
-    return Counter(new_id(name, tags));
+    return Counter(CreateNewId(name, tags));
 }
 
-Counter Registry::counter_with_id(const MeterId& meter_id) { return Counter(meter_id); }
+Counter Registry::CreateCounter(const MeterId& meter_id) const { return Counter(meter_id); }
 
-DistributionSummary Registry::distribution_summary(const std::string& name,
+DistributionSummary Registry::CreateDistributionSummary(const std::string& name,
                                                    const std::unordered_map<std::string, std::string>& tags) const
 {
-    return DistributionSummary(new_id(name, tags));
+    return DistributionSummary(CreateNewId(name, tags));
 }
 
-DistributionSummary Registry::distribution_summary_with_id(const MeterId& meter_id)
+DistributionSummary Registry::CreateDistributionSummary(const MeterId& meter_id) const
 {
     return DistributionSummary(meter_id);
 }
 
-Gauge Registry::gauge(const std::string& name, const std::unordered_map<std::string, std::string>& tags,
+Gauge Registry::CreateGauge(const std::string& name, const std::unordered_map<std::string, std::string>& tags,
                       const std::optional<int>& ttl_seconds) const
 {
-    return Gauge(new_id(name, tags), ttl_seconds);
+    return Gauge(CreateNewId(name, tags), ttl_seconds);
 }
 
-Gauge Registry::gauge_with_id(const MeterId& meter_id, const std::optional<int>& ttl_seconds)
+Gauge Registry::CreateGauge(const MeterId& meter_id, const std::optional<int>& ttl_seconds) const
 {
     return Gauge(meter_id, ttl_seconds);
 }
 
-MaxGauge Registry::max_gauge(const std::string& name, const std::unordered_map<std::string, std::string>& tags) const
+MaxGauge Registry::CreateMaxGauge(const std::string& name, const std::unordered_map<std::string, std::string>& tags) const
 {
-    return MaxGauge(new_id(name, tags));
+    return MaxGauge(CreateNewId(name, tags));
 }
 
-MaxGauge Registry::max_gauge_with_id(const MeterId& meter_id) { return MaxGauge(meter_id); }
+MaxGauge Registry::CreateMaxGauge(const MeterId& meter_id) const { return MaxGauge(meter_id); }
 
-MonotonicCounter Registry::monotonic_counter(const std::string& name,
+MonotonicCounter Registry::CreateMonotonicCounter(const std::string& name,
                                              const std::unordered_map<std::string, std::string>& tags) const
 {
-    return MonotonicCounter(new_id(name, tags));
+    return MonotonicCounter(CreateNewId(name, tags));
 }
 
-MonotonicCounter Registry::monotonic_counter_with_id(const MeterId& meter_id) { return MonotonicCounter(meter_id); }
+MonotonicCounter Registry::CreateMonotonicCounter(const MeterId& meter_id) const { return MonotonicCounter(meter_id); }
 
-MonotonicCounterUint Registry::monotonic_counter_uint(const std::string& name,
+MonotonicCounterUint Registry::CreateMonotonicCounterUint(const std::string& name,
                                                       const std::unordered_map<std::string, std::string>& tags) const
 {
-    return MonotonicCounterUint(new_id(name, tags));
+    return MonotonicCounterUint(CreateNewId(name, tags));
 }
 
-MonotonicCounterUint Registry::monotonic_counter_uint_with_id(const MeterId& meter_id)
+MonotonicCounterUint Registry::CreateMonotonicCounterUint(const MeterId& meter_id) const
 {
     return MonotonicCounterUint(meter_id);
 }
 
-PercentileDistributionSummary Registry::pct_distribution_summary(
+PercentileDistributionSummary Registry::CreatePercentDistributionSummary(
     const std::string& name, const std::unordered_map<std::string, std::string>& tags) const
 {
-    return PercentileDistributionSummary(new_id(name, tags));
+    return PercentileDistributionSummary(CreateNewId(name, tags));
 }
 
-PercentileDistributionSummary Registry::pct_distribution_summary_with_id(const MeterId& meter_id)
+PercentileDistributionSummary Registry::CreatePercentDistributionSummary(const MeterId& meter_id) const
 {
     return PercentileDistributionSummary(meter_id);
 }
 
-PercentileTimer Registry::pct_timer(const std::string& name, const std::unordered_map<std::string, std::string>& tags) const
+PercentileTimer Registry::CreatePercentTimer(const std::string& name, const std::unordered_map<std::string, std::string>& tags) const
 {
-    return PercentileTimer(new_id(name, tags));
+    return PercentileTimer(CreateNewId(name, tags));
 }
 
-PercentileTimer Registry::pct_timer_with_id(const MeterId& meter_id) { return PercentileTimer(meter_id); }
+PercentileTimer Registry::CreatePercentTimer(const MeterId& meter_id) const { return PercentileTimer(meter_id); }
 
-Timer Registry::timer(const std::string& name, const std::unordered_map<std::string, std::string>& tags) const
+Timer Registry::CreateTimer(const std::string& name, const std::unordered_map<std::string, std::string>& tags) const
 {
-    return Timer(new_id(name, tags));
+    return Timer(CreateNewId(name, tags));
 }
 
-Timer Registry::timer_with_id(const MeterId& meter_id) { return Timer(meter_id); }
+Timer Registry::CreateTimer(const MeterId& meter_id) const { return Timer(meter_id); }

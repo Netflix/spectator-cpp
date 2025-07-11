@@ -19,63 +19,63 @@ class Registry
     explicit Registry(const Config& config);
     ~Registry() = default;
 
-    MeterId new_id(const std::string& name, const std::unordered_map<std::string, std::string>& tags = {}) const;
+    MeterId CreateNewId(const std::string& name, const std::unordered_map<std::string, std::string>& tags = {}) const;
 
-    AgeGauge age_gauge(const std::string& name, const std::unordered_map<std::string, std::string>& tags =
+    AgeGauge CreateAgeGauge(const std::string& name, const std::unordered_map<std::string, std::string>& tags =
                                                     std::unordered_map<std::string, std::string>()) const;
 
-    static AgeGauge age_gauge_with_id(const MeterId& meter_id);
+    AgeGauge CreateAgeGauge(const MeterId& meter_id) const;
 
-    Counter counter(const std::string& name, const std::unordered_map<std::string, std::string>& tags =
+    Counter CreateCounter(const std::string& name, const std::unordered_map<std::string, std::string>& tags =
                                                  std::unordered_map<std::string, std::string>()) const;
 
-    static Counter counter_with_id(const MeterId& meter_id);
+    Counter CreateCounter(const MeterId& meter_id) const;
 
-    DistributionSummary distribution_summary(
+    DistributionSummary CreateDistributionSummary(
         const std::string& name,
         const std::unordered_map<std::string, std::string>& tags = std::unordered_map<std::string, std::string>()) const;
 
-    static DistributionSummary distribution_summary_with_id(const MeterId& meter_id);
+    DistributionSummary CreateDistributionSummary(const MeterId& meter_id) const;
 
-    Gauge gauge(
+    Gauge CreateGauge(
         const std::string& name,
         const std::unordered_map<std::string, std::string>& tags = std::unordered_map<std::string, std::string>(),
         const std::optional<int>& ttl_seconds = std::nullopt) const;
 
-    static Gauge gauge_with_id(const MeterId& meter_id, const std::optional<int>& ttl_seconds = std::nullopt);
+    Gauge CreateGauge(const MeterId& meter_id, const std::optional<int>& ttl_seconds = std::nullopt) const;
 
-    MaxGauge max_gauge(const std::string& name, const std::unordered_map<std::string, std::string>& tags =
+    MaxGauge CreateMaxGauge(const std::string& name, const std::unordered_map<std::string, std::string>& tags =
                                                     std::unordered_map<std::string, std::string>()) const;
 
-    static MaxGauge max_gauge_with_id(const MeterId& meter_id);
+    MaxGauge CreateMaxGauge(const MeterId& meter_id) const;
 
-    MonotonicCounter monotonic_counter(
+    MonotonicCounter CreateMonotonicCounter(
         const std::string& name,
         const std::unordered_map<std::string, std::string>& tags = std::unordered_map<std::string, std::string>()) const;
 
-    static MonotonicCounter monotonic_counter_with_id(const MeterId& meter_id);
+    MonotonicCounter CreateMonotonicCounter(const MeterId& meter_id) const;
 
-    MonotonicCounterUint monotonic_counter_uint(
+    MonotonicCounterUint CreateMonotonicCounterUint(
         const std::string& name,
         const std::unordered_map<std::string, std::string>& tags = std::unordered_map<std::string, std::string>()) const;
 
-    static MonotonicCounterUint monotonic_counter_uint_with_id(const MeterId& meter_id);
+    MonotonicCounterUint CreateMonotonicCounterUint(const MeterId& meter_id) const;
 
-    PercentileDistributionSummary pct_distribution_summary(
+    PercentileDistributionSummary CreatePercentDistributionSummary(
         const std::string& name,
         const std::unordered_map<std::string, std::string>& tags = std::unordered_map<std::string, std::string>()) const;
 
-    static PercentileDistributionSummary pct_distribution_summary_with_id(const MeterId& meter_id);
+    PercentileDistributionSummary CreatePercentDistributionSummary(const MeterId& meter_id) const;
 
-    PercentileTimer pct_timer(const std::string& name, const std::unordered_map<std::string, std::string>& tags =
+    PercentileTimer CreatePercentTimer(const std::string& name, const std::unordered_map<std::string, std::string>& tags =
                                                            std::unordered_map<std::string, std::string>()) const;
 
-    static PercentileTimer pct_timer_with_id(const MeterId& meter_id);
+    PercentileTimer CreatePercentTimer(const MeterId& meter_id) const;
 
-    Timer timer(const std::string& name, const std::unordered_map<std::string, std::string>& tags =
+    Timer CreateTimer(const std::string& name, const std::unordered_map<std::string, std::string>& tags =
                                              std::unordered_map<std::string, std::string>()) const;
 
-    static Timer timer_with_id(const MeterId& meter_id);
+    Timer CreateTimer(const MeterId& meter_id) const;
 
    private:
     Config m_config;
