@@ -190,12 +190,12 @@ TEST_F(ConfigTest, MergingTags)
         EXPECT_EQ(config.GetExtraTags().at("env"), "test");
     }
 
-    // Override environment variables with explicit tags
+    // Override common tags with explicit env tags
     {
-        containerGuard.setValue("test-container");
+        containerGuard.setValue("override-container");
         processGuard.unsetValue();
 
-        std::unordered_map<std::string, std::string> tags = {{"nf.container", "override-container"}};
+        std::unordered_map<std::string, std::string> tags = {{"nf.container", "test-container"}};
 
         Config config(writerConfig, tags);
 
