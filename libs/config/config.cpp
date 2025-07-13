@@ -20,6 +20,14 @@ std::unordered_map<std::string, std::string> CalculateTags(
 {
     std::unordered_map<std::string, std::string> valid_tags;
 
+    for (const auto& [fst, snd] : tags)
+    {
+        if (IsEmptyOrWhitespace(fst) == false && IsEmptyOrWhitespace(snd) == false)
+        {
+            valid_tags[fst] = snd;
+        }
+    }
+
     const char* container_name = std::getenv(ConfigConstants::EnvVarContainer);
     const char* process_name = std::getenv(ConfigConstants::EnvVarProcess);
 
@@ -38,14 +46,6 @@ std::unordered_map<std::string, std::string> CalculateTags(
         if (IsEmptyOrWhitespace(process_str) == false)
         {
             valid_tags[ConfigConstants::Process] = process_str;
-        }
-    }
-
-    for (const auto& [fst, snd] : tags)
-    {
-        if (IsEmptyOrWhitespace(fst) == false && IsEmptyOrWhitespace(snd) == false)
-        {
-            valid_tags[fst] = snd;
         }
     }
 
