@@ -1,5 +1,5 @@
 # Create a monolithic registry library with all required sources
-add_library(registry
+add_library(spectator-registry
     registry.cpp
     # Include all required source files directly
     ${CMAKE_CURRENT_SOURCE_DIR}/../libs/config/config.cpp
@@ -12,7 +12,7 @@ add_library(registry
     ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_wrapper/writer.cpp
 )
 
-target_include_directories(registry
+target_include_directories(spectator-registry
     PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/../libs/config
@@ -26,7 +26,7 @@ target_include_directories(registry
 )
 
 # Link only external dependencies, not internal spectator libraries
-target_link_libraries(registry
+target_link_libraries(spectator-registry
     PUBLIC
     spdlog::spdlog
     Boost::boost
@@ -36,7 +36,7 @@ add_executable(registry-test test_registry.cpp)
 target_link_libraries(registry-test PRIVATE
     GTest::gtest 
     GTest::gtest_main
-    registry
-	spectator-utils
+    spectator-registry
+    spectator-utils
 )
 add_test(NAME registry-test COMMAND registry-test)
