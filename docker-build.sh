@@ -10,6 +10,12 @@ if [[ -z "$BUILD_TYPE" ]]; then
   BUILD_TYPE="Debug"
 fi
 
+# Build image if it does not exist
+if [[ -z "$(docker images -q $IMAGE_NAME 2>/dev/null)" ]]; then
+  echo "Docker image $IMAGE_NAME not found. Building..."
+  docker build -t $IMAGE_NAME -f Dockerfiles/Ubuntu.Dockerfile .
+fi
+
 ## Remove any previous container
 docker rm $CONTAINER_NAME 2>/dev/null || true
 
