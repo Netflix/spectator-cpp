@@ -3,6 +3,7 @@ add_library(spectator-registry
     registry.cpp
     # Include all required source files directly
     ${CMAKE_CURRENT_SOURCE_DIR}/../libs/config/config.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../libs/logger/logger.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../libs/meter/meter_id/meter_id.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../libs/utils/src/util.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_config/writer_config.cpp

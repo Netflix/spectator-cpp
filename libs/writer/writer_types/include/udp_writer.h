@@ -2,7 +2,7 @@
 
 #include <base_writer.h>
 #include <string>
-#include <boost/asio.hpp>
+#include <memory>
 
 class UDPWriter final : public BaseWriter
 {
@@ -13,9 +13,7 @@ class UDPWriter final : public BaseWriter
     void Close() override;
 
    private:
-    std::string m_host;
-    int m_port;
-    std::unique_ptr<boost::asio::io_context> m_io_context;
-    std::unique_ptr<boost::asio::ip::udp::socket> m_socket;
-    boost::asio::ip::udp::endpoint m_endpoint;
+    // Forward declaration for implementation details
+    class Impl;
+    std::unique_ptr<Impl> m_pImpl;
 };
