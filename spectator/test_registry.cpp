@@ -166,7 +166,7 @@ TEST(RegistryTest, GaugeWithIdWithTtlSeconds)
 }
 
 TEST(RegistryTest, GaugeWithTtlSeconds) {
-    Config config(WriterConfig(WriterTypes::Memory));
+    Config config{WriterConfig(WriterTypes::Memory)};
     auto r = Registry(config);
     auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
 
