@@ -19,8 +19,7 @@ class UDSWriter final : public BaseWriter
     std::unique_ptr<boost::asio::io_context> m_ioContext;
     std::unique_ptr<boost::asio::local::datagram_protocol::socket> m_socket;
     boost::asio::local::datagram_protocol::endpoint m_endpoint;
-    bool m_isOpen;
-
-    // Helper method to initialize the connection
-    bool connect();
+    bool m_socketEstablished;
+    
+    bool CreateSocket();
 };
