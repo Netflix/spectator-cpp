@@ -17,7 +17,7 @@ UDPWriter::UDPWriter(const std::string& host, int port) :
 
 UDPWriter::~UDPWriter() { Close(); }
 
-bool UDPWriter::CreateSocket()
+bool UDPWriter::CreateSocket() try
 {
     if (m_socketEstablished)
     {
@@ -38,6 +38,32 @@ bool UDPWriter::CreateSocket()
     Logger::info("UDPWriter: Socket created for {}:{}", m_host, m_port);
     return true;
 }
+catch (const boost::system::system_error& ex)
+{
+    Logger::error("UDP Writer: Boost exception: {}", ex.what());
+    return false;
+}
+
+bool UDPWriter::TryToSend(const std::string& message) try
+{
+    boost::system::error_code ec;
+    for (int i = 0; i < 3; i++)
+    {
+        size_t sent = m_socket->send_to(boost::asio::buffer(message.data(), message.size()), m_endpoint, 0, ec);
+        if (ec || sent < message.size())
+        {   
+            Logger::error("UDP Writer: Failed to send message - {}, sent {} bytes out of {}", ec.message(), sent, message.size());
+            continue;
+        }
+        return true;
+    }
+    return false;
+}
+catch (const boost::system::system_error& ex)
+{
+    Logger::error("UDP Writer: Boost exception: {}", ex.what());
+    return false;
+}
 
 void UDPWriter::Write(const std::string& message)
 {
@@ -47,19 +73,14 @@ void UDPWriter::Write(const std::string& message)
         return;
     }
 
-    boost::system::error_code ec;
-    for (int i = 0; i < 3; i++)
+    if (TryToSend(message) == false)
     {
-        size_t sent = m_socket->send_to(boost::asio::buffer(message.data(), message.size()), m_endpoint, 0, ec);
-        if (ec || sent < message.size())
-        {   
-            Logger::error("UDP Writer: Failed to send message - {}, sent {} bytes out of {}", ec.message(), sent, message.size());
-        }
-        break;
+        Logger::error("UDP Writer: Failed to send message: {}", message);
+        this->Close();
     }
 }
 
-void UDPWriter::Close()
+void UDPWriter::Close() try
 {
     this->m_socketEstablished = false;
     if(m_socket && m_socket->is_open())
@@ -71,4 +92,8 @@ void UDPWriter::Close()
             Logger::error("UDP Writer: Error closing existing socket - {}", ec.message());
         }
     }
+}
+catch (const boost::system::system_error& ex)
+{
+    Logger::error("UDP Writer: Boost exception: {}", ex.what());
 }

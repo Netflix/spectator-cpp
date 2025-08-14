@@ -23,4 +23,5 @@ class UDPWriter final : public BaseWriter
     bool m_socketEstablished;
     
     bool CreateSocket();
+    bool TryToSend(const std::string& message);
 };
