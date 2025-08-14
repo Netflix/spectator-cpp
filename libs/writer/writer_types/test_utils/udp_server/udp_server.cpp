@@ -15,16 +15,16 @@ std::vector<std::string> messages = {};
 std::mutex messages_mutex;
 
 // Flag to control server shutdown
-std::atomic<bool> server_running(true);
+std::atomic<bool> udp_server_running(true);
 
 // Expose functions to interact with the messages vector
-std::vector<std::string> get_messages()
+std::vector<std::string> get_udp_messages()
 {
     std::lock_guard<std::mutex> lock(messages_mutex);
     return messages;
 }
 
-void clear_messages()
+void clear_udp_messages()
 {
     std::lock_guard<std::mutex> lock(messages_mutex);
     messages.clear();
@@ -68,7 +68,7 @@ try
     // Configure socket with a small timeout so we can check the run flag
     socket.non_blocking(true);
 
-    while (server_running)
+    while (udp_server_running)
     {
         try
         {
@@ -86,7 +86,7 @@ try
             add_message(message);
 
             // Get the current count of messages
-            auto current_messages = get_messages();
+            auto current_messages = get_udp_messages();
 
             std::cout << "Received from " << sender_endpoint << ": " << message << std::endl;
             std::cout << "Total messages stored: " << current_messages.size() << std::endl;

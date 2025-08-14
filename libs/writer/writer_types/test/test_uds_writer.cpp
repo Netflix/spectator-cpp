@@ -1,4 +1,3 @@
-
 #include <uds_writer.h>
 
 #include <gtest/gtest.h>
@@ -13,25 +12,39 @@ class UDSWriterTest : public testing::Test
    protected:
     void SetUp() override
     {
-        // Set the server to run
-        uds_server_running = true;
-
         // Clear any existing messages from previous tests
         clear_uds_messages();
-
-        // Start the UDS server in a separate thread
-        server_thread = std::thread(
-            []
-            {
-                // This calls our server function directly
-                listen_for_uds_messages();
-            });
-
-        // Give the server time to start
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        
+        // By default, start the server for most tests
+        StartServer();
     }
 
     void TearDown() override
+    {
+        StopServer();
+    }
+
+    void StartServer()
+    {
+        if (!server_thread.joinable()) // Only start if not already running
+        {
+            // Set the server to run
+            uds_server_running = true;
+
+            // Start the UDS server in a separate thread
+            server_thread = std::thread(
+                []
+                {
+                    // This calls our server function directly
+                    listen_for_uds_messages();
+                });
+
+            // Give the server time to start
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        }
+    }
+
+    void StopServer()
     {
         // Signal the server to stop
         uds_server_running = false;
@@ -136,4 +149,45 @@ TEST_F(UDSWriterTest, SendMultipleMessages)
     {
         ASSERT_EQ(test_messages.at(i), received_messages.at(i));
     }
+}
+
+TEST_F(UDSWriterTest, ClientReconnectsWhenServerStartsLater)
+{
+    // First, stop the server that was started in SetUp
+    StopServer();
+    
+    // Clear any existing messages
+    clear_uds_messages();
+    
+    // Create a client before the server is available
+    UDSWriter writer("/tmp/test_uds_socket");
+    
+    // Try to send a message while server is not running
+    // This should fail silently (UDSWriter logs errors but doesn't throw)
+    for (int i = 0; i < 3; ++i)
+    {
+        const std::string test_message_before = "Message sent before server starts";
+        writer.Write(test_message_before);
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+    
+    // Verify no messages were received (server wasn't running)
+    auto messages = get_uds_messages();
+    EXPECT_TRUE(messages.empty()) << "Expected no messages when server is not running";
+    
+    // Now start the server
+    StartServer();
+    
+    // Try to send a message after server is started
+    // The UDSWriter should automatically reconnect on the next Write call
+    const std::string test_message_after = "Message sent after server starts";
+    writer.Write(test_message_after);
+    
+    // Give time for the message to be processed
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    
+    // Verify the message was received
+    messages = get_uds_messages();
+    EXPECT_TRUE(messages.size() == 1);
+    EXPECT_TRUE(messages.at(0) == test_message_after);
 }

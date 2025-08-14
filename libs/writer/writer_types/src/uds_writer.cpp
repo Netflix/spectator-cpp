@@ -2,108 +2,97 @@
 
 #include <logger.h>
 
-#include <boost/asio.hpp>
-
-namespace local = boost::asio::local;
-
 UDSWriter::UDSWriter(const std::string& socketPath)
     : m_socketPath(socketPath),
       m_ioContext(std::make_unique<boost::asio::io_context>()),
       m_socket(nullptr),
-      m_isOpen(false)
+      m_socketEstablished(false)
 {
-    connect();
+    if (false == CreateSocket())
+    {
+        Logger::error("UDS Writer: Failed to create socket for {} during construction", m_socketPath);
+    }
 }
 
 UDSWriter::~UDSWriter() { Close(); }
 
-bool UDSWriter::connect()
+bool UDSWriter::CreateSocket() try
 {
-    if (m_isOpen)
+    if (m_socketEstablished)
     {
-        return true;  // Already connected
+        this->Close();
     }
-
-    try
+    
+    boost::system::error_code ec;
+    m_socket = std::make_unique<boost::asio::local::datagram_protocol::socket>(*m_ioContext);
+    m_socket->open(boost::asio::local::datagram_protocol(), ec);
+    if (ec)
     {
-        // Create a new socket if needed
-        if (!m_socket)
-        {
-            m_socket = std::make_unique<local::datagram_protocol::socket>(*m_ioContext);
-        }
-
-        // Open the socket and prepare the endpoint
-        boost::system::error_code ec;
-        m_socket->open(local::datagram_protocol(), ec);
-        
-        // Set up the server endpoint
-        m_endpoint = local::datagram_protocol::endpoint(m_socketPath);
-
-        if (ec)
-        {
-            Logger::error("UDS Writer: Failed to connect to {} - {}", m_socketPath, ec.message());
-            return false;
-        }
-
-        m_isOpen = true;
-        return true;
-    }
-    catch (const std::exception& e)
-    {
-        Logger::error("UDS Writer: Exception while connecting - {}", e.what());
-        m_isOpen = false;
+        Logger::error("UDS Writer: Failed to create socket - {}", ec.message());
         return false;
     }
+
+    m_endpoint = boost::asio::local::datagram_protocol::endpoint(m_socketPath);
+    m_socketEstablished = true;
+    Logger::info("UDS Writer: Socket created for {}", m_socketPath);
+    return true;
+}
+catch (const boost::system::system_error& ex)
+{
+    Logger::error("UDS Writer: Boost exception: {}", ex.what());
+    return false;
+}
+
+bool UDSWriter::TryToSend(const std::string& message) try
+{
+    boost::system::error_code ec;
+    for (int i = 0; i < 3; i++)
+    {
+        size_t sent = m_socket->send_to(boost::asio::buffer(message), m_endpoint, 0, ec);
+        if (ec || sent < message.size())
+        {   
+            Logger::error("UDS Writer: Failed to send message - {}, sent {} bytes out of {}", ec.message(), sent, message.size());
+            continue;
+        }
+        return true;
+    }
+    return false;
+}
+catch (const boost::system::system_error& ex)
+{
+    Logger::error("UDS Writer: Boost exception: {}", ex.what());
+    return false;
 }
 
 void UDSWriter::Write(const std::string& message)
 {
-    if (!m_isOpen && !connect())
+    if (false == this->m_socketEstablished && false == this->CreateSocket())
     {
-        Logger::error("UDS Writer: Cannot write - not connected to {}", m_socketPath);
+        Logger::error("UDS Writer: Failed to write message, socket not established {}", m_socketPath);
         return;
     }
 
-    try
+    if (false == this->TryToSend(message))
     {
-        boost::system::error_code ec;
-        size_t sent = m_socket->send_to(boost::asio::buffer(message), m_endpoint, 0, ec);
-
-        if (ec)
-        {
-            Logger::error("UDS Writer: Failed to send message - {}", ec.message());
-            m_isOpen = false;  // Mark as disconnected on error
-        }
-        if (sent < message.size())
-        {
-            Logger::error("UDS Writer: Sent only {} bytes out of {} bytes", sent, message.size());
-        }
-    }
-    catch (const std::exception& e)
-    {
-        Logger::error("UDS Writer: Exception while sending message - {}", e.what());
-        m_isOpen = false;  // Mark as disconnected on exception
+        Logger::error("UDS Writer: Failed to send message: {}", message);
+        this->Close();
     }
 }
 
-void UDSWriter::Close()
+void UDSWriter::Close() try
 {
-    if (m_socket && m_isOpen)
+    this->m_socketEstablished = false;
+    if (m_socket != nullptr && m_socket->is_open())
     {
-        try
+        boost::system::error_code ec;
+        m_socket->close(ec);
+        if (ec)
         {
-            boost::system::error_code ec;
-            m_socket->close(ec);
-
-            if (ec)
-            {
-                Logger::error("UDS Writer: Error closing socket - {}", ec.message());
-            }
-        }
-        catch (const std::exception& e)
-        {
-            Logger::error("UDS Writer: Exception while closing socket - {}", e.what());
+            Logger::error("UDS Writer: Error closing existing socket - {}", ec.message());
         }
     }
-    m_isOpen = false;
+}
+catch (const boost::system::system_error& ex)
+{
+    Logger::error("UDS Writer: Boost exception: {}", ex.what());
 }

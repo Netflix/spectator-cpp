@@ -2,72 +2,98 @@
 
 #include <logger.h>
 
-UDPWriter::UDPWriter(const std::string& host, int port) : m_host(host), m_port(port)
+UDPWriter::UDPWriter(const std::string& host, int port) : 
+    m_host(host), 
+    m_port(port),
+    m_io_context(std::make_unique<boost::asio::io_context>()),
+    m_socket(nullptr), 
+    m_socketEstablished(false)
 {
-    try
+    if (false == CreateSocket())
     {
-        // Create io_context
-        m_io_context = std::make_unique<boost::asio::io_context>();
-
-        // Create socket
-        m_socket = std::make_unique<boost::asio::ip::udp::socket>(*m_io_context);
-        m_socket->open(boost::asio::ip::udp::v4());
-
-        // Resolve the endpoint
-        boost::asio::ip::udp::resolver resolver(*m_io_context);
-        m_endpoint = *resolver.resolve(boost::asio::ip::udp::v4(), m_host, std::to_string(m_port)).begin();
-    }
-    catch (const boost::system::system_error& e)
-    {
-        Logger::error("UDPWriter: Failed to initialize connection: {}", e.what());
-        Close();
+        Logger::error("UDPWriter: Failed to create socket for {}:{} during construction", m_host, m_port);
     }
 }
 
 UDPWriter::~UDPWriter() { Close(); }
 
-void UDPWriter::Write(const std::string& message) try
+bool UDPWriter::CreateSocket() try
 {
-    if (m_socket == nullptr || m_socket->is_open() == false)
+    if (m_socketEstablished)
     {
-        Logger::error("UDPWriter: Socket not initialized or closed");
-        return;
+        this->Close();
     }
 
     boost::system::error_code ec;
-    size_t sent = m_socket->send_to(boost::asio::buffer(message.data(), message.size()), m_endpoint, 0, ec);
-
+    m_socket = std::make_unique<boost::asio::ip::udp::socket>(*m_io_context);
+    m_socket->open(boost::asio::ip::udp::v4(), ec);
     if (ec)
     {
-        Logger::error("UDPWriter: Failed to send message: {}", ec.message());
+        Logger::error("UDPWriter: Failed to create socket - {}", ec.message());
+        return false;
     }
-    else if (sent != message.size())
-    {
-        Logger::error("UDPWriter: Sent only {} bytes out of {} bytes", sent, message.size());
-    }
+    
+    m_endpoint = boost::asio::ip::udp::endpoint(boost::asio::ip::address::from_string(m_host), m_port);
+    m_socketEstablished = true;
+    Logger::info("UDPWriter: Socket created for {}:{}", m_host, m_port);
+    return true;
 }
-catch (const std::exception& e)
+catch (const boost::system::system_error& ex)
 {
-    Logger::error("UDPWriter: Exception during write: {}", e.what());
+    Logger::error("UDP Writer: Boost exception: {}", ex.what());
+    return false;
+}
+
+bool UDPWriter::TryToSend(const std::string& message) try
+{
+    boost::system::error_code ec;
+    for (int i = 0; i < 3; i++)
+    {
+        size_t sent = m_socket->send_to(boost::asio::buffer(message.data(), message.size()), m_endpoint, 0, ec);
+        if (ec || sent < message.size())
+        {   
+            Logger::error("UDP Writer: Failed to send message - {}, sent {} bytes out of {}", ec.message(), sent, message.size());
+            continue;
+        }
+        return true;
+    }
+    return false;
+}
+catch (const boost::system::system_error& ex)
+{
+    Logger::error("UDP Writer: Boost exception: {}", ex.what());
+    return false;
+}
+
+void UDPWriter::Write(const std::string& message)
+{
+    if (false == this->m_socketEstablished && false == this->CreateSocket())
+    {
+        Logger::error("UDPWriter: Failed to write message, socket not established {}:{}", m_host, m_port);
+        return;
+    }
+
+    if (TryToSend(message) == false)
+    {
+        Logger::error("UDP Writer: Failed to send message: {}", message);
+        this->Close();
+    }
 }
 
 void UDPWriter::Close() try
 {
-    if (m_socket && m_socket->is_open())
+    this->m_socketEstablished = false;
+    if(m_socket && m_socket->is_open())
     {
         boost::system::error_code ec;
         m_socket->close(ec);
         if (ec)
         {
-            Logger::error("UDPWriter: Error when closing socket: {}", ec.message());
+            Logger::error("UDP Writer: Error closing existing socket - {}", ec.message());
         }
     }
-
-    // Reset the unique_ptr to deallocate resources
-    m_socket.reset();
-    m_io_context.reset();
 }
-catch (const std::exception& e)
+catch (const boost::system::system_error& ex)
 {
-    Logger::error("UDPWriter: Exception during close: {}", e.what());
+    Logger::error("UDP Writer: Boost exception: {}", ex.what());
 }

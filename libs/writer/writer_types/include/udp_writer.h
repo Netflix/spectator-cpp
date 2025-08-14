@@ -1,6 +1,8 @@
 #pragma once
 
 #include <base_writer.h>
+
+#include <memory>
 #include <string>
 #include <boost/asio.hpp>
 
@@ -18,4 +20,8 @@ class UDPWriter final : public BaseWriter
     std::unique_ptr<boost::asio::io_context> m_io_context;
     std::unique_ptr<boost::asio::ip::udp::socket> m_socket;
     boost::asio::ip::udp::endpoint m_endpoint;
+    bool m_socketEstablished;
+    
+    bool CreateSocket();
+    bool TryToSend(const std::string& message);
 };

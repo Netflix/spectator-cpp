@@ -13,28 +13,43 @@ class UDPWriterTest : public testing::Test
    protected:
     void SetUp() override
     {
-        // Set the server to run
-        server_running = true;
-
         // Clear any existing messages from previous tests
-        clear_messages();
-
-        // Start the UDP server in a separate thread
-        server_thread = std::thread(
-            []
-            {
-                // This calls our server function directly
-                listen_for_udp_messages();
-            });
-
-        // Give the server time to start
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        clear_udp_messages();
+        
+        // By default, start the server for most tests
+        StartServer();
     }
 
     void TearDown() override
     {
+        StopServer();
+    }
+
+
+    void StartServer()
+    {
+        if (!server_thread.joinable()) // Only start if not already running
+        {
+            // Set the server to run
+            udp_server_running = true;
+
+            // Start the UDS server in a separate thread
+            server_thread = std::thread(
+                []
+                {
+                    // This calls our server function directly
+                    listen_for_udp_messages();
+                });
+
+            // Give the server time to start
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        }
+    }
+
+    void StopServer()
+    {
         // Signal the server to stop
-        server_running = false;
+        udp_server_running = false;
 
         // Terminate the server thread
         if (server_thread.joinable())
@@ -61,7 +76,7 @@ TEST_F(UDPWriterTest, SendMessage)
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     // Get current messages and verify the message was received
-    const auto messages = get_messages();
+    const auto messages = get_udp_messages();
     ASSERT_FALSE(messages.empty());
 
     // Check that our message is in the vector
@@ -87,7 +102,7 @@ TEST_F(UDPWriterTest, CloseAndReopen)
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     // Verify first message
-    auto messages = get_messages();
+    auto messages = get_udp_messages();
     ASSERT_FALSE(messages.empty());
     ASSERT_EQ(messages.back(), message1);
 
@@ -103,7 +118,7 @@ TEST_F(UDPWriterTest, CloseAndReopen)
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     // Verify second message
-    messages = get_messages();
+    messages = get_udp_messages();
     ASSERT_GE(messages.size(), 2);
     ASSERT_EQ(messages.back(), message2);
 }
@@ -125,7 +140,7 @@ TEST_F(UDPWriterTest, SendMultipleMessages)
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     // Get received messages and verify
-    const auto received_messages = get_messages();
+    const auto received_messages = get_udp_messages();
 
     // Verify we received at least the number of messages we sent
     ASSERT_EQ(received_messages.size(), test_messages.size());
@@ -133,4 +148,45 @@ TEST_F(UDPWriterTest, SendMultipleMessages)
     ASSERT_EQ(test_messages.at(0), received_messages.at(0));
     ASSERT_EQ(test_messages.at(1), received_messages.at(1));
     ASSERT_EQ(test_messages.at(2), received_messages.at(2));
+}
+
+TEST_F(UDPWriterTest, ClientReconnectsWhenServerStartsLater)
+{
+    // First, stop the server that was started in SetUp
+    StopServer();
+    
+    // Clear any existing messages
+    clear_udp_messages();
+    
+    // Create a client before the server is available
+    UDPWriter writer("127.0.0.1", 12345);
+
+    // Try to send a message while server is not running
+    // This should fail silently (UDSWriter logs errors but doesn't throw)
+    for (int i = 0; i < 3; ++i)
+    {
+        const std::string test_message_before = "Message sent before server starts";
+        writer.Write(test_message_before);
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+    
+    // Verify no messages were received (server wasn't running)
+    auto messages = get_udp_messages();
+    EXPECT_TRUE(messages.empty()) << "Expected no messages when server is not running";
+    
+    // Now start the server
+    StartServer();
+    
+    // Try to send a message after server is started
+    // The UDSWriter should automatically reconnect on the next Write call
+    const std::string test_message_after = "Message sent after server starts";
+    writer.Write(test_message_after);
+    
+    // Give time for the message to be processed
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    
+    // Verify the message was received
+    messages = get_udp_messages();
+    EXPECT_TRUE(messages.size() == 1);
+    EXPECT_TRUE(messages.at(0) == test_message_after);
 }
