@@ -2,87 +2,53 @@
 
 #include <singleton.h>
 
-#include <iostream>
 #include <memory>
 #include <string>
-
-#include <spdlog/spdlog.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
-#include <spdlog/async.h>
-#include <fmt/core.h>
-
-constexpr const char* kMainLogger = "spectator";
+#include <format>
 
 class Logger final : public Singleton<Logger>
 {
    private:
-    std::shared_ptr<spdlog::logger> m_logger;
+    // Forward declaration for pimpl
+    class LoggerImpl;
+    std::unique_ptr<LoggerImpl> m_impl;
 
     friend class Singleton<Logger>;
 
-    Logger()
-    {
-        try
-        {
-            m_logger = spdlog::create_async_nb<spdlog::sinks::ansicolor_stdout_sink_mt>(kMainLogger);
-        }
-        catch (const spdlog::spdlog_ex& ex)
-        {
-            std::cerr << "Log initialization failed: " << ex.what() << "\n";
-            m_logger = nullptr;
-        }
-    }
-
-    ~Logger() = default;
+    Logger();
+    ~Logger();
     Logger(const Logger&) = delete;
     Logger& operator=(const Logger&) = delete;
     Logger(Logger&&) = delete;
     Logger& operator=(Logger&&) = delete;
 
    public:
-    static spdlog::logger* GetLogger() { return GetInstance().m_logger.get(); }
+    static void debug(const std::string& msg);
+    static void info(const std::string& msg);
+    static void warn(const std::string& msg);
+    static void error(const std::string& msg);
 
-    static void debug(const std::string& msg)
+    template <typename... Args>
+    static void debug(std::format_string<Args...> fmt, Args&&... args)
     {
-        GetLogger()->debug(msg);
-    }
-
-    static void info(const std::string& msg)
-    {
-        GetLogger()->info(msg);
-    }
-
-    static void warn(const std::string& msg)
-    {
-        GetLogger()->warn(msg);
-    }
-
-    static void error(const std::string& msg)
-    {
-        GetLogger()->error(msg);
+        debug(std::format(fmt, std::forward<Args>(args)...));
     }
 
     template <typename... Args>
-    static void debug(fmt::format_string<Args...> fmt, Args&&... args)
+    static void info(std::format_string<Args...> fmt, Args&&... args)
     {
-        GetLogger()->debug(fmt, std::forward<Args>(args)...);
+        info(std::format(fmt, std::forward<Args>(args)...));
     }
 
     template <typename... Args>
-    static void info(fmt::format_string<Args...> fmt, Args&&... args)
+    static void warn(std::format_string<Args...> fmt, Args&&... args)
     {
-        GetLogger()->info(fmt, std::forward<Args>(args)...);
+        warn(std::format(fmt, std::forward<Args>(args)...));
     }
 
     template <typename... Args>
-    static void warn(fmt::format_string<Args...> fmt, Args&&... args)
+    static void error(std::format_string<Args...> fmt, Args&&... args)
     {
-        GetLogger()->warn(fmt, std::forward<Args>(args)...);
-    }
-
-    template <typename... Args>
-    static void error(fmt::format_string<Args...> fmt, Args&&... args)
-    {
-        GetLogger()->error(fmt, std::forward<Args>(args)...);
+        error(std::format(fmt, std::forward<Args>(args)...));
     }
 };

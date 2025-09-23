@@ -1,12 +1,13 @@
-add_library(spectator-logger INTERFACE)
+add_library(spectator-logger logger.cpp)
 
 target_include_directories(spectator-logger
-    INTERFACE
+    PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 target_link_libraries(spectator-logger
-    INTERFACE
+    PUBLIC
     spectator-utils
+    PRIVATE
     spdlog::spdlog
 )
