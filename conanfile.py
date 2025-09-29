@@ -9,3 +9,9 @@ class SpectatorCppConan(ConanFile):
     )
     tool_requires = ()
     generators = "CMakeDeps", "CMakeToolchain"
+
+    def configure(self):
+        # Configure spdlog to be header-only
+        self.options["spdlog"].header_only = True
+        self.options["spdlog"].use_std_fmt = True
+

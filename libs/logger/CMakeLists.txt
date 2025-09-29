@@ -9,5 +9,5 @@ target_link_libraries(spectator-logger
     PUBLIC
     spectator-utils
     PRIVATE
-    spdlog::spdlog
+    spdlog::spdlog_header_only
 )
