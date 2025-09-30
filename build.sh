@@ -42,6 +42,8 @@ echo "CXX=$CXX"
 if [[ ! -f "$HOME/.conan2/profiles/default" ]]; then
   echo -e "${BLUE}==== create default profile ====${NC}"
   conan profile detect
+  # Set C++ standard to 20 so spdlog uses std_format
+  sed -i 's/compiler\.cppstd=.*/compiler.cppstd=20/' "$HOME/.conan2/profiles/default"  
 fi
 
 if [[ ! -d $BUILD_DIR ]]; then
