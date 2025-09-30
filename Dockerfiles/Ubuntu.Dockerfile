@@ -12,6 +12,10 @@ RUN apt-get update && apt-get install -y \
     cmake \
     build-essential
 
+# Set up alternatives to make gcc-13 and g++-13 the default
+RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100 && \
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100
+
 # Create a default working directory
 WORKDIR /home/ubuntu/spectator-cpp
 

@@ -1,23 +1,47 @@
 #include <udp_writer.h>
 
 #include <logger.h>
+#include <boost/asio.hpp>
 
-UDPWriter::UDPWriter(const std::string& host, int port) : 
+class UDPWriter::Impl
+{
+public:
+    Impl(const std::string& host, int port);
+    ~Impl() = default;
+    
+    bool CreateSocket();
+    bool TryToSend(const std::string& message);
+    void Close();
+    
+    std::string m_host;
+    int m_port;
+    std::unique_ptr<boost::asio::io_context> m_io_context;
+    std::unique_ptr<boost::asio::ip::udp::socket> m_socket;
+    boost::asio::ip::udp::endpoint m_endpoint;
+    bool m_socketEstablished;
+};
+
+UDPWriter::Impl::Impl(const std::string& host, int port) : 
     m_host(host), 
     m_port(port),
     m_io_context(std::make_unique<boost::asio::io_context>()),
     m_socket(nullptr), 
     m_socketEstablished(false)
 {
-    if (false == CreateSocket())
+}
+
+UDPWriter::UDPWriter(const std::string& host, int port) : 
+    m_pImpl(std::make_unique<Impl>(host, port))
+{
+    if (false == m_pImpl->CreateSocket())
     {
-        Logger::error("UDPWriter: Failed to create socket for {}:{} during construction", m_host, m_port);
+        Logger::error("UDPWriter: Failed to create socket for {}:{} during construction", m_pImpl->m_host, m_pImpl->m_port);
     }
 }
 
 UDPWriter::~UDPWriter() { Close(); }
 
-bool UDPWriter::CreateSocket() try
+bool UDPWriter::Impl::CreateSocket() try
 {
     if (m_socketEstablished)
     {
@@ -44,7 +68,7 @@ catch (const boost::system::system_error& ex)
     return false;
 }
 
-bool UDPWriter::TryToSend(const std::string& message) try
+bool UDPWriter::Impl::TryToSend(const std::string& message) try
 {
     boost::system::error_code ec;
     for (int i = 0; i < 3; i++)
@@ -67,20 +91,20 @@ catch (const boost::system::system_error& ex)
 
 void UDPWriter::Write(const std::string& message)
 {
-    if (false == this->m_socketEstablished && false == this->CreateSocket())
+    if (false == m_pImpl->m_socketEstablished && false == m_pImpl->CreateSocket())
     {
-        Logger::error("UDPWriter: Failed to write message, socket not established {}:{}", m_host, m_port);
+        Logger::error("UDPWriter: Failed to write message, socket not established {}:{}", m_pImpl->m_host, m_pImpl->m_port);
         return;
     }
 
-    if (TryToSend(message) == false)
+    if (m_pImpl->TryToSend(message) == false)
     {
         Logger::error("UDP Writer: Failed to send message: {}", message);
-        this->Close();
+        m_pImpl->Close();
     }
 }
 
-void UDPWriter::Close() try
+void UDPWriter::Impl::Close() try
 {
     this->m_socketEstablished = false;
     if(m_socket && m_socket->is_open())
@@ -96,4 +120,12 @@ void UDPWriter::Close() try
 catch (const boost::system::system_error& ex)
 {
     Logger::error("UDP Writer: Boost exception: {}", ex.what());
+}
+
+void UDPWriter::Close()
+{
+    if (m_pImpl)
+    {
+        m_pImpl->Close();
+    }
 }

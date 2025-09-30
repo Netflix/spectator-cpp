@@ -1,22 +1,45 @@
 #include <uds_writer.h>
 
 #include <logger.h>
+#include <boost/asio.hpp>
 
-UDSWriter::UDSWriter(const std::string& socketPath)
+class UDSWriter::Impl
+{
+public:
+    Impl(const std::string& socketPath);
+    ~Impl() = default;
+    
+    bool CreateSocket();
+    bool TryToSend(const std::string& message);
+    void Close();
+    
+    std::string m_socketPath;
+    std::unique_ptr<boost::asio::io_context> m_ioContext;
+    std::unique_ptr<boost::asio::local::datagram_protocol::socket> m_socket;
+    boost::asio::local::datagram_protocol::endpoint m_endpoint;
+    bool m_socketEstablished;
+};
+
+UDSWriter::Impl::Impl(const std::string& socketPath)
     : m_socketPath(socketPath),
       m_ioContext(std::make_unique<boost::asio::io_context>()),
       m_socket(nullptr),
       m_socketEstablished(false)
 {
-    if (false == CreateSocket())
+}
+
+UDSWriter::UDSWriter(const std::string& socketPath)
+    : m_pImpl(std::make_unique<Impl>(socketPath))
+{
+    if (false == m_pImpl->CreateSocket())
     {
-        Logger::error("UDS Writer: Failed to create socket for {} during construction", m_socketPath);
+        Logger::error("UDS Writer: Failed to create socket for {} during construction", m_pImpl->m_socketPath);
     }
 }
 
 UDSWriter::~UDSWriter() { Close(); }
 
-bool UDSWriter::CreateSocket() try
+bool UDSWriter::Impl::CreateSocket() try
 {
     if (m_socketEstablished)
     {
@@ -43,7 +66,7 @@ catch (const boost::system::system_error& ex)
     return false;
 }
 
-bool UDSWriter::TryToSend(const std::string& message) try
+bool UDSWriter::Impl::TryToSend(const std::string& message) try
 {
     boost::system::error_code ec;
     for (int i = 0; i < 3; i++)
@@ -66,20 +89,20 @@ catch (const boost::system::system_error& ex)
 
 void UDSWriter::Write(const std::string& message)
 {
-    if (false == this->m_socketEstablished && false == this->CreateSocket())
+    if (false == m_pImpl->m_socketEstablished && false == m_pImpl->CreateSocket())
     {
-        Logger::error("UDS Writer: Failed to write message, socket not established {}", m_socketPath);
+        Logger::error("UDS Writer: Failed to write message, socket not established {}", m_pImpl->m_socketPath);
         return;
     }
 
-    if (false == this->TryToSend(message))
+    if (false == m_pImpl->TryToSend(message))
     {
         Logger::error("UDS Writer: Failed to send message: {}", message);
-        this->Close();
+        m_pImpl->Close();
     }
 }
 
-void UDSWriter::Close() try
+void UDSWriter::Impl::Close() try
 {
     this->m_socketEstablished = false;
     if (m_socket != nullptr && m_socket->is_open())
@@ -95,4 +118,12 @@ void UDSWriter::Close() try
 catch (const boost::system::system_error& ex)
 {
     Logger::error("UDS Writer: Boost exception: {}", ex.what());
+}
+
+void UDSWriter::Close()
+{
+    if (m_pImpl)
+    {
+        m_pImpl->Close();
+    }
 }

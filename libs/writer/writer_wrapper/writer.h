@@ -5,6 +5,10 @@
 
 #include <memory>
 #include <string>
+#include <thread>
+#include <condition_variable>
+#include <mutex>
+#include <atomic>
 
 class Writer final : public Singleton<Writer>
 {
