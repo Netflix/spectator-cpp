@@ -4,7 +4,7 @@
 #include <writer_test_helper.h>
 
 #include <gtest/gtest.h>
-#include <format>
+#include <fmt/core.h>
 #include <iostream>
 #include <thread>
 #include <chrono>
@@ -70,7 +70,7 @@ TEST_F(WriterWrapperUDSWriterTest, MultithreadedWrite)
         // Create several counters per thread with unique names
         for (int i = 0; i < countersPerThread; i++)
         {
-            std::string counterName = std::format("counter.thread{}.{}", threadId, i);
+            std::string counterName = fmt::format("counter.thread{}.{}", threadId, i);
             MeterId meterId(counterName);
             Counter counter(meterId);
 

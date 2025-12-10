@@ -1,7 +1,6 @@
 #include <meter_id.h>
 
 #include <util.h>
-#include <format>
 #include <sstream>
 
 // Define the static member
