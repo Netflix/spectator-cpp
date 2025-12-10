@@ -2,6 +2,8 @@
 
 #include <writer.h>
 
+namespace spectator {
+
 /**
  * WriterTestHelper - A utility class to help with testing Writer functionality
  *
@@ -20,3 +22,5 @@ class WriterTestHelper
     // Get the Writer's implementation for testing purposes
     static BaseWriter* GetImpl() { return Writer::GetInstance().m_impl.get(); }
 };
+
+}  // namespace spectator

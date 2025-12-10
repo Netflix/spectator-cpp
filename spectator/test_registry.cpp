@@ -6,6 +6,8 @@
 
 #include <util.h>
 
+using namespace spectator;
+
 TEST(RegistryTest, Close)
 {
     auto config = Config(WriterConfig(WriterTypes::Memory));

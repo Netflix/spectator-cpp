@@ -3,6 +3,8 @@
 
 #include <gtest/gtest.h>
 
+using namespace spectator;
+
 class AgeGaugeTest : public testing::Test
 {
    protected:

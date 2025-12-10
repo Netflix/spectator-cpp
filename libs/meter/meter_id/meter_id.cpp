@@ -3,6 +3,8 @@
 #include <util.h>
 #include <sstream>
 
+namespace spectator {
+
 // Define the static member
 const std::regex INVALID_CHARS("[^-._A-Za-z0-9~^]");
 
@@ -84,8 +86,10 @@ std::string MeterId::to_string() const
     return ss.str();
 }
 
+}  // namespace spectator
+
 // Implementation of the hash function for MeterId
-size_t std::hash<MeterId>::operator()(const MeterId& id) const
+size_t std::hash<spectator::MeterId>::operator()(const spectator::MeterId& id) const
 {
     // Hash the name first
     const size_t name_hash = std::hash<std::string>{}(id.GetName());

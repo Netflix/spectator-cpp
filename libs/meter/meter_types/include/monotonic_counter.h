@@ -6,6 +6,8 @@
 
 #include <string>
 
+namespace spectator {
+
 static constexpr auto MONOTONIC_COUNTER_TYPE_SYMBOL = "C";
 
 class MonotonicCounter final : public Meter
@@ -19,3 +21,5 @@ class MonotonicCounter final : public Meter
         Writer::GetInstance().Write(line);
     }
 };
+
+}  // namespace spectator

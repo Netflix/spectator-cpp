@@ -3,6 +3,8 @@
 
 #include <gtest/gtest.h>
 
+using namespace spectator;
+
 class PercentileTimerTest : public testing::Test
 {
    protected:

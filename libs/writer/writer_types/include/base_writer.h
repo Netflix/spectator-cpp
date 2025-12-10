@@ -2,6 +2,8 @@
 
 #include <string>
 
+namespace spectator {
+
 class BaseWriter
 {
    public:
@@ -16,3 +18,5 @@ class BaseWriter
     virtual void Write(const std::string& message) = 0;
     virtual void Close() = 0;
 };
+
+}  // namespace spectator

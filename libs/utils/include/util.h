@@ -8,6 +8,8 @@
 
 #include <meter_id.h>
 
+namespace spectator {
+
 struct ProtocolLine
 {
     char symbol;
@@ -53,3 +55,5 @@ struct ProtocolLine
 std::optional<ProtocolLine> ParseProtocolLine(const std::string& line);
 
 bool IsEmptyOrWhitespace(const std::string& str);
+
+}  // namespace spectator

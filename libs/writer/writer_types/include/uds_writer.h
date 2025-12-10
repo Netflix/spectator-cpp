@@ -6,6 +6,8 @@
 #include <boost/asio.hpp>
 #include <memory>
 
+namespace spectator {
+
 class UDSWriter final : public BaseWriter
 {
    public:
@@ -24,3 +26,5 @@ class UDSWriter final : public BaseWriter
     bool CreateSocket();
     bool TryToSend(const std::string& message);
 };
+
+}  // namespace spectator

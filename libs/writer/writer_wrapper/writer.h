@@ -6,6 +6,8 @@
 #include <memory>
 #include <string>
 
+namespace spectator {
+
 class Writer final : public Singleton<Writer>
 {
    public:
@@ -65,3 +67,5 @@ class Writer final : public Singleton<Writer>
     std::condition_variable cv_sender;
     std::atomic<bool> shutdown{false};
 };
+
+}  // namespace spectator

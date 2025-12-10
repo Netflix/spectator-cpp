@@ -2,6 +2,8 @@
 
 #include <logger.h>
 
+namespace spectator {
+
 UDPWriter::UDPWriter(const std::string& host, int port) : 
     m_host(host), 
     m_port(port),
@@ -97,3 +99,5 @@ catch (const boost::system::system_error& ex)
 {
     Logger::error("UDP Writer: Boost exception: {}", ex.what());
 }
+
+}  // namespace spectator

@@ -6,6 +6,8 @@
 
 #include <string>
 
+namespace spectator {
+
 static constexpr auto TIMER_TYPE_SYMBOL = "t";
 
 class Timer final : public Meter
@@ -22,3 +24,5 @@ class Timer final : public Meter
         }
     }
 };
+
+}  // namespace spectator

@@ -6,6 +6,8 @@
 
 #include <string>
 
+namespace spectator {
+
 static constexpr auto PERCENTILE_TIMER_TYPE_SYMBOL = "T";
 
 class PercentileTimer final : public Meter
@@ -22,3 +24,5 @@ class PercentileTimer final : public Meter
         }
     }
 };
+
+}  // namespace spectator

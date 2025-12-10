@@ -11,6 +11,8 @@
 #include <spdlog/async.h>
 #include <fmt/core.h>
 
+namespace spectator {
+
 constexpr const char* kMainLogger = "spectator";
 
 class Logger final : public Singleton<Logger>
@@ -86,3 +88,5 @@ class Logger final : public Singleton<Logger>
         GetLogger()->error(fmt, std::forward<Args>(args)...);
     }
 };
+
+}  // namespace spectator

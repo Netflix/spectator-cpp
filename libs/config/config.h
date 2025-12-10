@@ -5,6 +5,8 @@
 
 #include <writer_config.h>
 
+namespace spectator {
+
 class Config
 {
    public:
@@ -27,3 +29,5 @@ class Config
     std::unordered_map<std::string, std::string> m_extraTags;
     WriterConfig m_writerConfig;
 };
+
+}  // namespace spectator

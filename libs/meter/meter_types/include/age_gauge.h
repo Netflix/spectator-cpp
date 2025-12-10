@@ -6,6 +6,8 @@
 
 #include <string>
 
+namespace spectator {
+
 static constexpr auto AGE_GAUGE_TYPE_SYMBOL = "A";
 
 class AgeGauge final : public Meter
@@ -25,3 +27,5 @@ class AgeGauge final : public Meter
         Writer::GetInstance().Write(line);
     }
 };
+
+}  // namespace spectator

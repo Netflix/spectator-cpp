@@ -2,6 +2,8 @@
 
 #include <logger.h>
 
+namespace spectator {
+
 struct WriterConfigConstants
 {
     static constexpr auto RuntimeErrorMessage = "Invalid writer type: ";
@@ -53,3 +55,5 @@ WriterConfig::WriterConfig(const std::string& type, const unsigned int bufferSiz
     m_bufferSize = bufferSize;
     Logger::info("WriterConfig buffering enabled with size: {}", m_bufferSize);
 }
+
+}  // namespace spectator

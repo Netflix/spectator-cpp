@@ -6,6 +6,8 @@
 #include <chrono>
 #include <algorithm>
 
+using namespace spectator;
+
 // Test fixture for UDS Writer tests
 class UDSWriterTest : public testing::Test
 {

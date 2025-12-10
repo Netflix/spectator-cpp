@@ -6,6 +6,8 @@
 
 #include <string>
 
+namespace spectator {
+
 static constexpr auto DisTRIBUTION_SUMMARY_TYPE_SYMBOL = "d";
 
 class DistributionSummary final : public Meter
@@ -22,3 +24,5 @@ class DistributionSummary final : public Meter
         }
     }
 };
+
+}  // namespace spectator

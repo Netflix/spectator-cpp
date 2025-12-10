@@ -6,6 +6,8 @@
 
 #include <string>
 
+namespace spectator {
+
 static constexpr auto COUNTER_TYPE_SYMBOL = "c";
 
 class Counter final : public Meter
@@ -22,3 +24,5 @@ class Counter final : public Meter
         }
     }
 };
+
+}  // namespace spectator

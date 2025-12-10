@@ -7,6 +7,8 @@
 #include <chrono>
 #include <algorithm>  // For std::find
 
+using namespace spectator;
+
 // Test fixture for UDP Writer tests
 class UDPWriterTest : public testing::Test
 {

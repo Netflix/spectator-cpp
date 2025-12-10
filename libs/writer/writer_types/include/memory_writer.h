@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+namespace spectator {
+
 class MemoryWriter final : public BaseWriter
 {
    public:
@@ -23,3 +25,5 @@ class MemoryWriter final : public BaseWriter
    private:
     std::vector<std::string> m_messages;
 };
+
+}  // namespace spectator

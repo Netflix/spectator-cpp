@@ -10,6 +10,8 @@
 #include <thread>
 #include <vector>
 
+using namespace spectator;
+
 struct RunTimeConfig
 {
     bool bufferingEnabled;

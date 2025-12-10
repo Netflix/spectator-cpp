@@ -2,6 +2,8 @@
 
 #include <logger.h>
 
+namespace spectator {
+
 UDSWriter::UDSWriter(const std::string& socketPath)
     : m_socketPath(socketPath),
       m_ioContext(std::make_unique<boost::asio::io_context>()),
@@ -96,3 +98,5 @@ catch (const boost::system::system_error& ex)
 {
     Logger::error("UDS Writer: Boost exception: {}", ex.what());
 }
+
+}  // namespace spectator

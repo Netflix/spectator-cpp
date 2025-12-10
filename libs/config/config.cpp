@@ -7,6 +7,8 @@
 #include <algorithm>
 #include <cctype>
 
+namespace spectator {
+
 struct ConfigConstants
 {
     static constexpr auto Container = "nf.container";
@@ -69,3 +71,5 @@ Config::Config(const WriterConfig& writerConfig, const std::unordered_map<std::s
         Logger::info("  {}: {}", key, value);
     }
 }
+
+}  // namespace spectator

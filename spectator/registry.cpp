@@ -1,5 +1,7 @@
 #include <registry.h>
 
+namespace spectator {
+
 
 std::pair<std::string, int> ParseUdpAddress(const std::string& address) 
 {
@@ -152,3 +154,5 @@ Timer Registry::CreateTimer(const std::string& name, const std::unordered_map<st
 }
 
 Timer Registry::CreateTimer(const MeterId& meter_id) const { return Timer(meter_id); }
+
+}  // namespace spectator

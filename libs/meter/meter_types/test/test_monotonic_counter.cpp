@@ -3,6 +3,8 @@
 
 #include <gtest/gtest.h>
 
+using namespace spectator;
+
 class MonotonicCounterTest : public testing::Test
 {
    protected:

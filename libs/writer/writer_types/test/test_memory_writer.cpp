@@ -1,6 +1,8 @@
 #include <memory_writer.h>
 #include <gtest/gtest.h>
 
+using namespace spectator;
+
 TEST(MemoryWriterTest, IsEmpty)
 {
     const auto writer = MemoryWriter();

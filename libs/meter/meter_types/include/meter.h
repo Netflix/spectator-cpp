@@ -3,6 +3,8 @@
 #include <meter_id.h>
 #include <string>
 
+namespace spectator {
+
 class Meter
 {
    public:
@@ -41,3 +43,5 @@ class Meter
     MeterId m_id;
     std::string m_meterTypeSymbol;
 };
+
+}  // namespace spectator

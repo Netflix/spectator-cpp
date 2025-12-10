@@ -6,6 +6,8 @@
 #include <cstdlib>
 #include <optional>
 
+using namespace spectator;
+
 // Enhanced helper to temporarily modify an environment variable for testing
 class EnvironmentVariableGuard
 {

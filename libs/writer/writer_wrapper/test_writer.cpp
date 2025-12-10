@@ -12,6 +12,8 @@
 
 #include "../writer_types/test_utils/uds_server/uds_server.h"
 
+using namespace spectator;
+
 // Test fixture for UDS Writer tests
 class WriterWrapperUDSWriterTest : public testing::Test
 {
