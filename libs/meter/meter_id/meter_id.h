@@ -6,6 +6,8 @@
 #include <functional>
 #include <unordered_map>
 
+namespace spectator {
+
 class MeterId
 {
    public:
@@ -31,8 +33,10 @@ class MeterId
     std::string m_spectatord_id;
 };
 
+}  // namespace spectator
+
 template <>
-struct std::hash<MeterId>
+struct std::hash<spectator::MeterId>
 {
-    size_t operator()(const MeterId& id) const;
+    size_t operator()(const spectator::MeterId& id) const;
 };

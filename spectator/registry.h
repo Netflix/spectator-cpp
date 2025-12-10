@@ -13,6 +13,8 @@
 #include <unordered_map>
 #include <type_traits>
 
+namespace spectator {
+
 class Registry
 {
    public:
@@ -80,3 +82,5 @@ class Registry
    private:
     Config m_config;
 };
+
+}  // namespace spectator

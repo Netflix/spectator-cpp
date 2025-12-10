@@ -4,6 +4,8 @@
 #include <config.h>
 #include <optional>
 
+using namespace spectator;
+
 // Enhanced helper to temporarily modify an environment variable for testing
 class EnvironmentVariableGuard
 {

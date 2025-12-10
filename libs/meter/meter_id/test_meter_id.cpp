@@ -2,6 +2,8 @@
 
 #include <gtest/gtest.h>
 
+using namespace spectator;
+
 TEST(MeterIdTest, EqualsSameName)
 {
     const MeterId id1("foo");

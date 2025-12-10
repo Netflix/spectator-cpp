@@ -7,6 +7,8 @@
 #include <cstdint>
 #include <string>
 
+namespace spectator {
+
 static constexpr auto PERCENTILE_DISTRIBUTION_SUMMARY_TYPE_SYMBOL = "D";
 
 class PercentileDistributionSummary final : public Meter
@@ -26,3 +28,5 @@ class PercentileDistributionSummary final : public Meter
         }
     }
 };
+
+}  // namespace spectator

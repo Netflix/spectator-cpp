@@ -6,6 +6,8 @@
 
 #include <string>
 
+namespace spectator {
+
 static constexpr auto MAX_GAUGE_TYPE_SYMBOL = "m";
 
 class MaxGauge final : public Meter
@@ -19,3 +21,5 @@ class MaxGauge final : public Meter
         Writer::GetInstance().Write(line);
     }
 };
+
+}  // namespace spectator

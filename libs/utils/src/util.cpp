@@ -3,6 +3,8 @@
 #include <sstream>
 #include <vector>
 
+namespace spectator {
+
 // Utility: split a string by a delimiter
 std::vector<std::string> split(const std::string& str, const char delimiter)
 {
@@ -60,3 +62,5 @@ bool IsEmptyOrWhitespace(const std::string& str)
 {
     return str.empty() || std::all_of(str.begin(), str.end(), [](unsigned char c) { return std::isspace(c); });
 }
+
+}  // namespace spectator

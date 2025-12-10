@@ -10,6 +10,8 @@
 #include <utility>
 #include <unordered_set>
 
+namespace spectator {
+
 // Enum to specify which writer type to create
 enum class WriterType
 {
@@ -56,3 +58,5 @@ inline std::string WriterTypeToString(WriterType type)
             return "Unknown";
     }
 }
+
+}  // namespace spectator

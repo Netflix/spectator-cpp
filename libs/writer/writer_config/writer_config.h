@@ -5,6 +5,8 @@
 #include <string>
 #include <stdexcept>
 
+namespace spectator {
+
 class WriterConfig
 {
    public:
@@ -20,3 +22,5 @@ class WriterConfig
     std::string m_location;
     unsigned int m_bufferSize = 0;
 };
+
+}  // namespace spectator

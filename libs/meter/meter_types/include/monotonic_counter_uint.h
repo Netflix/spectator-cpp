@@ -6,6 +6,8 @@
 
 #include <string>
 
+namespace spectator {
+
 static constexpr auto MONOTONIC_COUNTER_UINT_TYPE_SYMBOL = "U";
 
 class MonotonicCounterUint final : public Meter
@@ -19,3 +21,5 @@ class MonotonicCounterUint final : public Meter
         Writer::GetInstance().Write(line);
     }
 };
+
+}  // namespace spectator

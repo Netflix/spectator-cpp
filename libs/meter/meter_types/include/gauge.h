@@ -7,6 +7,8 @@
 #include <string>
 #include <optional>
 
+namespace spectator {
+
 static constexpr auto GAUGE_TYPE_SYMBOL = "g";
 
 class Gauge final : public Meter
@@ -25,3 +27,5 @@ class Gauge final : public Meter
         Writer::GetInstance().Write(line);
     }
 };
+
+}  // namespace spectator

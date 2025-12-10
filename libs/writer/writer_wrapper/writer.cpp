@@ -4,6 +4,8 @@
 #include <logger.h>
 #include <stdexcept>
 
+namespace spectator {
+
 static constexpr auto NEW_LINE = '\n';
 
 Writer::~Writer()
@@ -160,3 +162,5 @@ void Writer::Close()
         Logger::error("Failed to close writer: {}", e.what());
     }
 }
+
+}  // namespace spectator

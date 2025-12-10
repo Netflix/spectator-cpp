@@ -2,6 +2,8 @@
 
 #include <logger.h>
 
+namespace spectator {
+
 void MemoryWriter::Write(const std::string& message)
 {
     this->m_messages.push_back(message);
@@ -28,3 +30,5 @@ const std::string& MemoryWriter::LastLine() const noexcept
 
     return this->m_messages.back();
 }
+
+}  // namespace spectator

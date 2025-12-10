@@ -3,6 +3,8 @@
 
 #include <gtest/gtest.h>
 
+using namespace spectator;
+
 class DistSummaryTest : public testing::Test
 {
    protected:

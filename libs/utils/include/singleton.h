@@ -1,6 +1,8 @@
 #pragma once
 // Templated Singleton for derived singleton classes
 
+namespace spectator {
+
 template <typename T>
 class Singleton
 {
@@ -21,3 +23,5 @@ class Singleton
         return instance;
     }
 };
+
+}  // namespace spectator
