@@ -89,7 +89,7 @@ void Writer::ThreadSend()
         {
             std::unique_lock<std::mutex> lock(instance.writeMutex);
             instance.cv_sender.wait(
-                lock, [&instance] { return instance.buffer.size() > instance.bufferSize || instance.shutdown.load(); });
+                lock, [&instance] { return instance.buffer.size() >= instance.bufferSize || instance.shutdown.load(); });
             if (instance.shutdown.load() == true)
             {
                 return;
@@ -119,7 +119,7 @@ void Writer::BufferedWrite(const std::string& message)
         instance.buffer.append(message);
         instance.buffer.push_back(NEW_LINE);
     }
-    instance.buffer.size() > instance.bufferSize ? instance.cv_sender.notify_one() : instance.cv_receiver.notify_one();
+    instance.buffer.size() >= instance.bufferSize ? instance.cv_sender.notify_one() : instance.cv_receiver.notify_one();
 }
 
 void Writer::NonBufferedWrite(const std::string& message)
