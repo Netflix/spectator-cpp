@@ -14,9 +14,10 @@ class WriterTestHelper
 {
    public:
     // Initialize the Writer for testing purposes
-    static void InitializeWriter(WriterType type, const std::string& param = "", int port = 0, unsigned int bufferSize = 0)
+    static void InitializeWriter(WriterType type, const std::string& param = "", int port = 0, unsigned int bufferSize = 0,
+                                 WriteModeType modeType = WriteModeType::Auto)
     {
-        Writer::Initialize(type, param, port, bufferSize);
+        Writer::Initialize(type, param, port, bufferSize, modeType);
     }
 
     // Get the Writer's implementation for testing purposes

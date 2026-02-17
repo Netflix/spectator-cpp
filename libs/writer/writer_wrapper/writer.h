@@ -2,6 +2,7 @@
 
 #include <singleton.h>
 #include <writer_types.h>
+#include <write_mode.h>
 
 #include <memory>
 #include <string>
@@ -31,17 +32,10 @@ class Writer final : public Singleton<Writer>
     // Private constructor - enforces singleton pattern
     Writer() = default;
 
-    static void Initialize(WriterType type, const std::string& param = "", int port = 0, unsigned int bufferSize = 0);
+    static void Initialize(WriterType type, const std::string& param = "", int port = 0, unsigned int bufferSize = 0,
+                           WriteModeType modeType = WriteModeType::Auto);
 
     static void Write(const std::string& message);
-
-    void BufferedWrite(const std::string& message);
-
-    void NonBufferedWrite(const std::string& message);
-
-    void ThreadSend();
-
-    void TryToSend(const std::string& message);
 
     void Close();
 
@@ -51,21 +45,9 @@ class Writer final : public Singleton<Writer>
 
     std::unique_ptr<BaseWriter> m_impl;
     WriterType m_currentType = WriterType::Memory;  // Default type
-    bool bufferingEnabled = false;
-    unsigned int bufferSize = 0;
-    std::string buffer{};
-    
-    // Function pointer for write strategy - member function pointer
-    using WriteFunction = void (Writer::*)(const std::string&);
-    WriteFunction writeImpl = &Writer::NonBufferedWrite;  // Default to non-buffered
 
-
-    // multithreading writes
-    std::mutex writeMutex;
-    std::thread sendingThread;
-    std::condition_variable cv_receiver;
-    std::condition_variable cv_sender;
-    std::atomic<bool> shutdown{false};
+    // m_writeMode must be declared after m_impl so it is destroyed first
+    std::unique_ptr<WriteMode> m_writeMode;
 };
 
 }  // namespace spectator

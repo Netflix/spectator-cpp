@@ -10,6 +10,9 @@ add_library(spectator-registry
     ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_types/src/udp_writer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_types/src/uds_writer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_wrapper/writer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_wrapper/writer_modes/buffered_write/buffered_write_mode.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_wrapper/writer_modes/non_buffered_write/non_buffered_write_mode.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_wrapper/writer_modes/lock_free_buffered_write/lock_free_buffered_write_mode.cpp
 )
 
 target_include_directories(spectator-registry
@@ -22,6 +25,10 @@ target_include_directories(spectator-registry
     ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_config
     ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_types/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_wrapper
+    ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_wrapper/writer_modes
+    ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_wrapper/writer_modes/buffered_write
+    ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_wrapper/writer_modes/non_buffered_write
+    ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_wrapper/writer_modes/lock_free_buffered_write
     ${CMAKE_CURRENT_SOURCE_DIR}/../libs/logger
 )
 

@@ -1,4 +1,5 @@
 #include <registry.h>
+#include <write_mode.h>
 #include <chrono>
 #include <iostream>
 #include <iomanip>
@@ -14,18 +15,47 @@ using namespace spectator;
 
 struct RunTimeConfig
 {
-    bool bufferingEnabled;
+    WriteModeType modeType;
     std::string writerType;
     std::string writerTypeName;
     std::string counterName;
     std::string locationTag;
+    std::string modeName;
+    unsigned int numThreads = 4;
+};
+
+struct PerfResults
+{
+    unsigned long long iterations;
+    double elapsedSeconds;
+    unsigned int numThreads;
+    std::string modeName;
 };
 
 void PrintUsage()
 {
-    std::cerr << "Usage: performance_test [writer_type] [buffering]" << std::endl;
+    std::cerr << "Usage: performance_test [writer_type] [write_mode]" << std::endl;
     std::cerr << "  writer_type: udp or uds" << std::endl;
-    std::cerr << "  buffering: 0 for disabled, 1 for enabled (default is 0)" << std::endl;
+    std::cerr << "  write_mode: 0 for non-buffered, 1 for buffered, 2 for lock-free (default is 0)" << std::endl;
+}
+
+std::optional<WriteModeType> ParseWriteMode(const std::string& arg)
+{
+    if (arg == "0") return WriteModeType::NonBuffered;
+    if (arg == "1") return WriteModeType::Buffered;
+    if (arg == "2") return WriteModeType::LockFreeBuffered;
+    return std::nullopt;
+}
+
+std::string WriteModeToString(WriteModeType mode)
+{
+    switch (mode)
+    {
+        case WriteModeType::NonBuffered: return "NonBuffered";
+        case WriteModeType::Buffered: return "Buffered";
+        case WriteModeType::LockFreeBuffered: return "LockFreeBuffered";
+        default: return "Auto";
+    }
 }
 
 std::optional<RunTimeConfig> HandleArgs(int argc, char* argv[])
@@ -35,18 +65,18 @@ std::optional<RunTimeConfig> HandleArgs(int argc, char* argv[])
         return std::nullopt;
     }
 
-    bool bufferingEnabled = false;
+    WriteModeType modeType = WriteModeType::NonBuffered;
     if (argc == 3)
     {
-        std::string bufferingArg = argv[2];
-        if (bufferingArg != "0" && bufferingArg != "1")
+        auto parsed = ParseWriteMode(argv[2]);
+        if (!parsed)
         {
-            std::cerr << "Invalid buffering argument: " << bufferingArg << std::endl;
+            std::cerr << "Invalid write mode argument: " << argv[2] << std::endl;
             return std::nullopt;
         }
-        bufferingEnabled = (bufferingArg == "1");
+        modeType = *parsed;
     }
-    
+
     std::string writerArg = argv[1];
     if (writerArg != "udp" && writerArg != "uds")
     {
@@ -55,29 +85,105 @@ std::optional<RunTimeConfig> HandleArgs(int argc, char* argv[])
     }
 
     RunTimeConfig config;
-    if (writerArg == "udp") 
+    config.modeType = modeType;
+    config.modeName = WriteModeToString(modeType);
+
+    if (writerArg == "udp")
     {
         config.writerType = WriterTypes::UDP;
         config.counterName = "udp_test_counter";
         config.locationTag = "udp";
         config.writerTypeName = "UDP";
-    } 
-    else 
+    }
+    else
     {
         config.writerType = WriterTypes::Unix;
         config.counterName = "unix_test_counter";
         config.locationTag = "unix";
         config.writerTypeName = "UDS";
     }
-    config.bufferingEnabled = bufferingEnabled;
 
     return config;
+}
+
+Registry CreateRegistry(const RunTimeConfig& config)
+{
+    WriterConfig writerConfig(config.writerType);
+    if (config.modeType != WriteModeType::NonBuffered)
+    {
+        writerConfig = WriterConfig(config.writerType, 4096, config.modeType);
+    }
+    return Registry(Config(writerConfig));
+}
+
+PerfResults RunBenchmark(Registry& registry, const RunTimeConfig& config)
+{
+    constexpr int maxDurationSeconds = 2 * 60;
+    std::unordered_map<std::string, std::string> tags = {
+        {"location", config.locationTag},
+        {"version", "correct-horse-battery-staple"}
+    };
+
+    std::atomic<unsigned long long> iterations{0};
+    std::atomic<bool> shouldStop{false};
+    auto startTime = std::chrono::steady_clock::now();
+
+    auto threadFunc = [&registry, &config, &tags, &iterations, &shouldStop]()
+    {
+        while (!shouldStop.load())
+        {
+            registry.CreateCounter(config.counterName, tags).Increment();
+            iterations.fetch_add(1, std::memory_order_relaxed);
+        }
+    };
+
+    std::vector<std::thread> threads;
+    for (unsigned int i = 0; i < config.numThreads; ++i)
+    {
+        threads.emplace_back(threadFunc);
+    }
+
+    // Wait until max duration
+    while (true)
+    {
+        std::this_thread::sleep_for(std::chrono::seconds(6));
+        auto elapsed = std::chrono::duration<double>(std::chrono::steady_clock::now() - startTime).count();
+        if (elapsed > maxDurationSeconds)
+        {
+            shouldStop = true;
+            break;
+        }
+    }
+
+    for (auto& t : threads)
+    {
+        if (t.joinable())
+        {
+            t.join();
+        }
+    }
+
+    auto totalElapsed = std::chrono::duration<double>(std::chrono::steady_clock::now() - startTime).count();
+    return {iterations.load(), totalElapsed, config.numThreads, config.modeName};
+}
+
+void PrintResults(const PerfResults& results)
+{
+    double ratePerSecond = static_cast<double>(results.iterations) / results.elapsedSeconds;
+
+    std::cout << "\nPerformance Test Summary:" << std::endl;
+    std::cout << "Threads used: " << results.numThreads << std::endl;
+    std::cout << "Write Mode: " << results.modeName << std::endl;
+    std::cout << "Iterations completed: " << results.iterations << std::endl;
+    std::cout << "Total elapsed time: " << std::fixed << std::setprecision(2) << results.elapsedSeconds << " seconds" << std::endl;
+    std::cout << "Rate: " << std::fixed << std::setprecision(2) << ratePerSecond << " iterations/second" << std::endl;
+    std::cout << "Rate per thread: " << std::fixed << std::setprecision(2) << ratePerSecond / results.numThreads << " iterations/second/thread" << std::endl;
 }
 
 int main(int argc, char* argv[])
 {
     auto config = HandleArgs(argc, argv);
-    if (config == std::nullopt)
+    if (!config)
     {
         PrintUsage();
         return 1;
@@ -85,84 +191,12 @@ int main(int argc, char* argv[])
 
     std::cout << "Running performance test with the following configuration:" << std::endl;
     std::cout << "Writer Type: " << config->writerTypeName << std::endl;
-    std::cout << "Buffering Enabled: " << (config->bufferingEnabled ? "Yes" : "No") << std::endl;
-    
-    // Configure the registry with or without buffering based on the command line argument
-    auto writerConfig = WriterConfig(config->writerType);
-    if (config->bufferingEnabled)
-    {
-        writerConfig = WriterConfig(config->writerType, 4096);
-    }
-    auto r = Registry(Config(writerConfig));
-    std::unordered_map<std::string, std::string> tags = { 
-        {"location", config->locationTag}, 
-        {"version", "correct-horse-battery-staple"}
-    };
+    std::cout << "Write Mode: " << config->modeName << std::endl;
+    std::cout << "Threads: " << config->numThreads << std::endl;
 
-    // Set maximum duration to 2 minutes
-    constexpr int max_duration_seconds = 2 * 60;
-    
-    // Track iterations and timing with atomic counter for thread safety
-    std::atomic<unsigned long long> iterations{0};
-    auto start_time = std::chrono::steady_clock::now();
-    double total_elapsed{};
-    
-    unsigned int num_threads = 4;
-    num_threads = std::max(1u, std::min(16u, num_threads));
-    
-    std::cout << "Running performance test with " << num_threads << " threads..." << std::endl;
-    
-    // Flag to signal threads to stop
-    std::atomic<bool> should_stop{false};
-    
-    // Thread function
-    auto thread_func = [&r, &config, &tags, &iterations, &should_stop]()
-    {
-        while (should_stop == false)
-        {
-            r.CreateCounter(config->counterName, tags).Increment();
-            iterations.fetch_add(1, std::memory_order_relaxed);
-        }
-    };
-    
-    // Create and start threads
-    std::vector<std::thread> threads;
-    for (unsigned int i = 0; i < num_threads; ++i)
-    {
-        threads.emplace_back(thread_func);
-    }
-    
-    // Monitor progress
-    while (true) 
-    {
-        std::this_thread::sleep_for(std::chrono::seconds(6));
-        auto now = std::chrono::steady_clock::now();
-        auto elapsed = std::chrono::duration<double>(now - start_time).count();
-        
-        if (elapsed > max_duration_seconds)
-        {
-            total_elapsed = elapsed;
-            should_stop = true;
-            break;
-        }
-    }
-    
-    // Wait for all threads to finish
-    for (auto& t : threads)
-    {
-        if (t.joinable()) 
-        {
-            t.join();
-        }
-    }
-    
-    double rate_per_second = static_cast<double>(iterations) / total_elapsed;
-    
-    std::cout << "\nPerformance Test Summary:" << std::endl;
-    std::cout << "Threads used: " << num_threads << std::endl;
-    std::cout << "Iterations completed: " << iterations << std::endl;
-    std::cout << "Total elapsed time: " << std::fixed << std::setprecision(2) << total_elapsed << " seconds" << std::endl;
-    std::cout << "Rate: " << std::fixed << std::setprecision(2) << rate_per_second << " iterations/second" << std::endl;
-    std::cout << "Rate per thread: " << std::fixed << std::setprecision(2) << rate_per_second / num_threads << " iterations/second/thread" << std::endl;
+    auto registry = CreateRegistry(*config);
+    auto results = RunBenchmark(registry, *config);
+    PrintResults(results);
+
     return 0;
 }
