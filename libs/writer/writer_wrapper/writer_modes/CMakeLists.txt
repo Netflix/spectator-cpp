@@ -17,3 +17,17 @@ target_link_libraries(spectator-writer-modes
     spectator-logger
     spectator-writer-types
 )
+
+add_executable(test_thread_local_buffered_write_mode
+    thread_local_buffered_write/test_thread_local_buffered_write_mode.cpp
+)
+
+target_link_libraries(test_thread_local_buffered_write_mode
+    PRIVATE
+    spectator-writer-modes
+    spectator-writer-types
+    GTest::gtest
+    GTest::gtest_main
+)
+
+add_test(NAME thread_local_buffered_write_mode_test COMMAND test_thread_local_buffered_write_mode)
