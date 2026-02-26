@@ -142,17 +142,18 @@ PerfResults RunBenchmark(Registry& registry, const RunTimeConfig& config)
     };
 
     std::atomic<unsigned long long> iterations{0};
+    std::atomic<bool> shouldStop{false};
 
-    auto threadFunc = [&registry, &config, &tags, &iterations](std::stop_token stop)
+    auto threadFunc = [&registry, &config, &tags, &iterations, &shouldStop]()
     {
-        while (!stop.stop_requested())
+        while (!shouldStop.load())
         {
             registry.CreateCounter(config.counterName, tags).Increment();
             iterations.fetch_add(1, std::memory_order_relaxed);
         }
     };
 
-    std::vector<std::jthread> threads;
+    std::vector<std::thread> threads;
     for (unsigned int i = 0; i < config.numThreads; ++i)
     {
         threads.emplace_back(threadFunc);
@@ -160,7 +161,12 @@ PerfResults RunBenchmark(Registry& registry, const RunTimeConfig& config)
 
     auto startTime = std::chrono::steady_clock::now();
     std::this_thread::sleep_for(std::chrono::seconds(benchmarkSeconds));
-    threads.clear();  // requests stop and joins all threads
+    shouldStop.store(true);
+
+    for (auto& t : threads)
+    {
+        t.join();
+    }
 
     auto totalElapsed = std::chrono::duration<double>(std::chrono::steady_clock::now() - startTime).count();
     return {iterations.load(), totalElapsed, config.numThreads, config.modeName};
@@ -181,7 +187,7 @@ void PrintResults(const PerfResults& results)
 
 int main(int argc, char* argv[])
 {
-    Logger::GetLogger()->set_level(spdlog::level::critical);
+    //Logger::GetLogger()->set_level(spdlog::level::critical);
 
     auto config = HandleArgs(argc, argv);
     if (!config)
