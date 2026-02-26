@@ -1,3 +1,6 @@
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
+
 cc_library(
     name = "spectator",
     srcs = [
@@ -18,11 +21,11 @@ cc_library(
     ],
     visibility = ["//visibility:public"],
     deps = [
+        "@abseil-cpp//absl/container:flat_hash_map",
+        "@abseil-cpp//absl/strings",
         "@asio",
-        "@com_github_fmtlib_fmt//:fmtlib",
-        "@com_github_gabime_spdlog//:spdlog",
-        "@com_google_absl//absl/container:flat_hash_map",
-        "@com_google_absl//absl/strings",
+        "@fmt//:fmt",
+        "@spdlog//:spdlog",
     ],
 )
 
