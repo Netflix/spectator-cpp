@@ -2,7 +2,6 @@
 
 #include <buffered_write_mode.h>
 #include <non_buffered_write_mode.h>
-#include <lock_free_buffered_write_mode.h>
 #include <thread_local_buffered_write_mode.h>
 #include <writer_types.h>
 #include <logger.h>
@@ -60,9 +59,6 @@ void Writer::Initialize(WriterType type, const std::string& param, int port, uns
                 break;
             case WriteModeType::Buffered:
                 instance.m_writeMode = std::make_unique<BufferedWriteMode>(*instance.m_impl, bufferSize);
-                break;
-            case WriteModeType::LockFreeBuffered:
-                instance.m_writeMode = std::make_unique<LockFreeBufferedWriteMode>(*instance.m_impl, 8192, bufferSize);
                 break;
             case WriteModeType::ThreadLocalBuffered:
                 instance.m_writeMode = std::make_unique<ThreadLocalBufferedWriteMode>(*instance.m_impl, bufferSize);

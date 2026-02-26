@@ -37,7 +37,7 @@ void PrintUsage()
 {
     std::cerr << "Usage: performance_test [writer_type] [write_mode] [num_threads]" << std::endl;
     std::cerr << "  writer_type: udp or uds" << std::endl;
-    std::cerr << "  write_mode: 0 for non-buffered, 1 for buffered, 2 for lock-free, 3 for thread-local (default is 0)" << std::endl;
+    std::cerr << "  write_mode: 0 for non-buffered, 1 for buffered, 2 for thread-local (default is 0)" << std::endl;
     std::cerr << "  num_threads: number of producer threads (default is 1)" << std::endl;
 }
 
@@ -45,8 +45,7 @@ std::optional<WriteModeType> ParseWriteMode(const std::string& arg)
 {
     if (arg == "0") return WriteModeType::NonBuffered;
     if (arg == "1") return WriteModeType::Buffered;
-    if (arg == "2") return WriteModeType::LockFreeBuffered;
-    if (arg == "3") return WriteModeType::ThreadLocalBuffered;
+    if (arg == "2") return WriteModeType::ThreadLocalBuffered;
     return std::nullopt;
 }
 
@@ -56,7 +55,6 @@ std::string WriteModeToString(WriteModeType mode)
     {
         case WriteModeType::NonBuffered: return "NonBuffered";
         case WriteModeType::Buffered: return "Buffered";
-        case WriteModeType::LockFreeBuffered: return "LockFreeBuffered";
         case WriteModeType::ThreadLocalBuffered: return "ThreadLocalBuffered";
         default: return "Auto";
     }
