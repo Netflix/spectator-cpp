@@ -12,8 +12,7 @@ class WriterConfig
 {
    public:
     explicit WriterConfig(const std::string& type);
-    WriterConfig(const std::string& type, unsigned int bufferSize,
-                 WriteModeType modeType = WriteModeType::Auto);
+    WriterConfig(const std::string& type, unsigned int bufferSize, WriteModeType modeType);
 
     [[nodiscard]] const WriterType& GetType() const noexcept { return m_type; }
     [[nodiscard]] unsigned int GetBufferSize() const noexcept { return m_bufferSize; }
@@ -24,7 +23,7 @@ class WriterConfig
     WriterType m_type;
     std::string m_location;
     unsigned int m_bufferSize = 0;
-    WriteModeType m_modeType = WriteModeType::Auto;
+    WriteModeType m_modeType = WriteModeType::NonBuffered;
 };
 
 }  // namespace spectator

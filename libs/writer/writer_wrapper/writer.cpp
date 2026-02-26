@@ -46,12 +46,6 @@ void Writer::Initialize(WriterType type, const std::string& param, int port, uns
 
         instance.m_currentType = type;
 
-        // Auto: preserve original behavior based on bufferSize
-        if (modeType == WriteModeType::Auto)
-        {
-            modeType = bufferSize > 0 ? WriteModeType::Buffered : WriteModeType::NonBuffered;
-        }
-
         switch (modeType)
         {
             case WriteModeType::NonBuffered:

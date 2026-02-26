@@ -6,7 +6,6 @@ namespace spectator {
 
 enum class WriteModeType
 {
-    Auto,              // bufferSize > 0 → Buffered, else NonBuffered
     NonBuffered,
     Buffered,
     ThreadLocalBuffered

@@ -92,12 +92,45 @@ TEST_F(WriterConfigTest, URLBasedWriterTypes)
     }
 }
 
-TEST_F(WriterConfigTest, BufferingConstructor)
+TEST_F(WriterConfigTest, BufferedMode)
 {
-    
-    const WriterConfig config(WriterTypes::UDP, 2048);
+    const WriterConfig config(WriterTypes::UDP, 2048, WriteModeType::Buffered);
     EXPECT_EQ(config.GetType(), WriterType::UDP);
     EXPECT_EQ(config.GetBufferSize(), 2048);
+    EXPECT_EQ(config.GetModeType(), WriteModeType::Buffered);
+}
+
+TEST_F(WriterConfigTest, ThreadLocalBufferedMode)
+{
+    const WriterConfig config(WriterTypes::Unix, 4096, WriteModeType::ThreadLocalBuffered);
+    EXPECT_EQ(config.GetType(), WriterType::Unix);
+    EXPECT_EQ(config.GetBufferSize(), 4096);
+    EXPECT_EQ(config.GetModeType(), WriteModeType::ThreadLocalBuffered);
+}
+
+TEST_F(WriterConfigTest, NonBufferedMode)
+{
+    const WriterConfig config(WriterTypes::UDP);
+    EXPECT_EQ(config.GetModeType(), WriteModeType::NonBuffered);
+    EXPECT_EQ(config.GetBufferSize(), 0);
+}
+
+TEST_F(WriterConfigTest, InvalidModeBufferSizeCombinations)
+{
+    // bufferSize > 0 with NonBuffered is invalid
+    EXPECT_THROW(
+        { WriterConfig config(WriterTypes::UDP, 4096, WriteModeType::NonBuffered); },
+        std::invalid_argument);
+
+    // bufferSize == 0 with Buffered is invalid
+    EXPECT_THROW(
+        { WriterConfig config(WriterTypes::UDP, 0, WriteModeType::Buffered); },
+        std::invalid_argument);
+
+    // bufferSize == 0 with ThreadLocalBuffered is invalid
+    EXPECT_THROW(
+        { WriterConfig config(WriterTypes::UDP, 0, WriteModeType::ThreadLocalBuffered); },
+        std::invalid_argument);
 }
 
 TEST_F(WriterConfigTest, InvalidWriterType)

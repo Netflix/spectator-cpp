@@ -59,7 +59,7 @@ TEST_F(WriterWrapperUDSWriterTest, MultithreadedWrite)
 
     // Create a UDS writer with a small buffer size
     const std::string unixUrl = "/tmp/test_uds_socket";
-    WriterTestHelper::InitializeWriter(WriterType::Unix, unixUrl, 0, 30);
+    WriterTestHelper::InitializeWriter(WriterType::Unix, unixUrl, 0, 30, WriteModeType::Buffered);
 
     // Number of threads and counters to create
     constexpr auto numThreads = 4;
@@ -127,31 +127,24 @@ TEST_F(WriterWrapperUDSWriterTest, MultithreadedWrite)
     EXPECT_EQ(actualIncrements, expectedIncrements);
 }
 
-// This is a unique test that attempts to create messages of exactly 10 bytes in size
-// and writes to a buffer of size 10 bytes from multiple threads. The NDrive team discovered
-// a deadlock scenario in this specific case where the buffer size matched the message size
-// and multiple threads were writing simultaneously. This test is designed to reproduce
-// that scenario to ensure it has been resolved. Due to singleton issues this test is currently
-// commented out.
-/*
+// Regression test: verifies no deadlock when the buffer size matches the message size
+// and multiple threads write simultaneously. Each counter message is exactly 21 bytes
+// (e.g. "c:ctr000000:1.000000\n"), matching the buffer size of 21.
 TEST_F(WriterWrapperUDSWriterTest, TenThreadsBufferSize10Messages)
 {
     Logger::info("Starting 10 threads with buffer size 10 test...");
 
-    // Create a UDS writer with buffer size of 10
     const std::string unixUrl = "/tmp/test_uds_socket";
-    WriterTestHelper::InitializeWriter(WriterType::Unix, unixUrl, 0, 21);
+    WriterTestHelper::InitializeWriter(WriterType::Unix, unixUrl, 0, 21, WriteModeType::Buffered);
 
     // Number of threads and counters to create
     constexpr auto numThreads = 10;
     constexpr auto countersPerThread = 1;
     constexpr auto incrementsPerCounter = 10;
 
-    // Function for worker threads - creates counter names of size 10
     auto worker = [&](int threadId)
     {
-        // Create counters with names that result in messages of size 10
-        // Format: "ctr<6-digit-padded-id>" to ensure consistent message size
+        // Format: "ctr<6-digit-padded-id>" produces messages of exactly 21 bytes including newline
         for (int i = 0; i < countersPerThread; i++)
         {
             std::string counterName = fmt::format("ctr{:06d}", threadId * countersPerThread + i);
@@ -191,4 +184,3 @@ TEST_F(WriterWrapperUDSWriterTest, TenThreadsBufferSize10Messages)
         EXPECT_EQ(msg.size(), 21);
     }
 }
-*/

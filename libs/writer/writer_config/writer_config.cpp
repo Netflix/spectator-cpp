@@ -52,6 +52,14 @@ WriterConfig::WriterConfig(const std::string& type)
 WriterConfig::WriterConfig(const std::string& type, const unsigned int bufferSize, const WriteModeType modeType)
     : WriterConfig(type)  // Constructor delegation
 {
+    if (bufferSize == 0 && modeType != WriteModeType::NonBuffered)
+    {
+        throw std::invalid_argument("bufferSize must be > 0 when using a buffered write mode");
+    }
+    if (bufferSize > 0 && modeType == WriteModeType::NonBuffered)
+    {
+        throw std::invalid_argument("bufferSize must be 0 when using NonBuffered write mode");
+    }
     m_bufferSize = bufferSize;
     m_modeType = modeType;
     Logger::info("WriterConfig buffering enabled with size: {}", m_bufferSize);
