@@ -13,7 +13,8 @@ class UDSWriter final : public BaseWriter
    public:
     UDSWriter(const std::string& socketPath);
     ~UDSWriter() override;
-    void Write(const std::string& message) override;
+    WriterType GetType() const override { return WriterType::Unix; }
+    void Send(const std::string& message) override;
     void Close() override;
 
    private:

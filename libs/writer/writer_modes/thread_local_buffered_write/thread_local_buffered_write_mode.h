@@ -1,7 +1,6 @@
 #pragma once
 
 #include <write_mode.h>
-#include <base_writer.h>
 
 #include <atomic>
 #include <chrono>
@@ -14,10 +13,11 @@ namespace spectator {
 class ThreadLocalBufferedWriteMode final : public WriteMode
 {
    public:
-    ThreadLocalBufferedWriteMode(BaseWriter& writer, size_t bufferSize,
+    ThreadLocalBufferedWriteMode(std::unique_ptr<BaseWriter> writer, size_t bufferSize,
                                   std::chrono::seconds flushInterval = std::chrono::seconds(10));
     ~ThreadLocalBufferedWriteMode() override;
 
+    WriteModeType GetType() const override { return WriteModeType::ThreadLocalBuffered; }
     void Write(const std::string& message) override;
 
    private:
@@ -40,7 +40,6 @@ class ThreadLocalBufferedWriteMode final : public WriteMode
     void FlushBuffer(ThreadBuffer& tb);
     void FlushThread();
 
-    BaseWriter& m_writer;
     size_t m_bufferSize;
     std::chrono::seconds m_flushInterval;
 

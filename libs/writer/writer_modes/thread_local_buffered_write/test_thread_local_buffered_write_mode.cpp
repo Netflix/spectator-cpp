@@ -33,21 +33,23 @@ static int CountLines(const MemoryWriter& writer)
 // Buffer = 20 bytes; message "aaaaaaaaaaaaaaaaaaa" (19 chars) + '\n' = 20 bytes >= 20.
 TEST(ThreadLocalBufferedWriteModeTest, SizeBasedFlushTriggered)
 {
-    MemoryWriter writer;
-    ThreadLocalBufferedWriteMode mode(writer, 20, std::chrono::seconds(100));
+    auto writerOwned = std::make_unique<MemoryWriter>();
+    MemoryWriter* writer = writerOwned.get();
+    ThreadLocalBufferedWriteMode mode(std::move(writerOwned), 20, std::chrono::seconds(100));
 
     const std::string msg(19, 'a');
     std::thread t([&]() { mode.Write(msg); });
     t.join();
 
-    EXPECT_FALSE(writer.IsEmpty());
+    EXPECT_FALSE(writer->IsEmpty());
 }
 
 // A message well below the buffer threshold should remain buffered until the thread exits.
 TEST(ThreadLocalBufferedWriteModeTest, SmallWriteNotFlushedBeforeThreadExit)
 {
-    MemoryWriter writer;
-    ThreadLocalBufferedWriteMode mode(writer, 1000, std::chrono::seconds(100));
+    auto writerOwned = std::make_unique<MemoryWriter>();
+    MemoryWriter* writer = writerOwned.get();
+    ThreadLocalBufferedWriteMode mode(std::move(writerOwned), 1000, std::chrono::seconds(100));
 
     std::atomic<bool> writeComplete{false};
     std::atomic<bool> canExit{false};
@@ -60,33 +62,35 @@ TEST(ThreadLocalBufferedWriteModeTest, SmallWriteNotFlushedBeforeThreadExit)
     });
 
     while (!writeComplete.load()) {}
-    EXPECT_TRUE(writer.IsEmpty());  // still in thread-local buffer
+    EXPECT_TRUE(writer->IsEmpty());  // still in thread-local buffer
 
     canExit.store(true);
     t.join();
-    EXPECT_FALSE(writer.IsEmpty());  // flushed by ThreadLocalData destructor on thread exit
+    EXPECT_FALSE(writer->IsEmpty());  // flushed by ThreadLocalData destructor on thread exit
 }
 
 // Thread exit should flush any remaining data in the thread-local buffer.
 TEST(ThreadLocalBufferedWriteModeTest, ThreadExitFlushesRemainingData)
 {
-    MemoryWriter writer;
-    ThreadLocalBufferedWriteMode mode(writer, 1000, std::chrono::seconds(100));
+    auto writerOwned = std::make_unique<MemoryWriter>();
+    MemoryWriter* writer = writerOwned.get();
+    ThreadLocalBufferedWriteMode mode(std::move(writerOwned), 1000, std::chrono::seconds(100));
 
     std::thread t([&]() { mode.Write("flushed_on_exit"); });
     t.join();
 
-    ASSERT_EQ(writer.GetMessages().size(), 1u);
-    EXPECT_NE(writer.GetMessages()[0].find("flushed_on_exit"), std::string::npos);
+    ASSERT_EQ(writer->GetMessages().size(), 1u);
+    EXPECT_NE(writer->GetMessages()[0].find("flushed_on_exit"), std::string::npos);
 }
 
 // Data written below the size threshold should be delivered by the background flush
 // thread once the flush interval has elapsed.
 TEST(ThreadLocalBufferedWriteModeTest, TimedFlushDeliversStaleData)
 {
-    MemoryWriter writer;
+    auto writerOwned = std::make_unique<MemoryWriter>();
+    MemoryWriter* writer = writerOwned.get();
     // flushInterval = 1s; flush thread wakes every 1s, so worst-case delivery is ~2s
-    ThreadLocalBufferedWriteMode mode(writer, 1000, std::chrono::seconds(1));
+    ThreadLocalBufferedWriteMode mode(std::move(writerOwned), 1000, std::chrono::seconds(1));
 
     std::atomic<bool> writeComplete{false};
     std::atomic<bool> canExit{false};
@@ -99,10 +103,10 @@ TEST(ThreadLocalBufferedWriteModeTest, TimedFlushDeliversStaleData)
     });
 
     while (!writeComplete.load()) {}
-    EXPECT_TRUE(writer.IsEmpty());  // not yet flushed
+    EXPECT_TRUE(writer->IsEmpty());  // not yet flushed
 
     std::this_thread::sleep_for(std::chrono::seconds(3));
-    EXPECT_FALSE(writer.IsEmpty());  // flushed by background flush thread
+    EXPECT_FALSE(writer->IsEmpty());  // flushed by background flush thread
 
     canExit.store(true);
     t.join();
@@ -113,8 +117,9 @@ TEST(ThreadLocalBufferedWriteModeTest, TimedFlushDeliversStaleData)
 // total lines == numThreads * writesPerThread.
 TEST(ThreadLocalBufferedWriteModeTest, MultipleThreadsGetIndependentBuffers)
 {
-    MemoryWriter writer;
-    ThreadLocalBufferedWriteMode mode(writer, 1000, std::chrono::seconds(100));
+    auto writerOwned = std::make_unique<MemoryWriter>();
+    MemoryWriter* writer = writerOwned.get();
+    ThreadLocalBufferedWriteMode mode(std::move(writerOwned), 1000, std::chrono::seconds(100));
 
     constexpr int numThreads = 4;
     constexpr int writesPerThread = 3;
@@ -132,15 +137,16 @@ TEST(ThreadLocalBufferedWriteModeTest, MultipleThreadsGetIndependentBuffers)
     }
     for (auto& t : threads) { t.join(); }
 
-    EXPECT_EQ(static_cast<int>(writer.GetMessages().size()), numThreads);
-    EXPECT_EQ(CountLines(writer), numThreads * writesPerThread);
+    EXPECT_EQ(static_cast<int>(writer->GetMessages().size()), numThreads);
+    EXPECT_EQ(CountLines(*writer), numThreads * writesPerThread);
 }
 
 // Under concurrent load from many threads, no lines should be lost or corrupted.
 TEST(ThreadLocalBufferedWriteModeTest, ConcurrentWritesProduceAllLines)
 {
-    MemoryWriter writer;
-    ThreadLocalBufferedWriteMode mode(writer, 1000, std::chrono::seconds(100));
+    auto writerOwned = std::make_unique<MemoryWriter>();
+    MemoryWriter* writer = writerOwned.get();
+    ThreadLocalBufferedWriteMode mode(std::move(writerOwned), 1000, std::chrono::seconds(100));
 
     constexpr int numThreads = 8;
     constexpr int writesPerThread = 10;
@@ -158,5 +164,5 @@ TEST(ThreadLocalBufferedWriteModeTest, ConcurrentWritesProduceAllLines)
     }
     for (auto& t : threads) { t.join(); }
 
-    EXPECT_EQ(CountLines(writer), numThreads * writesPerThread);
+    EXPECT_EQ(CountLines(*writer), numThreads * writesPerThread);
 }

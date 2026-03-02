@@ -12,7 +12,7 @@ TEST(MemoryWriterTest, IsEmpty)
 TEST(MemoryWriterTest, Write)
 {
     auto writer = MemoryWriter();
-    writer.Write("Test message");
+    writer.Send("Test message");
     EXPECT_FALSE(writer.IsEmpty());
     EXPECT_EQ(writer.LastLine(), "Test message");
 }
@@ -20,7 +20,7 @@ TEST(MemoryWriterTest, Write)
 TEST(MemoryWriterTest, Clear)
 {
     auto writer = MemoryWriter();
-    writer.Write("Test message");
+    writer.Send("Test message");
     EXPECT_FALSE(writer.IsEmpty());
 
     writer.Clear();
@@ -30,8 +30,8 @@ TEST(MemoryWriterTest, Clear)
 TEST(MemoryWriterTest, GetMessages)
 {
     auto writer = MemoryWriter();
-    writer.Write("First message");
-    writer.Write("Second message");
+    writer.Send("First message");
+    writer.Send("Second message");
 
     const auto& messages = writer.GetMessages();
     EXPECT_EQ(messages.size(), 2);
@@ -42,8 +42,8 @@ TEST(MemoryWriterTest, GetMessages)
 TEST(MemoryWriterTest, LastLine)
 {
     auto writer = MemoryWriter();
-    writer.Write("First message");
-    writer.Write("Second message");
+    writer.Send("First message");
+    writer.Send("Second message");
 
     EXPECT_EQ(writer.LastLine(), "Second message");
 

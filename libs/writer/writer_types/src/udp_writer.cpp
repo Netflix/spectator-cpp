@@ -67,7 +67,7 @@ catch (const boost::system::system_error& ex)
     return false;
 }
 
-void UDPWriter::Write(const std::string& message)
+void UDPWriter::Send(const std::string& message)
 {
     if (false == this->m_socketEstablished && false == this->CreateSocket())
     {

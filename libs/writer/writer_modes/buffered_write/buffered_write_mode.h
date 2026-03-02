@@ -1,7 +1,6 @@
 #pragma once
 
 #include <write_mode.h>
-#include <base_writer.h>
 
 #include <atomic>
 #include <condition_variable>
@@ -13,15 +12,15 @@ namespace spectator {
 class BufferedWriteMode final : public WriteMode
 {
    public:
-    BufferedWriteMode(BaseWriter& writer, unsigned int bufferSize);
+    BufferedWriteMode(std::unique_ptr<BaseWriter> writer, unsigned int bufferSize);
     ~BufferedWriteMode() override;
 
+    WriteModeType GetType() const override { return WriteModeType::Buffered; }
     void Write(const std::string& message) override;
 
    private:
     void ThreadSend();
 
-    BaseWriter& m_writer;
     unsigned int m_bufferSize;
     std::string m_buffer;
 

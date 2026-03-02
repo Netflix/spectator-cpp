@@ -13,10 +13,8 @@ Writer::~Writer()
 {
     auto& instance = GetInstance();
 
-    // Destroy write mode first to stop any buffered send thread
+    // Destroying write mode stops any buffered send thread, then closes the underlying writer
     instance.m_writeMode.reset();
-
-    this->Close();
 }
 
 void Writer::Initialize(WriterType type, const std::string& param, int port, unsigned int bufferSize,
@@ -26,40 +24,42 @@ void Writer::Initialize(WriterType type, const std::string& param, int port, uns
 
     try
     {
+        std::unique_ptr<BaseWriter> impl;
+
         switch (type)
         {
             case WriterType::Memory:
-                instance.m_impl = std::make_unique<MemoryWriter>();
+                impl = std::make_unique<MemoryWriter>();
                 Logger::info("WriterWrapper initialized as MemoryWriter");
                 break;
             case WriterType::UDP:
-                instance.m_impl = std::make_unique<UDPWriter>(param, port);
+                impl = std::make_unique<UDPWriter>(param, port);
                 Logger::info("WriterWrapper initialized as UDPWriter with host: {} and port: {}", param, port);
                 break;
             case WriterType::Unix:
-                instance.m_impl = std::make_unique<UDSWriter>(param);
+                impl = std::make_unique<UDSWriter>(param);
                 Logger::info("WriterWrapper initialized as UnixWriter with socket path: {}", param);
                 break;
             default:
                 throw std::runtime_error("Unsupported writer type");
         }
 
-        instance.m_currentType = type;
-
         switch (modeType)
         {
             case WriteModeType::NonBuffered:
-                instance.m_writeMode = std::make_unique<NonBufferedWriteMode>(*instance.m_impl);
+                instance.m_writeMode = std::make_unique<NonBufferedWriteMode>(std::move(impl));
                 break;
             case WriteModeType::Buffered:
-                instance.m_writeMode = std::make_unique<BufferedWriteMode>(*instance.m_impl, bufferSize);
+                instance.m_writeMode = std::make_unique<BufferedWriteMode>(std::move(impl), bufferSize);
                 break;
             case WriteModeType::ThreadLocalBuffered:
-                instance.m_writeMode = std::make_unique<ThreadLocalBufferedWriteMode>(*instance.m_impl, bufferSize);
+                instance.m_writeMode = std::make_unique<ThreadLocalBufferedWriteMode>(std::move(impl), bufferSize);
                 break;
             default:
                 throw std::runtime_error("Unsupported write mode type");
         }
+
+
     }
     catch (const std::exception& e)
     {
@@ -72,9 +72,9 @@ void Writer::Write(const std::string& message)
 {
     auto& instance = GetInstance();
 
-    if (!instance.m_impl)
+    if (!instance.m_writeMode)
     {
-        Logger::error("Attempted to write with uninitialized writer implementation");
+        Logger::error("Attempted to write with uninitialized writer");
         return;
     }
 
@@ -85,7 +85,7 @@ void Writer::Close()
 {
     const auto& instance = GetInstance();
 
-    if (!instance.m_impl)
+    if (!instance.m_writeMode)
     {
         Logger::error("Close called on uninitialized writer");
         return;
@@ -93,7 +93,7 @@ void Writer::Close()
 
     try
     {
-        instance.m_impl->Close();
+        instance.m_writeMode->GetWriter()->Close();
     }
     catch (const std::exception& e)
     {

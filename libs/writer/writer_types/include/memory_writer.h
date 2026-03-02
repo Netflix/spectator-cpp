@@ -12,7 +12,8 @@ class MemoryWriter final : public BaseWriter
     MemoryWriter() = default;
     ~MemoryWriter() override = default;
 
-    void Write(const std::string& message) override;
+    WriterType GetType() const override { return WriterType::Memory; }
+    void Send(const std::string& message) override;
     void Close() override;
     void Clear();
 

@@ -5,9 +5,9 @@ namespace spectator {
 
 static constexpr auto NEW_LINE = '\n';
 
-ThreadLocalBufferedWriteMode::ThreadLocalBufferedWriteMode(BaseWriter& writer, size_t bufferSize,
+ThreadLocalBufferedWriteMode::ThreadLocalBufferedWriteMode(std::unique_ptr<BaseWriter> writer, size_t bufferSize,
                                                              std::chrono::seconds flushInterval)
-    : m_writer(writer), m_bufferSize(bufferSize), m_flushInterval(flushInterval)
+    : WriteMode(std::move(writer)), m_bufferSize(bufferSize), m_flushInterval(flushInterval)
 {
     m_flushThread = std::thread(&ThreadLocalBufferedWriteMode::FlushThread, this);
 }
@@ -56,7 +56,7 @@ void ThreadLocalBufferedWriteMode::Write(const std::string& message)
 void ThreadLocalBufferedWriteMode::FlushBuffer(ThreadBuffer& tb)
 {
     std::lock_guard<std::mutex> wlock(m_writerMutex);
-    m_writer.Write(tb.buffer);
+    m_writer->Send(tb.buffer);
     tb.buffer.clear();
     tb.lastFlush = std::chrono::steady_clock::now();
 }

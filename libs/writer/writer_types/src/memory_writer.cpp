@@ -4,7 +4,7 @@
 
 namespace spectator {
 
-void MemoryWriter::Write(const std::string& message)
+void MemoryWriter::Send(const std::string& message)
 {
     this->m_messages.push_back(message);
 }

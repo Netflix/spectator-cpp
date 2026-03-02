@@ -1,5 +1,3 @@
-add_subdirectory(writer_modes)
-
 add_library(spectator-writer-wrapper
     writer.cpp
 )

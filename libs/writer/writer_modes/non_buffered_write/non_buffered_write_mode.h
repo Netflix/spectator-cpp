@@ -1,19 +1,16 @@
 #pragma once
 
 #include <write_mode.h>
-#include <base_writer.h>
 
 namespace spectator {
 
 class NonBufferedWriteMode final : public WriteMode
 {
    public:
-    explicit NonBufferedWriteMode(BaseWriter& writer);
+    explicit NonBufferedWriteMode(std::unique_ptr<BaseWriter> writer);
 
+    WriteModeType GetType() const override { return WriteModeType::NonBuffered; }
     void Write(const std::string& message) override;
-
-   private:
-    BaseWriter& m_writer;
 };
 
 }  // namespace spectator

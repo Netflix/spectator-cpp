@@ -13,7 +13,8 @@ class UDPWriter final : public BaseWriter
    public:
     UDPWriter(const std::string& host, int port);
     ~UDPWriter() override;
-    void Write(const std::string& message) override;
+    WriterType GetType() const override { return WriterType::UDP; }
+    void Send(const std::string& message) override;
     void Close() override;
 
    private:

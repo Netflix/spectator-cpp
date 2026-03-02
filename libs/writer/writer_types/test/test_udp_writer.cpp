@@ -72,7 +72,7 @@ TEST_F(UDPWriterTest, SendMessage)
     const std::string test_message = "Hello from UDP Writer Test";
 
     // Send a test message
-    writer.Write(test_message);
+    writer.Send(test_message);
 
     // Give time for the message to be processed
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -98,7 +98,7 @@ TEST_F(UDPWriterTest, CloseAndReopen)
 {
     UDPWriter writer("127.0.0.1", 12345);
     std::string message1 = "Initial message";
-    writer.Write(message1);
+    writer.Send(message1);
 
     // Wait for message processing
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -114,7 +114,7 @@ TEST_F(UDPWriterTest, CloseAndReopen)
     // Create a new writer
     UDPWriter writer2("127.0.0.1", 12345);
     std::string message2 = "Message after reopening";
-    writer2.Write(message2);
+    writer2.Send(message2);
 
     // Wait for message processing
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -135,7 +135,7 @@ TEST_F(UDPWriterTest, SendMultipleMessages)
     // Send several messages in succession
     for (const auto& msg : test_messages)
     {
-        writer.Write(msg);
+        writer.Send(msg);
     }
 
     // Give time for messages to be processed
@@ -168,7 +168,7 @@ TEST_F(UDPWriterTest, ClientReconnectsWhenServerStartsLater)
     for (int i = 0; i < 3; ++i)
     {
         const std::string test_message_before = "Message sent before server starts";
-        writer.Write(test_message_before);
+        writer.Send(test_message_before);
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
     
@@ -182,7 +182,7 @@ TEST_F(UDPWriterTest, ClientReconnectsWhenServerStartsLater)
     // Try to send a message after server is started
     // The UDSWriter should automatically reconnect on the next Write call
     const std::string test_message_after = "Message sent after server starts";
-    writer.Write(test_message_after);
+    writer.Send(test_message_after);
     
     // Give time for the message to be processed
     std::this_thread::sleep_for(std::chrono::milliseconds(200));

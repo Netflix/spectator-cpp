@@ -12,14 +12,6 @@
 
 namespace spectator {
 
-// Enum to specify which writer type to create
-enum class WriterType
-{
-    Memory,
-    UDP,
-    Unix
-};
-
 struct WriterTypes
 {
     static constexpr auto Memory = "memory";

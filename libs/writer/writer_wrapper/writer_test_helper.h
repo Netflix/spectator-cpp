@@ -21,7 +21,7 @@ class WriterTestHelper
     }
 
     // Get the Writer's implementation for testing purposes
-    static BaseWriter* GetImpl() { return Writer::GetInstance().m_impl.get(); }
+    static BaseWriter* GetImpl() { return Writer::GetInstance().m_writeMode->GetWriter(); }
 };
 
 }  // namespace spectator

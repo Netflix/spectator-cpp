@@ -4,6 +4,13 @@
 
 namespace spectator {
 
+enum class WriterType
+{
+    Memory,
+    UDP,
+    Unix
+};
+
 class BaseWriter
 {
    public:
@@ -15,7 +22,8 @@ class BaseWriter
     BaseWriter(BaseWriter&&) = delete;
     BaseWriter& operator=(BaseWriter&&) = delete;
 
-    virtual void Write(const std::string& message) = 0;
+    virtual WriterType GetType() const = 0;
+    virtual void Send(const std::string& message) = 0;
     virtual void Close() = 0;
 };
 

@@ -39,14 +39,10 @@ class Writer final : public Singleton<Writer>
 
     void Close();
 
-    // Get the Writer's implementation for testing purposes
-    static BaseWriter* GetImpl() { return Writer::GetInstance().m_impl.get(); }
-    static WriterType GetWriterType() { return GetInstance().m_currentType; }
+    static WriterType GetWriterType() { return GetInstance().m_writeMode->GetWriter()->GetType(); }
+    static WriteModeType GetWriteModeType() { return GetInstance().m_writeMode->GetType(); }
 
-    std::unique_ptr<BaseWriter> m_impl;
-    WriterType m_currentType = WriterType::Memory;  // Default type
-
-    // m_writeMode must be declared after m_impl so it is destroyed first
+    // m_writeMode owns both the write strategy and the underlying BaseWriter
     std::unique_ptr<WriteMode> m_writeMode;
 };
 
