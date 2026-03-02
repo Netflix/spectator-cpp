@@ -23,6 +23,7 @@ struct RunTimeConfig
     std::string locationTag;
     std::string modeName;
     unsigned int numThreads = 1;
+    unsigned int bufferSize = 4096;
 };
 
 struct PerfResults
@@ -35,10 +36,11 @@ struct PerfResults
 
 void PrintUsage()
 {
-    std::cerr << "Usage: performance_test [writer_type] [write_mode] [num_threads]" << std::endl;
+    std::cerr << "Usage: performance_test [writer_type] [write_mode] [num_threads] [buffer_size]" << std::endl;
     std::cerr << "  writer_type: udp or uds" << std::endl;
     std::cerr << "  write_mode: 0 for non-buffered, 1 for buffered, 2 for thread-local (default is 0)" << std::endl;
     std::cerr << "  num_threads: number of producer threads (default is 1)" << std::endl;
+    std::cerr << "  buffer_size: buffer size in bytes for buffered modes (default is 4096)" << std::endl;
 }
 
 std::optional<WriteModeType> ParseWriteMode(const std::string& arg)
@@ -62,7 +64,7 @@ std::string WriteModeToString(WriteModeType mode)
 
 std::optional<RunTimeConfig> HandleArgs(int argc, char* argv[])
 {
-    if (argc < 2 || argc > 4)
+    if (argc < 2 || argc > 5)
     {
         return std::nullopt;
     }
@@ -87,7 +89,7 @@ std::optional<RunTimeConfig> HandleArgs(int argc, char* argv[])
     }
 
     unsigned int numThreads = 1;
-    if (argc == 4)
+    if (argc >= 4)
     {
         int parsed = std::atoi(argv[3]);
         if (parsed <= 0)
@@ -98,10 +100,23 @@ std::optional<RunTimeConfig> HandleArgs(int argc, char* argv[])
         numThreads = static_cast<unsigned int>(parsed);
     }
 
+    unsigned int bufferSize = 4096;
+    if (argc == 5)
+    {
+        int parsed = std::atoi(argv[4]);
+        if (parsed <= 0)
+        {
+            std::cerr << "Invalid buffer_size argument: " << argv[4] << std::endl;
+            return std::nullopt;
+        }
+        bufferSize = static_cast<unsigned int>(parsed);
+    }
+
     RunTimeConfig config;
     config.modeType = modeType;
     config.modeName = WriteModeToString(modeType);
     config.numThreads = numThreads;
+    config.bufferSize = bufferSize;
 
     if (writerArg == "udp")
     {
@@ -126,7 +141,7 @@ Registry CreateRegistry(const RunTimeConfig& config)
     WriterConfig writerConfig(config.writerType);
     if (config.modeType != WriteModeType::NonBuffered)
     {
-        writerConfig = WriterConfig(config.writerType, 4096, config.modeType);
+        writerConfig = WriterConfig(config.writerType, config.bufferSize, config.modeType);
     }
     return Registry(Config(writerConfig));
 }
@@ -198,6 +213,10 @@ int main(int argc, char* argv[])
     std::cout << "Writer Type: " << config->writerTypeName << std::endl;
     std::cout << "Write Mode: " << config->modeName << std::endl;
     std::cout << "Threads: " << config->numThreads << std::endl;
+    if (config->modeType != WriteModeType::NonBuffered)
+    {
+        std::cout << "Buffer Size: " << config->bufferSize << " bytes" << std::endl;
+    }
 
     auto registry = CreateRegistry(*config);
     auto results = RunBenchmark(registry, *config);

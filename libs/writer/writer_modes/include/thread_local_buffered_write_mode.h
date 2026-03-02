@@ -15,7 +15,7 @@ class ThreadLocalBufferedWriteMode final : public WriteMode
 {
    public:
     ThreadLocalBufferedWriteMode(WriterType type, size_t bufferSize,
-                                  std::chrono::seconds flushInterval = std::chrono::seconds(10),
+                                  std::chrono::seconds flushInterval = std::chrono::seconds(25),
                                   const std::string& param = "", int port = 0);
     ~ThreadLocalBufferedWriteMode() override;
 

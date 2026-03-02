@@ -33,7 +33,7 @@ void Writer::Initialize(WriterType type, const std::string& param, int port, uns
                 break;
             case WriteModeType::ThreadLocalBuffered:
                 instance.m_writeMode = std::make_unique<ThreadLocalBufferedWriteMode>(type, bufferSize,
-                                                                                       std::chrono::seconds(10),
+                                                                                       std::chrono::seconds(25),
                                                                                        param, port);
                 break;
             default:
