@@ -3,7 +3,6 @@
 #include <buffered_write_mode.h>
 #include <non_buffered_write_mode.h>
 #include <thread_local_buffered_write_mode.h>
-#include <writer_types.h>
 #include <logger.h>
 #include <stdexcept>
 
@@ -24,42 +23,22 @@ void Writer::Initialize(WriterType type, const std::string& param, int port, uns
 
     try
     {
-        std::unique_ptr<BaseWriter> impl;
-
-        switch (type)
-        {
-            case WriterType::Memory:
-                impl = std::make_unique<MemoryWriter>();
-                Logger::info("WriterWrapper initialized as MemoryWriter");
-                break;
-            case WriterType::UDP:
-                impl = std::make_unique<UDPWriter>(param, port);
-                Logger::info("WriterWrapper initialized as UDPWriter with host: {} and port: {}", param, port);
-                break;
-            case WriterType::Unix:
-                impl = std::make_unique<UDSWriter>(param);
-                Logger::info("WriterWrapper initialized as UnixWriter with socket path: {}", param);
-                break;
-            default:
-                throw std::runtime_error("Unsupported writer type");
-        }
-
         switch (modeType)
         {
             case WriteModeType::NonBuffered:
-                instance.m_writeMode = std::make_unique<NonBufferedWriteMode>(std::move(impl));
+                instance.m_writeMode = std::make_unique<NonBufferedWriteMode>(type, param, port);
                 break;
             case WriteModeType::Buffered:
-                instance.m_writeMode = std::make_unique<BufferedWriteMode>(std::move(impl), bufferSize);
+                instance.m_writeMode = std::make_unique<BufferedWriteMode>(type, bufferSize, param, port);
                 break;
             case WriteModeType::ThreadLocalBuffered:
-                instance.m_writeMode = std::make_unique<ThreadLocalBufferedWriteMode>(std::move(impl), bufferSize);
+                instance.m_writeMode = std::make_unique<ThreadLocalBufferedWriteMode>(type, bufferSize,
+                                                                                       std::chrono::seconds(10),
+                                                                                       param, port);
                 break;
             default:
                 throw std::runtime_error("Unsupported write mode type");
         }
-
-
     }
     catch (const std::exception& e)
     {

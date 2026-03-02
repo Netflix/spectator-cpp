@@ -33,9 +33,8 @@ static int CountLines(const MemoryWriter& writer)
 // Buffer = 20 bytes; message "aaaaaaaaaaaaaaaaaaa" (19 chars) + '\n' = 20 bytes >= 20.
 TEST(ThreadLocalBufferedWriteModeTest, SizeBasedFlushTriggered)
 {
-    auto writerOwned = std::make_unique<MemoryWriter>();
-    MemoryWriter* writer = writerOwned.get();
-    ThreadLocalBufferedWriteMode mode(std::move(writerOwned), 20, std::chrono::seconds(100));
+    ThreadLocalBufferedWriteMode mode(WriterType::Memory, 20, std::chrono::seconds(100));
+    auto* writer = static_cast<MemoryWriter*>(mode.GetWriter());
 
     const std::string msg(19, 'a');
     std::thread t([&]() { mode.Write(msg); });
@@ -47,9 +46,8 @@ TEST(ThreadLocalBufferedWriteModeTest, SizeBasedFlushTriggered)
 // A message well below the buffer threshold should remain buffered until the thread exits.
 TEST(ThreadLocalBufferedWriteModeTest, SmallWriteNotFlushedBeforeThreadExit)
 {
-    auto writerOwned = std::make_unique<MemoryWriter>();
-    MemoryWriter* writer = writerOwned.get();
-    ThreadLocalBufferedWriteMode mode(std::move(writerOwned), 1000, std::chrono::seconds(100));
+    ThreadLocalBufferedWriteMode mode(WriterType::Memory, 1000, std::chrono::seconds(100));
+    auto* writer = static_cast<MemoryWriter*>(mode.GetWriter());
 
     std::atomic<bool> writeComplete{false};
     std::atomic<bool> canExit{false};
@@ -72,9 +70,8 @@ TEST(ThreadLocalBufferedWriteModeTest, SmallWriteNotFlushedBeforeThreadExit)
 // Thread exit should flush any remaining data in the thread-local buffer.
 TEST(ThreadLocalBufferedWriteModeTest, ThreadExitFlushesRemainingData)
 {
-    auto writerOwned = std::make_unique<MemoryWriter>();
-    MemoryWriter* writer = writerOwned.get();
-    ThreadLocalBufferedWriteMode mode(std::move(writerOwned), 1000, std::chrono::seconds(100));
+    ThreadLocalBufferedWriteMode mode(WriterType::Memory, 1000, std::chrono::seconds(100));
+    auto* writer = static_cast<MemoryWriter*>(mode.GetWriter());
 
     std::thread t([&]() { mode.Write("flushed_on_exit"); });
     t.join();
@@ -87,10 +84,9 @@ TEST(ThreadLocalBufferedWriteModeTest, ThreadExitFlushesRemainingData)
 // thread once the flush interval has elapsed.
 TEST(ThreadLocalBufferedWriteModeTest, TimedFlushDeliversStaleData)
 {
-    auto writerOwned = std::make_unique<MemoryWriter>();
-    MemoryWriter* writer = writerOwned.get();
     // flushInterval = 1s; flush thread wakes every 1s, so worst-case delivery is ~2s
-    ThreadLocalBufferedWriteMode mode(std::move(writerOwned), 1000, std::chrono::seconds(1));
+    ThreadLocalBufferedWriteMode mode(WriterType::Memory, 1000, std::chrono::seconds(1));
+    auto* writer = static_cast<MemoryWriter*>(mode.GetWriter());
 
     std::atomic<bool> writeComplete{false};
     std::atomic<bool> canExit{false};
@@ -117,9 +113,8 @@ TEST(ThreadLocalBufferedWriteModeTest, TimedFlushDeliversStaleData)
 // total lines == numThreads * writesPerThread.
 TEST(ThreadLocalBufferedWriteModeTest, MultipleThreadsGetIndependentBuffers)
 {
-    auto writerOwned = std::make_unique<MemoryWriter>();
-    MemoryWriter* writer = writerOwned.get();
-    ThreadLocalBufferedWriteMode mode(std::move(writerOwned), 1000, std::chrono::seconds(100));
+    ThreadLocalBufferedWriteMode mode(WriterType::Memory, 1000, std::chrono::seconds(100));
+    auto* writer = static_cast<MemoryWriter*>(mode.GetWriter());
 
     constexpr int numThreads = 4;
     constexpr int writesPerThread = 3;
@@ -144,9 +139,8 @@ TEST(ThreadLocalBufferedWriteModeTest, MultipleThreadsGetIndependentBuffers)
 // Under concurrent load from many threads, no lines should be lost or corrupted.
 TEST(ThreadLocalBufferedWriteModeTest, ConcurrentWritesProduceAllLines)
 {
-    auto writerOwned = std::make_unique<MemoryWriter>();
-    MemoryWriter* writer = writerOwned.get();
-    ThreadLocalBufferedWriteMode mode(std::move(writerOwned), 1000, std::chrono::seconds(100));
+    ThreadLocalBufferedWriteMode mode(WriterType::Memory, 1000, std::chrono::seconds(100));
+    auto* writer = static_cast<MemoryWriter*>(mode.GetWriter());
 
     constexpr int numThreads = 8;
     constexpr int writesPerThread = 10;

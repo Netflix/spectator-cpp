@@ -4,8 +4,8 @@ namespace spectator {
 
 static constexpr auto NEW_LINE = '\n';
 
-NonBufferedWriteMode::NonBufferedWriteMode(std::unique_ptr<BaseWriter> writer)
-    : WriteMode(std::move(writer)) {}
+NonBufferedWriteMode::NonBufferedWriteMode(WriterType type, const std::string& param, int port)
+    : WriteMode(type, param, port) {}
 
 void NonBufferedWriteMode::Write(const std::string& message)
 {

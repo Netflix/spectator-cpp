@@ -5,9 +5,10 @@ namespace spectator {
 
 static constexpr auto NEW_LINE = '\n';
 
-ThreadLocalBufferedWriteMode::ThreadLocalBufferedWriteMode(std::unique_ptr<BaseWriter> writer, size_t bufferSize,
-                                                             std::chrono::seconds flushInterval)
-    : WriteMode(std::move(writer)), m_bufferSize(bufferSize), m_flushInterval(flushInterval)
+ThreadLocalBufferedWriteMode::ThreadLocalBufferedWriteMode(WriterType type, size_t bufferSize,
+                                                             std::chrono::seconds flushInterval,
+                                                             const std::string& param, int port)
+    : WriteMode(type, param, port), m_bufferSize(bufferSize), m_flushInterval(flushInterval)
 {
     m_flushThread = std::thread(&ThreadLocalBufferedWriteMode::FlushThread, this);
 }
@@ -25,7 +26,7 @@ ThreadLocalBufferedWriteMode::~ThreadLocalBufferedWriteMode()
     for (auto* tb : m_buffers)
     {
         std::lock_guard<std::mutex> lock(tb->mutex);
-        if (!tb->buffer.empty())
+        if (!tb->data.empty())
         {
             FlushBuffer(*tb);
         }
@@ -38,16 +39,16 @@ void ThreadLocalBufferedWriteMode::Write(const std::string& message)
     if (tld.owner == nullptr)
     {
         tld.owner = this;
-        tld.buffer.buffer.reserve(m_bufferSize);
+        tld.buffer.data.reserve(m_bufferSize);
         RegisterBuffer(&tld.buffer);
     }
 
     auto& tb = tld.buffer;
     std::lock_guard<std::mutex> lock(tb.mutex);
-    tb.buffer.append(message);
-    tb.buffer.push_back(NEW_LINE);
+    tb.data.append(message);
+    tb.data.push_back(NEW_LINE);
 
-    if (tb.buffer.size() >= m_bufferSize)
+    if (tb.data.size() >= m_bufferSize)
     {
         FlushBuffer(tb);
     }
@@ -56,8 +57,8 @@ void ThreadLocalBufferedWriteMode::Write(const std::string& message)
 void ThreadLocalBufferedWriteMode::FlushBuffer(ThreadBuffer& tb)
 {
     std::lock_guard<std::mutex> wlock(m_writerMutex);
-    m_writer->Send(tb.buffer);
-    tb.buffer.clear();
+    m_writer->Send(tb.data);
+    tb.data.clear();
     tb.lastFlush = std::chrono::steady_clock::now();
 }
 
@@ -72,7 +73,7 @@ void ThreadLocalBufferedWriteMode::FlushThread()
         for (auto* tb : m_buffers)
         {
             std::lock_guard<std::mutex> lock(tb->mutex);
-            if (!tb->buffer.empty() && (now - tb->lastFlush) >= m_flushInterval)
+            if (!tb->data.empty() && (now - tb->lastFlush) >= m_flushInterval)
             {
                 FlushBuffer(*tb);
             }
@@ -98,7 +99,7 @@ ThreadLocalBufferedWriteMode::ThreadLocalData::~ThreadLocalData()
     {
         {
             std::lock_guard<std::mutex> lock(buffer.mutex);
-            if (!buffer.buffer.empty())
+            if (!buffer.data.empty())
             {
                 owner->FlushBuffer(buffer);
             }

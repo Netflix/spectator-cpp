@@ -5,8 +5,8 @@ namespace spectator {
 
 static constexpr auto NEW_LINE = '\n';
 
-BufferedWriteMode::BufferedWriteMode(std::unique_ptr<BaseWriter> writer, unsigned int bufferSize)
-    : WriteMode(std::move(writer)), m_bufferSize(bufferSize)
+BufferedWriteMode::BufferedWriteMode(WriterType type, unsigned int bufferSize, const std::string& param, int port)
+    : WriteMode(type, param, port), m_bufferSize(bufferSize)
 {
     m_buffer.reserve(m_bufferSize);
     m_sendingThread = std::thread(&BufferedWriteMode::ThreadSend, this);
@@ -45,20 +45,23 @@ void BufferedWriteMode::ThreadSend()
 {
     std::string message{};
     message.reserve(m_bufferSize);
-    while (m_shutdown.load() == false)
+    while (true)
     {
         {
             std::unique_lock<std::mutex> lock(m_writeMutex);
             m_cv_sender.wait(lock, [this] { return m_buffer.size() >= m_bufferSize || m_shutdown.load(); });
-            if (m_shutdown.load() == true)
-            {
-                return;
-            }
             message.swap(m_buffer);
             m_buffer.clear();
         }
         m_cv_receiver.notify_one();
-        m_writer->Send(message);
+        if (!message.empty())
+        {
+            m_writer->Send(message);
+        }
+        if (m_shutdown.load())
+        {
+            return;
+        }
     }
 }
 

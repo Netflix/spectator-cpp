@@ -12,7 +12,7 @@ namespace spectator {
 class BufferedWriteMode final : public WriteMode
 {
    public:
-    BufferedWriteMode(std::unique_ptr<BaseWriter> writer, unsigned int bufferSize);
+    BufferedWriteMode(WriterType type, unsigned int bufferSize, const std::string& param = "", int port = 0);
     ~BufferedWriteMode() override;
 
     WriteModeType GetType() const override { return WriteModeType::Buffered; }

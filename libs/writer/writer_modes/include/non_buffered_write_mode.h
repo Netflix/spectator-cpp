@@ -7,7 +7,7 @@ namespace spectator {
 class NonBufferedWriteMode final : public WriteMode
 {
    public:
-    explicit NonBufferedWriteMode(std::unique_ptr<BaseWriter> writer);
+    explicit NonBufferedWriteMode(WriterType type, const std::string& param = "", int port = 0);
 
     WriteModeType GetType() const override { return WriteModeType::NonBuffered; }
     void Write(const std::string& message) override;

@@ -17,7 +17,6 @@ enum class WriteModeType
 class WriteMode
 {
    public:
-    explicit WriteMode(std::unique_ptr<BaseWriter> writer) : m_writer(std::move(writer)) {}
     virtual ~WriteMode() { if (m_writer) m_writer->Close(); }
 
     WriteMode(const WriteMode&) = delete;
@@ -30,7 +29,10 @@ class WriteMode
 
     BaseWriter* GetWriter() const { return m_writer.get(); }
 
+    static std::unique_ptr<BaseWriter> CreateWriter(WriterType type, const std::string& param, int port);
+
    protected:
+    WriteMode(WriterType type, const std::string& param, int port);
     std::unique_ptr<BaseWriter> m_writer;
 };
 

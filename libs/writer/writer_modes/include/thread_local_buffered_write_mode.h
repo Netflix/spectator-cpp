@@ -13,8 +13,9 @@ namespace spectator {
 class ThreadLocalBufferedWriteMode final : public WriteMode
 {
    public:
-    ThreadLocalBufferedWriteMode(std::unique_ptr<BaseWriter> writer, size_t bufferSize,
-                                  std::chrono::seconds flushInterval = std::chrono::seconds(10));
+    ThreadLocalBufferedWriteMode(WriterType type, size_t bufferSize,
+                                  std::chrono::seconds flushInterval = std::chrono::seconds(10),
+                                  const std::string& param = "", int port = 0);
     ~ThreadLocalBufferedWriteMode() override;
 
     WriteModeType GetType() const override { return WriteModeType::ThreadLocalBuffered; }
@@ -23,7 +24,7 @@ class ThreadLocalBufferedWriteMode final : public WriteMode
    private:
     struct ThreadBuffer
     {
-        std::string buffer;
+        std::string data;
         std::mutex mutex;
         std::chrono::steady_clock::time_point lastFlush{std::chrono::steady_clock::now()};
     };

@@ -1,15 +1,13 @@
 add_library(spectator-writer-modes
-    buffered_write/buffered_write_mode.cpp
-    non_buffered_write/non_buffered_write_mode.cpp
-thread_local_buffered_write/thread_local_buffered_write_mode.cpp
+    src/write_mode.cpp
+    src/buffered_write_mode.cpp
+    src/non_buffered_write_mode.cpp
+    src/thread_local_buffered_write_mode.cpp
 )
 
 target_include_directories(spectator-writer-modes
     PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/buffered_write
-    ${CMAKE_CURRENT_SOURCE_DIR}/non_buffered_write
-${CMAKE_CURRENT_SOURCE_DIR}/thread_local_buffered_write
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 target_link_libraries(spectator-writer-modes
@@ -19,7 +17,7 @@ target_link_libraries(spectator-writer-modes
 )
 
 add_executable(test_thread_local_buffered_write_mode
-    thread_local_buffered_write/test_thread_local_buffered_write_mode.cpp
+    test/test_thread_local_buffered_write_mode.cpp
 )
 
 target_link_libraries(test_thread_local_buffered_write_mode
