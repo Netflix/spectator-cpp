@@ -4,6 +4,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <mutex>
 #include <thread>
 #include <vector>
@@ -48,6 +49,9 @@ class ThreadLocalBufferedWriteMode final : public WriteMode
     std::vector<ThreadBuffer*> m_buffers;
 
     std::mutex m_writerMutex;
+
+    std::mutex m_shutdownMutex;
+    std::condition_variable m_shutdownCv;
 
     std::thread m_flushThread;
     std::atomic<bool> m_shutdown{false};

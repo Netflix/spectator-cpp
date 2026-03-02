@@ -1,92 +1,101 @@
-# Writer Module
+# Writer
 
-The Writer module provides a flexible system for metric data output in the Spectator C++ library. It consists of 
-several components that handle different aspects of data writing.
+The writer subsystem is responsible for sending metric messages to a destination (UDP socket, Unix domain socket, or in-memory for testing). It is organized into four layers, each with a single responsibility.
 
-## Components
+```
+writer_wrapper   (public API — Writer singleton)
+      │
+writer_modes     (buffering strategy — owns the writer)
+      │
+writer_types     (transport — sends bytes to a destination)
+      │
+writer_config    (configuration parsing)
+```
 
-### Writer Types (`writer_types`)
+---
 
-This component defines the available writer types and their associated configurations:
+## Layers
 
-- **Supported Writer Types:**
-  - `Memory` - Writes data to an in-memory buffer (primarily for testing)
-  - `UDP` - Writes data over UDP to a specified endpoint
-  - `Unix` - Writes data to a Unix Domain Socket
+### `writer_types` — Transport
 
-- **Key Features:**
-  - Type enumeration via `WriterType` enum class
-  - String constants for type names in `WriterTypes` struct
-  - Default locations for different writer types in `DefaultLocations` struct
-  - Type-to-location mapping in `TypeToLocationMap`
-  - String conversion via `WriterTypeToString()` function
+Defines how bytes are physically sent.
 
-### Writer Config (`writer_config`)
+**`BaseWriter`** is the abstract base class with three pure virtual methods:
 
-This component handles configuration of writers:
+| Method | Description |
+|--------|-------------|
+| `Send(message)` | Transmit a newline-terminated string |
+| `Close()` | Release the underlying socket/resource |
+| `GetType()` | Return the `WriterType` enum value |
 
-- **Key Features:**
-  - Parses writer configuration from string identifiers
-  - Handles environment variable overrides via `SPECTATOR_OUTPUT_LOCATION`
-  - Error handling for invalid writer types
-  - Provides a clean API for specifying writer type and location
+Three concrete implementations are provided:
 
-- **Usage Example:**
-  ```cpp
-  // Create a writer config with a specific type
-  WriterConfig config(WriterTypes::UDP);
-  
-  // Or with a URL-style location
-  const std::string unixUrl = std::string(WriterTypes::UnixURL) + "/var/run/custom/socket.sock";
-  const WriterConfig config(unixUrl);
-  
-  // Environment variable overrides any provided value
-  // SPECTATOR_OUTPUT_LOCATION=unix:///custom/path/socket.sock
-  WriterConfig config(WriterTypes::UDP);  // Will use Unix socket instead
-  ```
+| Class | `WriterType` | Description |
+|-------|-------------|-------------|
+| `MemoryWriter` | `Memory` | Stores messages in-memory; used for testing |
+| `UDPWriter` | `UDP` | Sends over a UDP socket (Boost.Asio) |
+| `UDSWriter` | `Unix` | Sends over a Unix domain socket (Boost.Asio) |
 
-### Writer Wrapper (`writer_wrapper`)
+---
 
-This component provides a wrapper around the different writer implementations:
+### `writer_modes` — Buffering Strategy
 
-- **Key Features:**
-  - Common interface for all writer types
-  - Factory pattern for creating writers based on configuration
-  - Handles serialization and transmission of metric data
-  - Abstracts transport details from the rest of the library
+Defines _when_ messages are sent. Each mode owns the `BaseWriter` and is responsible for creating it via `WriteMode::CreateWriter()`.
 
-## Integration
+**`WriteMode`** is the abstract base class. Its protected constructor accepts `(WriterType, param, port)` and calls `CreateWriter()` internally, so derived classes never interact with raw `BaseWriter` construction directly.
 
-These components work together to provide a flexible metric output system:
+| Class | `WriteModeType` | Description |
+|-------|----------------|-------------|
+| `NonBufferedWriteMode` | `NonBuffered` | Calls `Send()` immediately on every `Write()` |
+| `BufferedWriteMode` | `Buffered` | Accumulates messages in a string buffer; a background thread flushes when the buffer is full. Remaining data is flushed on destruction. |
+| `ThreadLocalBufferedWriteMode` | `ThreadLocalBuffered` | Each thread has its own independent buffer. A background flush thread periodically sends stale data (default interval: 10 s). Buffers are also flushed when a thread exits or the buffer reaches the size threshold. |
 
-1. `writer_types` defines the available writer types and their default configurations
-2. `writer_config` handles parsing and validating configuration values
-3. `writer_wrapper` instantiates the appropriate writer implementation
+#### BufferedWriteMode — shutdown sequence
 
-## Best Practices
+1. Caller destroys the `BufferedWriteMode` object.
+2. Destructor sets `m_shutdown = true` and notifies all waiting threads.
+3. The background `ThreadSend` thread wakes, swaps out any remaining buffer content, sends it, then exits.
 
-- Use the environment variable `SPECTATOR_OUTPUT_LOCATION` for runtime configuration
-- Prefer URL-style configurations for explicit endpoint specification
-- For UDP: `udp://host:port`
-- For Unix Domain Sockets: `unix:///path/to/socket`
+#### ThreadLocalBufferedWriteMode — shutdown sequence
 
-## Example
+1. Caller destroys the `ThreadLocalBufferedWriteMode` object.
+2. Destructor sets `m_shutdown = true` and joins the flush thread.
+3. Destructor then iterates over all registered `ThreadBuffer`s and flushes any remaining data.
+4. When a worker thread exits, its `ThreadLocalData` destructor flushes and deregisters its buffer (if shutdown has not already started).
+
+---
+
+### `writer_config` — Configuration
+
+`WriterConfig` parses a type string into a `WriterType` + destination location and validates buffering parameters.
+
+**Accepted type strings:**
+
+| String | Transport | Default location |
+|--------|-----------|-----------------|
+| `"memory"` | `MemoryWriter` | _(none)_ |
+| `"udp"` | `UDPWriter` | `udp://127.0.0.1:1234` |
+| `"unix"` | `UDSWriter` | `unix:///run/spectatord/spectatord.unix` |
+| `"udp://host:port"` | `UDPWriter` | as specified |
+| `"unix:///path"` | `UDSWriter` | as specified |
+
+The environment variable `SPECTATOR_OUTPUT_LOCATION` overrides the type string when set.
+
+**Validation rules:**
+- `bufferSize` must be `> 0` when using `Buffered` or `ThreadLocalBuffered` mode.
+- `bufferSize` must be `0` when using `NonBuffered` mode.
+
+---
+
+### `writer_wrapper` — Public API
+
+`Writer` is a singleton (via `Singleton<Writer>`) that exposes two static methods to the rest of the codebase:
 
 ```cpp
-// Create a configuration
-const std::string udpUrl = std::string(WriterTypes::UDPURL) + "192.168.1.100:8125";
-const WriterConfig writerConfig(udpUrl);
-
-// Create a configuration object with the writer config
-Config config(writerConfig);
-
-// Additional tags can be added
-std::unordered_map<std::string, std::string> tags = {
-    {"app", "my-application"},
-    {"env", "production"}
-};
-Config config(writerConfig, tags);
-
-// The config can be used to create a registry
-auto registry = spectator::Registry(config);
+Writer::Initialize(type, param, port, bufferSize, modeType);
+Writer::Write(message);
 ```
+
+`Initialize` constructs the appropriate `WriteMode` (which constructs the appropriate `BaseWriter` internally). `Write` delegates to the active `WriteMode`.
+
+`WriterTestHelper` is a friend class that grants tests access to `Initialize` and the underlying `BaseWriter*` without exposing them publicly.

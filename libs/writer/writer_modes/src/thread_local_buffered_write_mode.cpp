@@ -16,6 +16,7 @@ ThreadLocalBufferedWriteMode::ThreadLocalBufferedWriteMode(WriterType type, size
 ThreadLocalBufferedWriteMode::~ThreadLocalBufferedWriteMode()
 {
     m_shutdown.store(true);
+    m_shutdownCv.notify_one();
     if (m_flushThread.joinable())
     {
         m_flushThread.join();
@@ -64,9 +65,15 @@ void ThreadLocalBufferedWriteMode::FlushBuffer(ThreadBuffer& tb)
 
 void ThreadLocalBufferedWriteMode::FlushThread()
 {
-    while (!m_shutdown.load())
+    while (true)
     {
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+        {
+            std::unique_lock<std::mutex> lk(m_shutdownMutex);
+            if (m_shutdownCv.wait_for(lk, m_flushInterval, [this] { return m_shutdown.load(); }))
+            {
+                return;
+            }
+        }
 
         std::lock_guard<std::mutex> rlock(m_registryMutex);
         auto now = std::chrono::steady_clock::now();
