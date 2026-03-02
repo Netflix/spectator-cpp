@@ -10,6 +10,8 @@ ThreadLocalBufferedWriteMode::ThreadLocalBufferedWriteMode(WriterType type, size
                                                              const std::string& param, int port)
     : WriteMode(type, param, port), m_bufferSize(bufferSize), m_flushInterval(flushInterval)
 {
+    Logger::info("WriteMode mode: ThreadLocalBuffered, buffer size: {}, flush interval: {}s",
+                 m_bufferSize, m_flushInterval.count());
     m_flushThread = std::thread(&ThreadLocalBufferedWriteMode::FlushThread, this);
 }
 

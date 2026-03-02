@@ -8,6 +8,7 @@ static constexpr auto NEW_LINE = '\n';
 BufferedWriteMode::BufferedWriteMode(WriterType type, unsigned int bufferSize, const std::string& param, int port)
     : WriteMode(type, param, port), m_bufferSize(bufferSize)
 {
+    Logger::info("WriteMode mode: Buffered, buffer size: {}", m_bufferSize);
     m_buffer.reserve(m_bufferSize);
     m_sendingThread = std::thread(&BufferedWriteMode::ThreadSend, this);
 }

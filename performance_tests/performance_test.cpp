@@ -23,7 +23,7 @@ struct RunTimeConfig
     std::string locationTag;
     std::string modeName;
     unsigned int numThreads = 1;
-    unsigned int bufferSize = 4096;
+    unsigned int bufferSize = 8192;
 };
 
 struct PerfResults
@@ -100,7 +100,7 @@ std::optional<RunTimeConfig> HandleArgs(int argc, char* argv[])
         numThreads = static_cast<unsigned int>(parsed);
     }
 
-    unsigned int bufferSize = 4096;
+    unsigned int bufferSize = 8192;
     if (argc == 5)
     {
         int parsed = std::atoi(argv[4]);

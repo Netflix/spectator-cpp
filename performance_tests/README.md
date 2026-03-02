@@ -13,7 +13,7 @@ performance_test [writer_type] [write_mode] [num_threads] [buffer_size]
 | `writer_type` | `udp`, `uds`                                              | required |
 | `write_mode`  | `0` NonBuffered, `1` Buffered, `2` ThreadLocalBuffered    | `0`      |
 | `num_threads` | any positive integer                                      | `1`      |
-| `buffer_size` | bytes, ignored for NonBuffered                            | `4096`   |
+| `buffer_size` | bytes, ignored for NonBuffered                            | `8192`   |
 
 ### Examples
 
