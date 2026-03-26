@@ -1,5 +1,7 @@
 #pragma once
+#include <charconv>
 #include "id.h"
+#include "absl/strings/str_cat.h"
 #include "absl/strings/str_format.h"
 #include "absl/time/time.h"
 
