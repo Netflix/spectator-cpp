@@ -79,13 +79,26 @@ class StatelessMeter {
     }
     // std::to_chars with fixed format: no trailing zeros, no scientific notation,
     // ~5-10x faster than absl::StrFormat("%s%f",...) + erase.
-    char num_buf[327];  // fixed-format double worst case: DBL_MAX ~309 digits
+    // Stack buffer covers typical values; heap fallback for extreme cases (subnormals).
+    char num_buf[64];
     auto [ptr, ec] = std::to_chars(num_buf, num_buf + sizeof(num_buf), value,
                                     std::chars_format::fixed);
     // thread_local retains capacity after warmup — zero allocation per send.
     thread_local std::string tl_msg;
     tl_msg.assign(value_prefix_);
-    tl_msg.append(num_buf, ptr);
+    if (ec == std::errc{}) {
+      tl_msg.append(num_buf, ptr);
+    } else {
+      // Fallback for extreme values (subnormals): write into tl_msg via resize.
+      // We do not take this pathway normally as it will issue a write of \0's into
+      // the 1076 chars every time
+      auto off = tl_msg.size();
+      tl_msg.resize(off + 1076);
+      auto [hp, hec] = std::to_chars(tl_msg.data() + off,
+                                      tl_msg.data() + tl_msg.size(), value,
+                                      std::chars_format::fixed);
+      tl_msg.resize(static_cast<size_t>(hp - tl_msg.data()));
+    }
     publisher_->send(tl_msg);
   }
 
