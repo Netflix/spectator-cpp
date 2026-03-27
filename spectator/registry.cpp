@@ -41,19 +41,19 @@ Registry::Registry(const Config& config) : m_config(config)
     if (config.GetWriterType() == WriterType::Memory)
     {
         Logger::info("Registry initializing Memory Writer");
-        Writer::Initialize(config.GetWriterType(), "", 0, this->m_config.GetWriterBufferSize()); 
+        Writer::Initialize(config.GetWriterType(), "", 0, this->m_config.GetWriterBufferSize());
     }
     else if (config.GetWriterType() == WriterType::UDP)
     {
         auto [ip, port] = ParseUdpAddress(this->m_config.GetWriterLocation());
         Logger::info("Registry initializing UDP Writer at {}:{}", ip, port);
-        Writer::Initialize(config.GetWriterType(), ip, port, this->m_config.GetWriterBufferSize()); 
+        Writer::Initialize(config.GetWriterType(), ip, port, this->m_config.GetWriterBufferSize());
     }
     else if (config.GetWriterType() == WriterType::Unix)
     {
         auto socketPath = ParseUnixAddress(this->m_config.GetWriterLocation());
         Logger::info("Registry initializing UDS Writer at {}", socketPath);
-        Writer::Initialize(config.GetWriterType(), socketPath, 0, this->m_config.GetWriterBufferSize()); 
+        Writer::Initialize(config.GetWriterType(), socketPath, 0, this->m_config.GetWriterBufferSize());
     }    
 }
 

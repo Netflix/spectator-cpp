@@ -127,6 +127,66 @@ TEST_F(WriterWrapperUDSWriterTest, MultithreadedWrite)
     EXPECT_EQ(actualIncrements, expectedIncrements);
 }
 
+// Verify that multiple worker threads do not block each other: each thread uses its own
+// local buffer, flushing by capacity. Remaining data is drained by ThreadLocalBuffer's
+// destructor when each thread exits.
+TEST_F(WriterWrapperUDSWriterTest, ThreadLocalBufferNoMutexContention)
+{
+    Logger::info("Starting thread-local buffer contention test...");
+
+    const std::string unixUrl = "/tmp/test_uds_socket";
+    // Small buffer so capacity-based flush fires frequently
+    WriterTestHelper::InitializeWriter(WriterType::Unix, unixUrl, 0, 64);
+
+    constexpr auto numThreads = 8;
+    constexpr auto incrementsPerThread = 20;
+
+    auto worker = [&](int threadId)
+    {
+        std::string name = fmt::format("tl.counter.{}", threadId);
+        MeterId meterId(name);
+        Counter counter(meterId);
+        for (int j = 0; j < incrementsPerThread; j++)
+        {
+            counter.Increment();
+        }
+    };
+
+    std::vector<std::thread> threads;
+    for (int i = 0; i < numThreads; i++)
+    {
+        threads.emplace_back(worker, i);
+    }
+    for (auto& t : threads)
+    {
+        t.join();
+    }
+
+    // Allow time for thread destructor flushes to reach the UDS server
+    std::this_thread::sleep_for(std::chrono::milliseconds(300));
+
+    auto msgs = get_uds_messages();
+    EXPECT_FALSE(msgs.empty());
+
+    int totalIncrements = 0;
+    std::regex counter_regex(R"(c:tl\.counter\.\d+:1.000000)");
+    for (const auto& msg : msgs)
+    {
+        std::stringstream ss(msg);
+        std::string line;
+        while (std::getline(ss, line))
+        {
+            if (!line.empty())
+            {
+                EXPECT_TRUE(std::regex_match(line, counter_regex))
+                    << "Unexpected line: " << line;
+                totalIncrements++;
+            }
+        }
+    }
+    EXPECT_EQ(totalIncrements, numThreads * incrementsPerThread);
+}
+
 // This is a unique test that attempts to create messages of exactly 10 bytes in size
 // and writes to a buffer of size 10 bytes from multiple threads. The NDrive team discovered
 // a deadlock scenario in this specific case where the buffer size matched the message size

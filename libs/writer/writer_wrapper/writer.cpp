@@ -8,28 +8,43 @@ namespace spectator {
 
 static constexpr auto NEW_LINE = '\n';
 
+// Each worker thread owns a shared_ptr to its buffer.
+// The registry in Writer holds weak_ptrs so threads can exit freely.
+thread_local std::shared_ptr<Writer::ThreadLocalBuffer> tl_buffer;
+
+// Flush any data remaining in the buffer when the thread exits.
+Writer::ThreadLocalBuffer::~ThreadLocalBuffer()
+{
+    if (data.empty())
+    {
+        return;
+    }
+    try
+    {
+        auto& instance = Writer::GetInstance();
+        if (instance.m_impl)
+        {
+            instance.TryToSend(data);
+        }
+    }
+    catch (...)
+    {
+        // Best-effort: ignore errors during thread teardown
+    }
+}
+
 Writer::~Writer()
 {
     auto& instance = GetInstance();
-
-    if (instance.bufferingEnabled)
-    {
-        instance.shutdown.store(true);
-        instance.cv_receiver.notify_all();
-        instance.cv_sender.notify_all();
-        if (instance.sendingThread.joinable()) {
-            instance.sendingThread.join();
-        }
-    }
+    instance.shutdown.store(true);
     this->Close();
 }
 
-void Writer::Initialize(WriterType type, const std::string& param, int port, unsigned int bufferSize)
+void Writer::Initialize(WriterType type, const std::string& param, int port,
+                        unsigned int bufferSize)
 {
-    // Get the singleton instance directly
     auto& instance = GetInstance();
 
-    // Create the new writer based on type
     try
     {
         switch (type)
@@ -51,19 +66,23 @@ void Writer::Initialize(WriterType type, const std::string& param, int port, uns
         }
 
         instance.m_currentType = type;
-        
+        instance.shutdown.store(false);
+        instance.bufferingEnabled = false;
+
+        // Clear thread-local buffer registry from any previous init
+        {
+            std::lock_guard<std::mutex> regLock(instance.registryMutex);
+            instance.threadBufferRegistry.clear();
+        }
+
         if (bufferSize > 0)
         {
             instance.bufferingEnabled = true;
             instance.bufferSize = bufferSize;
-            instance.buffer.reserve(bufferSize);
-            instance.writeImpl = &Writer::BufferedWrite;
-            // Create a thread with proper binding to the instance method
-            instance.sendingThread = std::thread(&Writer::ThreadSend, &instance);
+            instance.writeImpl = &Writer::ThreadLocalBufferedWrite;
         }
         else
         {
-            // Explicitly set to non-buffered if buffer size is 0
             instance.writeImpl = &Writer::NonBufferedWrite;
         }
     }
@@ -80,52 +99,40 @@ void Writer::TryToSend(const std::string& message)
     instance.m_impl->Write(message);
 }
 
-void Writer::ThreadSend()
+void Writer::ThreadLocalBufferedWrite(const std::string& message)
 {
     auto& instance = GetInstance();
-    std::string message{};
-    while (instance.shutdown.load() == false)
-    {
-        {
-            std::unique_lock<std::mutex> lock(instance.writeMutex);
-            instance.cv_sender.wait(
-                lock, [&instance] { return instance.buffer.size() >= instance.bufferSize || instance.shutdown.load(); });
-            if (instance.shutdown.load() == true)
-            {
-                return;
-            }
-            message = std::move(instance.buffer);
-            instance.buffer = std::string();
-            instance.buffer.reserve(instance.bufferSize);
-        }
-        instance.cv_receiver.notify_one();
-        instance.TryToSend(message);
-    }
-}
 
-void Writer::BufferedWrite(const std::string& message)
-{
-    auto& instance = GetInstance();
+    // Initialise this thread's buffer on first use and register it
+    if (!tl_buffer)
     {
-        std::unique_lock<std::mutex> lock(instance.writeMutex);
-        // TODO: Optimize memory alloc to not exceed allocated size
-        instance.cv_receiver.wait(
-            lock, [&instance] { return instance.buffer.size() < instance.bufferSize || instance.shutdown.load(); });
-        if (instance.shutdown.load())
-        {
-            Logger::info("Write operation aborted due to shutdown signal");
-            return;
-        }
-        instance.buffer.append(message);
-        instance.buffer.push_back(NEW_LINE);
+        tl_buffer = std::make_shared<ThreadLocalBuffer>();
+        std::lock_guard<std::mutex> regLock(instance.registryMutex);
+        instance.threadBufferRegistry.push_back(tl_buffer);
     }
-    instance.buffer.size() >= instance.bufferSize ? instance.cv_sender.notify_one() : instance.cv_receiver.notify_one();
+
+    std::string toSend;
+    {
+        std::lock_guard<std::mutex> lock(tl_buffer->mutex);
+        tl_buffer->data.append(message);
+        tl_buffer->data.push_back(NEW_LINE);
+
+        // Capacity-based flush: drain when the thread-local buffer is full
+        if (tl_buffer->data.size() >= instance.bufferSize)
+        {
+            toSend = std::move(tl_buffer->data);
+            tl_buffer->data.clear();
+        }
+    }
+
+    if (!toSend.empty())
+    {
+        instance.TryToSend(toSend);
+    }
 }
 
 void Writer::NonBufferedWrite(const std::string& message)
 {
-    // Since this is a non-static method, we're already operating on an instance
-    // and can call the instance method directly
     this->TryToSend(message + NEW_LINE);
 }
 
@@ -139,7 +146,6 @@ void Writer::Write(const std::string& message)
         return;
     }
 
-    // Call the member function using the pointer-to-member syntax
     (instance.*instance.writeImpl)(message);
 }
 
