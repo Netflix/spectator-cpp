@@ -23,6 +23,7 @@ class Config
     const std::string& GetWriterLocation() const noexcept { return m_writerConfig.GetLocation(); }
     const WriterType& GetWriterType() const noexcept { return m_writerConfig.GetType(); }
     const unsigned int GetWriterBufferSize() const noexcept { return m_writerConfig.GetBufferSize(); }
+    const unsigned int GetFlushIntervalMs() const noexcept { return m_writerConfig.GetFlushIntervalMs(); }
 
 
    private:

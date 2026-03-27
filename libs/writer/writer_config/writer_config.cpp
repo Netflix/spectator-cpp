@@ -56,4 +56,11 @@ WriterConfig::WriterConfig(const std::string& type, const unsigned int bufferSiz
     Logger::info("WriterConfig buffering enabled with size: {}", m_bufferSize);
 }
 
+WriterConfig::WriterConfig(const std::string& type, const unsigned int bufferSize, const unsigned int flushIntervalMs)
+    : WriterConfig(type, bufferSize)  // Constructor delegation
+{
+    m_flushIntervalMs = flushIntervalMs;
+    Logger::info("WriterConfig flush interval enabled with interval: {}ms", m_flushIntervalMs);
+}
+
 }  // namespace spectator

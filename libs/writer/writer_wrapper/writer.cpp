@@ -36,12 +36,24 @@ Writer::ThreadLocalBuffer::~ThreadLocalBuffer()
 Writer::~Writer()
 {
     auto& instance = GetInstance();
-    instance.shutdown.store(true);
+
+    // Signal all background threads to stop
+    {
+        std::lock_guard<std::mutex> lock(instance.shutdownMutex);
+        instance.shutdown.store(true);
+    }
+    instance.cv_shutdown.notify_all();
+
+    if (instance.flushTimerThread.joinable())
+    {
+        instance.flushTimerThread.join();
+    }
+
     this->Close();
 }
 
 void Writer::Initialize(WriterType type, const std::string& param, int port,
-                        unsigned int bufferSize)
+                        unsigned int bufferSize, unsigned int flushIntervalMs)
 {
     auto& instance = GetInstance();
 
@@ -66,20 +78,37 @@ void Writer::Initialize(WriterType type, const std::string& param, int port,
         }
 
         instance.m_currentType = type;
-        instance.shutdown.store(false);
-        instance.bufferingEnabled = false;
 
-        // Clear thread-local buffer registry from any previous init
+        // Stop any pre-existing timer thread before re-initialising
+        {
+            std::lock_guard<std::mutex> lock(instance.shutdownMutex);
+            instance.shutdown.store(true);
+        }
+        instance.cv_shutdown.notify_all();
+        if (instance.flushTimerThread.joinable())
+        {
+            instance.flushTimerThread.join();
+        }
+        // Clear the thread-local buffer registry from any previous init
         {
             std::lock_guard<std::mutex> regLock(instance.registryMutex);
             instance.threadBufferRegistry.clear();
         }
+        instance.shutdown.store(false);
+        instance.bufferingEnabled = false;
 
-        if (bufferSize > 0)
+        if (bufferSize > 0 || flushIntervalMs > 0)
         {
             instance.bufferingEnabled = true;
             instance.bufferSize = bufferSize;
             instance.writeImpl = &Writer::ThreadLocalBufferedWrite;
+
+            if (flushIntervalMs > 0)
+            {
+                instance.flushInterval = std::chrono::milliseconds(flushIntervalMs);
+                instance.flushTimerThread = std::thread(&Writer::FlushTimerThread, &instance);
+                Logger::info("Writer interval flush enabled: {}ms", flushIntervalMs);
+            }
         }
         else
         {
@@ -97,6 +126,63 @@ void Writer::TryToSend(const std::string& message)
 {
     const auto& instance = GetInstance();
     instance.m_impl->Write(message);
+}
+
+void Writer::FlushTimerThread()
+{
+    auto& instance = GetInstance();
+
+    while (true)
+    {
+        // Sleep for the flush interval, or wake early on shutdown
+        {
+            std::unique_lock<std::mutex> lock(instance.shutdownMutex);
+            instance.cv_shutdown.wait_for(lock, instance.flushInterval,
+                [&instance] { return instance.shutdown.load(); });
+        }
+
+        if (instance.shutdown.load())
+        {
+            break;
+        }
+
+        // Collect live buffers (clean up expired weak_ptrs in the same pass)
+        std::vector<std::shared_ptr<ThreadLocalBuffer>> buffersToFlush;
+        {
+            std::lock_guard<std::mutex> regLock(instance.registryMutex);
+            for (auto it = instance.threadBufferRegistry.begin();
+                 it != instance.threadBufferRegistry.end();)
+            {
+                if (auto buf = it->lock())
+                {
+                    buffersToFlush.push_back(std::move(buf));
+                    ++it;
+                }
+                else
+                {
+                    it = instance.threadBufferRegistry.erase(it);
+                }
+            }
+        }
+
+        // Drain each thread-local buffer
+        for (auto& buf : buffersToFlush)
+        {
+            std::string toSend;
+            {
+                std::lock_guard<std::mutex> lock(buf->mutex);
+                if (!buf->data.empty())
+                {
+                    toSend = std::move(buf->data);
+                    buf->data.clear();
+                }
+            }
+            if (!toSend.empty())
+            {
+                instance.TryToSend(toSend);
+            }
+        }
+    }
 }
 
 void Writer::ThreadLocalBufferedWrite(const std::string& message)
@@ -118,7 +204,7 @@ void Writer::ThreadLocalBufferedWrite(const std::string& message)
         tl_buffer->data.push_back(NEW_LINE);
 
         // Capacity-based flush: drain when the thread-local buffer is full
-        if (tl_buffer->data.size() >= instance.bufferSize)
+        if (instance.bufferSize > 0 && tl_buffer->data.size() >= instance.bufferSize)
         {
             toSend = std::move(tl_buffer->data);
             tl_buffer->data.clear();

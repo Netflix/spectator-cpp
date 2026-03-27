@@ -127,16 +127,56 @@ TEST_F(WriterWrapperUDSWriterTest, MultithreadedWrite)
     EXPECT_EQ(actualIncrements, expectedIncrements);
 }
 
+// Verify that metrics written infrequently are still flushed via the interval mechanism
+// even when the buffer is not full.
+TEST_F(WriterWrapperUDSWriterTest, IntervalFlushWithIdleThread)
+{
+    Logger::info("Starting interval flush test...");
+
+    // Use a large buffer so capacity-based flush never triggers,
+    // but set a short flush interval so metrics get sent in time.
+    const std::string unixUrl = "/tmp/test_uds_socket";
+    constexpr unsigned int largeBuffer = 4096;
+    constexpr unsigned int flushIntervalMs = 200;
+    WriterTestHelper::InitializeWriter(WriterType::Unix, unixUrl, 0, largeBuffer, flushIntervalMs);
+
+    MeterId meterId("interval.test.counter");
+    Counter counter(meterId);
+    counter.Increment();
+
+    // Wait for at least two flush intervals to pass
+    std::this_thread::sleep_for(std::chrono::milliseconds(flushIntervalMs * 3));
+
+    auto msgs = get_uds_messages();
+    EXPECT_FALSE(msgs.empty()) << "Expected metrics to be flushed by interval timer";
+
+    std::regex counter_regex(R"(c:interval\.test\.counter:1.000000)");
+    bool found = false;
+    for (const auto& msg : msgs)
+    {
+        std::stringstream ss(msg);
+        std::string line;
+        while (std::getline(ss, line))
+        {
+            if (std::regex_match(line, counter_regex))
+            {
+                found = true;
+            }
+        }
+    }
+    EXPECT_TRUE(found) << "Expected interval.test.counter metric to be received";
+}
+
 // Verify that multiple worker threads do not block each other: each thread uses its own
-// local buffer, flushing by capacity. Remaining data is drained by ThreadLocalBuffer's
-// destructor when each thread exits.
+// local buffer, flushing by capacity. The interval timer catches any tail data that
+// does not fill the buffer before the threads exit.
 TEST_F(WriterWrapperUDSWriterTest, ThreadLocalBufferNoMutexContention)
 {
     Logger::info("Starting thread-local buffer contention test...");
 
     const std::string unixUrl = "/tmp/test_uds_socket";
-    // Small buffer so capacity-based flush fires frequently
-    WriterTestHelper::InitializeWriter(WriterType::Unix, unixUrl, 0, 64);
+    // Small buffer so capacity-based flush fires frequently; interval timer catches the tail
+    WriterTestHelper::InitializeWriter(WriterType::Unix, unixUrl, 0, 64, 100);
 
     constexpr auto numThreads = 8;
     constexpr auto incrementsPerThread = 20;
@@ -162,7 +202,7 @@ TEST_F(WriterWrapperUDSWriterTest, ThreadLocalBufferNoMutexContention)
         t.join();
     }
 
-    // Allow time for thread destructor flushes to reach the UDS server
+    // Allow the interval timer to flush any remaining buffered data
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
 
     auto msgs = get_uds_messages();
