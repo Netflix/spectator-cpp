@@ -1,8 +1,9 @@
 #pragma once
+#include <cassert>
 #include <charconv>
+#include <cmath>
 #include "id.h"
 #include "absl/strings/str_cat.h"
-#include "absl/strings/str_format.h"
 #include "absl/time/time.h"
 
 namespace spectator {
@@ -10,6 +11,10 @@ namespace spectator {
 namespace detail {
 
 #include "valid_chars.inc"
+
+// IEEE 754 double in fixed notation requires at most 1076 chars
+// (sign + 1074 fractional digits + decimal point for minimum subnormal).
+static constexpr size_t kMaxFixedDoubleLen = 1076;
 
 inline std::string as_string(std::string_view v) { 
     return {v.data(), v.size()}; 
@@ -45,6 +50,14 @@ inline std::string create_prefix(const Id& id, std::string_view type_name) {
   return res;
 }
 
+// Single thread-local send buffer shared across all StatelessMeter instantiations.
+// Non-template so all Pub types resolve to the same storage slot per thread.
+// Not re-entrant: callers must complete send() before the buffer is safe to reuse.
+inline std::string& tl_send_buf() {
+  thread_local std::string buf;
+  return buf;
+}
+
 template <typename T>
 T restrict(T amount, T min, T max) {
   auto r = amount;
@@ -66,9 +79,7 @@ class StatelessMeter {
   }
   virtual ~StatelessMeter() = default;
   std::string GetPrefix() {
-    if (value_prefix_.empty()) {
-      value_prefix_ = detail::create_prefix(*id_, Type());
-    }
+    ensure_prefix();
     return value_prefix_;
   }
   [[nodiscard]] IdPtr MeterId() const noexcept { return id_; }
@@ -76,41 +87,51 @@ class StatelessMeter {
 
  protected:
   void send(double value) {
-    if (value_prefix_.empty()) {
-      value_prefix_ = detail::create_prefix(*id_, Type());
+    ensure_prefix();
+    auto& tl_msg = detail::tl_send_buf();
+    tl_msg.assign(value_prefix_);
+
+    // Early exit: match absl::StrFormat("%f") behaviour for special values.
+    if (std::isnan(value)) {
+      tl_msg.append("nan");
+      publisher_->send(tl_msg);
+      return;
     }
+
+    if (std::isinf(value)) {
+      tl_msg.append(value > 0 ? "inf" : "-inf");
+      publisher_->send(tl_msg);
+      return;
+    }
+
     // std::to_chars with fixed format: no trailing zeros, no scientific notation,
     // ~5-10x faster than absl::StrFormat("%s%f",...) + erase.
     // Stack buffer covers typical values; heap fallback for extreme cases (subnormals).
     char num_buf[64];
     auto [ptr, ec] = std::to_chars(num_buf, num_buf + sizeof(num_buf), value,
                                     std::chars_format::fixed);
-    // thread_local retains capacity after warmup — zero allocation per send.
-    thread_local std::string tl_msg;
-    tl_msg.assign(value_prefix_);
     if (ec == std::errc{}) {
       tl_msg.append(num_buf, ptr);
     } else {
-      // Fallback for extreme values (subnormals): write into tl_msg via resize.
-      // We do not take this pathway normally as it will issue a write of \0's into
-      // the 1076 chars every time
+      // Fallback for subnormal values, which require up to 1076 chars in fixed
+      // notation. NaN/Inf are handled above, so this branch is subnormals only.
       auto off = tl_msg.size();
-      tl_msg.resize(off + 1076);
-      auto [hp, hec] = std::to_chars(tl_msg.data() + off,
-                                      tl_msg.data() + tl_msg.size(), value,
-                                      std::chars_format::fixed);
-      tl_msg.resize(static_cast<size_t>(hp - tl_msg.data()));
+      tl_msg.resize(off + detail::kMaxFixedDoubleLen);
+      auto [heap_ptr, heap_ec] = std::to_chars(tl_msg.data() + off,
+                                               tl_msg.data() + tl_msg.size(), value,
+                                               std::chars_format::fixed);
+      assert(heap_ec == std::errc{});
+      tl_msg.resize(static_cast<size_t>(heap_ptr - tl_msg.data()));
     }
     publisher_->send(tl_msg);
   }
 
   void send_uint(uint64_t value) {
-    if (value_prefix_.empty()) {
-      value_prefix_ = detail::create_prefix(*id_, Type());
-    }
+    ensure_prefix();
     char num_buf[24];
     auto [ptr, ec] = std::to_chars(num_buf, num_buf + sizeof(num_buf), value);
-    thread_local std::string tl_msg;
+    assert(ec == std::errc{});
+    auto& tl_msg = detail::tl_send_buf();
     tl_msg.assign(value_prefix_);
     tl_msg.append(num_buf, ptr);
     publisher_->send(tl_msg);
@@ -120,6 +141,12 @@ class StatelessMeter {
   IdPtr id_;
   Pub* publisher_;
   std::string value_prefix_;
+
+  void ensure_prefix() {
+    if (value_prefix_.empty()) {
+      value_prefix_ = detail::create_prefix(*id_, Type());
+    }
+  }
 };
 
 template <typename Pub>
