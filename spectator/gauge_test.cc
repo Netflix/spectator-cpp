@@ -1,6 +1,8 @@
 #include "stateless_meters.h"
 #include "test_publisher.h"
 #include <gtest/gtest.h>
+#include <cmath>
+#include <limits>
 
 namespace {
 
@@ -21,6 +23,27 @@ TEST(Gauge, Set) {
   g.Set(1);
   std::vector<std::string> expected = {"g:gauge:42", "g:gauge2,key=val:2",
                                        "g:gauge:1"};
+  EXPECT_EQ(publisher.SentMessages(), expected);
+}
+
+TEST(Gauge, NaN) {
+  TestPublisher publisher;
+  auto id = std::make_shared<Id>("gauge", Tags{});
+  Gauge g{id, &publisher};
+  g.Set(std::numeric_limits<double>::quiet_NaN());
+  // Legacy absl::StrFormat("%f") produced "nan"; verify we preserve that.
+  std::vector<std::string> expected = {"g:gauge:nan"};
+  EXPECT_EQ(publisher.SentMessages(), expected);
+}
+
+TEST(Gauge, Infinity) {
+  TestPublisher publisher;
+  auto id = std::make_shared<Id>("gauge", Tags{});
+  Gauge g{id, &publisher};
+  g.Set(std::numeric_limits<double>::infinity());
+  g.Set(-std::numeric_limits<double>::infinity());
+  // Legacy absl::StrFormat("%f") produced "inf" / "-inf".
+  std::vector<std::string> expected = {"g:gauge:inf", "g:gauge:-inf"};
   EXPECT_EQ(publisher.SentMessages(), expected);
 }
 
