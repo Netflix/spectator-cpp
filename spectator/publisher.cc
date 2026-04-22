@@ -57,29 +57,36 @@ void SpectatordPublisher::setup_unix_domain(absl::string_view path) {
   local_reconnect(path);
   // get a copy of the file path
   std::string local_path{path};
-  sender_ = [local_path, this](std::string_view msg) {
+
+  flusher_ = [local_path, this]() {
+    if (buffer_.empty()) return;
+    const auto now = std::chrono::steady_clock::now();
+    for (auto i = 0; i < 3; ++i) {
+      try {
+        auto sent_bytes = local_socket_.send(asio::buffer(buffer_));
+        logger_->trace("Sent (local): {} bytes, in total had {}", sent_bytes, buffer_.length());
+        last_flush_time_ = now;
+        break;
+      } catch (std::exception& e) {
+        local_reconnect(local_path);
+        logger_->warn("Unable to send {} - attempt {}/3 ({})", buffer_, i,
+                      e.what());
+      }
+    }
+    buffer_.clear();
+  };
+
+  sender_ = [this](std::string_view msg) {
     buffer_.append(msg);
     const auto now = std::chrono::steady_clock::now();
     const bool should_flush = buffer_.length() >= bytes_to_buffer_ ||
                         now - last_flush_time_ >= flush_interval_;
 
     if (should_flush) {
-      for (auto i = 0; i < 3; ++i) {
-        try {
-          auto sent_bytes = local_socket_.send(asio::buffer(buffer_));
-          logger_->trace("Sent (local): {} bytes, in total had {}", sent_bytes, buffer_.length());
-          last_flush_time_ = now;
-          break;
-        } catch (std::exception& e) {
-          local_reconnect(local_path);
-          logger_->warn("Unable to send {} - attempt {}/3 ({})", buffer_, i,
-                        e.what());
-        }
-      }
-      buffer_.clear();
+      flusher_();
     } else {
       buffer_.push_back(NEW_LINE);
-    }   
+    }
   };
 }
 
