@@ -326,6 +326,8 @@ class SpectatordRegistry
     state_.publisher =
         std::make_unique<SpectatordPublisher>(config.endpoint, config.bytes_to_buffer, config.flush_interval, logger_);
   }
+
+  void Flush() { state_.publisher->flush(); }
 };
 
 /// A Registry that can be used for tests. It keeps state about which meters
