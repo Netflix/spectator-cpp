@@ -26,7 +26,21 @@ SpectatordPublisher::SpectatordPublisher(absl::string_view endpoint,
     if (endpoint.substr(pos, 2) == "//") {
       pos += 2;
     }
-    setup_udp(endpoint.substr(pos));
+    // resolve_host_port (called from setup_udp) throws asio::system_error
+    // when the resolver fails — e.g. for an unresolvable hostname or transient
+    // DNS outage. An exception escaping this constructor unwinds through the
+    // embedder's stats-init path and can trigger std::terminate. Fall back to
+    // the nop sender on any setup failure so callers stay alive and just lose
+    // metrics, mirroring the soft-fail behavior of local_reconnect /
+    // udp_reconnect for post-construction errors.
+    try {
+      setup_udp(endpoint.substr(pos));
+    } catch (const std::exception& e) {
+      logger_->warn(
+          "Unable to setup udp publisher for '{}': {} - Will not send metrics",
+          std::string(endpoint), e.what());
+      setup_nop_sender();
+    }
   } else if (endpoint != "disabled") {
     logger_->warn(
         "Unknown endpoint: '{}'. Expecting: 'unix:/path/to/socket'"
@@ -90,23 +104,49 @@ void SpectatordPublisher::setup_unix_domain(absl::string_view path) {
   };
 }
 
+// Splits "host:port" or bracketed "[v6-host]:port" into (host, port).
+// Bracketed form is required for IPv6 literals so the multiple ':' in the
+// address are not confused with the host/port separator.
+inline std::pair<std::string, std::string> split_host_port(
+    absl::string_view host_port) {
+  if (!host_port.empty() && host_port.front() == '[') {
+    auto close = host_port.find(']');
+    if (close == absl::string_view::npos || close + 1 >= host_port.size() ||
+        host_port[close + 1] != ':') {
+      throw std::runtime_error(fmt::format(
+          "Unable to parse udp endpoint: '{}'. Expecting [ipv6-host]:port",
+          std::string(host_port)));
+    }
+    return {std::string(host_port.substr(1, close - 1)),
+            std::string(host_port.substr(close + 2))};
+  }
+  // Use rfind so a bare (unbracketed) IPv6 literal at least lands on the last
+  // ':' rather than the first; bracketed form is still the supported way.
+  auto sep = host_port.rfind(':');
+  if (sep == absl::string_view::npos) {
+    throw std::runtime_error(fmt::format(
+        "Unable to parse udp endpoint: '{}'. Expecting hostname:port",
+        std::string(host_port)));
+  }
+  return {std::string(host_port.substr(0, sep)),
+          std::string(host_port.substr(sep + 1))};
+}
+
 inline asio::ip::udp::endpoint resolve_host_port(
     asio::io_context& io_context,  // NOLINT
     absl::string_view host_port) {
   using asio::ip::udp;
   udp::resolver resolver{io_context};
 
-  auto end_host = host_port.find(':');
-  if (end_host == std::string_view::npos) {
-    auto err = fmt::format(
-        "Unable to parse udp endpoint: '{}'. Expecting hostname:port",
-        std::string(host_port));
-    throw std::runtime_error(err);
-  }
-
-  auto host = host_port.substr(0, end_host);
-  auto port = host_port.substr(end_host + 1);
-  return *resolver.resolve(udp::v6(), std::string(host), std::string(port));
+  auto [host, port] = split_host_port(host_port);
+  // Resolve with AF_UNSPEC (no protocol pin) so we accept whatever family the
+  // host actually supports — IPv4-only, IPv6-only, or dual-stack. The earlier
+  // udp::v6() pin caused getaddrinfo to fail with EAI_ADDRFAMILY in IPv4-only
+  // environments (kind clusters with net.ipv6.conf.all.disable_ipv6=1, etc.),
+  // throwing out of the SpectatordPublisher constructor and crashing
+  // embedders. asio orders the result set per RFC 6724, so on dual-stack
+  // hosts the OS-preferred family wins.
+  return *resolver.resolve(std::string(host), std::string(port));
 }
 
 void SpectatordPublisher::udp_reconnect(
@@ -115,7 +155,10 @@ void SpectatordPublisher::udp_reconnect(
     if (udp_socket_.is_open()) {
       udp_socket_.close();
     }
-    udp_socket_.open(asio::ip::udp::v6());
+    // Match the socket's protocol family to the resolved endpoint so we
+    // open an AF_INET socket for v4 endpoints and AF_INET6 for v6 ones —
+    // works on v4-only, v6-only, and dual-stack hosts.
+    udp_socket_.open(endpoint.protocol());
     udp_socket_.connect(endpoint);
   } catch (std::exception& e) {
     logger_->warn("Unable to connect to {}: {}", endpoint.address().to_string(),

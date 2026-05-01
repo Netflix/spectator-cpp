@@ -121,4 +121,76 @@ TEST(Publisher, Nop) {
   c.Add(2);
 }
 
+// Numeric IPv4 endpoint. Previously the resolver was pinned to udp::v6(),
+// which crashed in IPv4-only environments (e.g. kind clusters); now the
+// resolver runs as AF_UNSPEC and the socket family is taken from the
+// resolved endpoint, so v4 hosts work regardless of host IPv6 support.
+TEST(Publisher, UdpIpv4Numeric) {
+  if (std::getenv("TRAVIS_COMPILER") != nullptr) return;
+  TestUdpServer server;
+  server.Start();
+  auto logger = spectator::DefaultLogger();
+  SpectatordPublisher publisher{
+      fmt::format("udp:127.0.0.1:{}", server.GetPort()), 0};
+  Counter c{std::make_shared<Id>("counter", Tags{}), &publisher};
+  c.Increment();
+  c.Add(2);
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  auto msgs = server.GetMessages();
+  server.Stop();
+  std::vector<std::string> expected{"c:counter:1", "c:counter:2"};
+  EXPECT_EQ(msgs, expected);
+}
+
+// Bracketed IPv6 literal. Verifies split_host_port handles "[v6]:port" and
+// the publisher opens a v6 socket against a v6 endpoint.
+TEST(Publisher, UdpIpv6Bracketed) {
+  if (std::getenv("TRAVIS_COMPILER") != nullptr) return;
+  // Skip if IPv6 loopback isn't usable (some sandboxed envs disable it).
+  asio::io_context io;
+  asio::ip::udp::socket probe{io};
+  std::error_code ec;
+  probe.open(asio::ip::udp::v6(), ec);
+  if (ec) {
+    GTEST_SKIP() << "IPv6 not available: " << ec.message();
+  }
+  probe.close();
+
+  TestUdpServer server;
+  server.Start();
+  SpectatordPublisher publisher{
+      fmt::format("udp:[::1]:{}", server.GetPort()), 0};
+  Counter c{std::make_shared<Id>("counter", Tags{}), &publisher};
+  c.Increment();
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  auto msgs = server.GetMessages();
+  server.Stop();
+  std::vector<std::string> expected{"c:counter:1"};
+  EXPECT_EQ(msgs, expected);
+}
+
+// Regression: prior to soft-fail wrap + AF_UNSPEC resolver, an unresolvable
+// hostname (or v4-only host with the old v6-pinned resolver) escaped the
+// SpectatordPublisher constructor as asio::system_error and tripped
+// std::terminate in embedders. Construction must not throw and subsequent
+// emits must be silent no-ops.
+TEST(Publisher, UdpUnresolvableHostFallsBackToNop) {
+  // .invalid is RFC 2606 reserved — guaranteed not to resolve.
+  ASSERT_NO_THROW({
+    SpectatordPublisher publisher{"udp:nonexistent.invalid:1", 0};
+    Counter c{std::make_shared<Id>("counter", Tags{}), &publisher};
+    c.Increment();
+    c.Add(2);
+  });
+}
+
+// Malformed endpoint (no port) — must also be soft-fail, not throw.
+TEST(Publisher, UdpMalformedEndpointFallsBackToNop) {
+  ASSERT_NO_THROW({
+    SpectatordPublisher publisher{"udp:no-port-here", 0};
+    Counter c{std::make_shared<Id>("counter", Tags{}), &publisher};
+    c.Increment();
+  });
+}
+
 }  // namespace
