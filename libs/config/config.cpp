@@ -47,37 +47,34 @@ std::unordered_map<std::string, std::string> CalculateTags(
 }
 
 Config::Config(const WriterConfig& writerConfig, const std::unordered_map<std::string, std::string>& extraTags)
-    : m_extraTags(std::make_shared<ExtraCommonTags>()), m_writerConfig(writerConfig)
+    : m_writerConfig(writerConfig)
 {
-    ExtraCommonTags ect;
-    ect.tags = CalculateTags(extraTags);
+    m_extraTags.tags = CalculateTags(extraTags);
 
     bool first = true;
-    for (const auto& [key, val] : ect.tags)
+    for (const auto& [key, val] : m_extraTags.tags)
     {
-        if (!first) ect.prefixString += ',';
-        ect.prefixString += key;
-        ect.prefixString += '=';
-        ect.prefixString += val;
+        if (!first) m_extraTags.prefixString += ',';
+        m_extraTags.prefixString += key;
+        m_extraTags.prefixString += '=';
+        m_extraTags.prefixString += val;
         first = false;
     }
 
     Logger::info("Config initialized with writer type: {}", WriterTypeToString(m_writerConfig.GetType()));
 
-    if (ect.tags.empty())
+    if (m_extraTags.tags.empty())
     {
         Logger::info("Config initialized with no extra tags.");
     }
     else
     {
         Logger::info("Config initialized with the following extra tags:");
-        for (const auto& [key, value] : ect.tags)
+        for (const auto& [key, value] : m_extraTags.tags)
         {
             Logger::info("  {}: {}", key, value);
         }
     }
-
-    m_extraTags = std::make_shared<const ExtraCommonTags>(std::move(ect));
 }
 
 }  // namespace spectator

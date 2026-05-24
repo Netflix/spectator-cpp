@@ -19,7 +19,7 @@ class Config
     Config(Config&& other) = delete;
     Config& operator=(Config&& other) = delete;
 
-    std::shared_ptr<const ExtraCommonTags> GetExtraTags() const noexcept { return m_extraTags; }
+    const ExtraCommonTags& GetExtraTags() const noexcept { return m_extraTags; }
 
     const std::string& GetWriterLocation() const noexcept { return m_writerConfig.GetLocation(); }
     const WriterType& GetWriterType() const noexcept { return m_writerConfig.GetType(); }
@@ -27,7 +27,7 @@ class Config
 
 
    private:
-    std::shared_ptr<const ExtraCommonTags> m_extraTags;
+    ExtraCommonTags m_extraTags;
 
     WriterConfig m_writerConfig;
 };

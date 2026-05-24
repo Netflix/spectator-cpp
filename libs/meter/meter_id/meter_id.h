@@ -2,7 +2,6 @@
 
 #include <string>
 #include <map>
-#include <memory>
 #include <regex>
 #include <functional>
 #include <unordered_map>
@@ -15,10 +14,12 @@ struct ExtraCommonTags
     std::string prefixString;
 };
 
+std::unordered_map<std::string, std::string> ValidateTags(const std::unordered_map<std::string, std::string>& tags);
+
 class MeterId
 {
    public:
-    MeterId(const std::string& name, const std::unordered_map<std::string, std::string>& tags = {}, std::shared_ptr<const ExtraCommonTags> extra = nullptr);
+    MeterId(const std::string& name, const std::unordered_map<std::string, std::string>& tags = {}, const ExtraCommonTags* extra = nullptr);
 
     const std::string& GetName() const noexcept { return m_name; };
     const std::string& GetSpectatordId() const noexcept { return m_spectatord_id; }

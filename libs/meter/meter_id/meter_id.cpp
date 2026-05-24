@@ -34,11 +34,24 @@ MeterId MeterId::WithTag(const std::string& key, const std::string& value) const
     MeterId result;
     result.m_name = m_name;
     result.m_tags = m_tags;
+    result.m_spectatord_id = m_spectatord_id;
+
     if (!IsEmptyOrWhitespace(key) && !IsEmptyOrWhitespace(value))
     {
-        result.m_tags[key] = value;
+        auto [it, inserted] = result.m_tags.emplace(key, value);
+        if (inserted)
+        {
+            result.m_spectatord_id += ',';
+            result.m_spectatord_id += Sanitize(key);
+            result.m_spectatord_id += '=';
+            result.m_spectatord_id += Sanitize(value);
+        }
+        else
+        {
+            it->second = value;
+            result.m_spectatord_id = ToSpectatorId(result.m_name, result.m_tags);
+        }
     }
-    result.m_spectatord_id = ToSpectatorId(result.m_name, result.m_tags);
     return result;
 }
 
@@ -47,13 +60,33 @@ MeterId MeterId::WithTags(const std::unordered_map<std::string, std::string>& ad
     MeterId result;
     result.m_name = m_name;
     result.m_tags = m_tags;
-    const auto validated = ValidateTags(additional_tags);
-    result.m_tags.insert(validated.begin(), validated.end());
-    result.m_spectatord_id = ToSpectatorId(result.m_name, result.m_tags);
+    result.m_spectatord_id = m_spectatord_id;
+
+    bool needs_rebuild = false;
+    for (const auto& [k, v] : ValidateTags(additional_tags))
+    {
+        auto [it, inserted] = result.m_tags.emplace(k, v);
+        if (inserted)
+        {
+            result.m_spectatord_id += ',';
+            result.m_spectatord_id += Sanitize(k);
+            result.m_spectatord_id += '=';
+            result.m_spectatord_id += Sanitize(v);
+        }
+        else
+        {
+            it->second = v;
+            needs_rebuild = true;
+        }
+    }
+    if (needs_rebuild)
+    {
+        result.m_spectatord_id = ToSpectatorId(result.m_name, result.m_tags);
+    }
     return result;
 }
 
-MeterId::MeterId(const std::string& name, const std::unordered_map<std::string, std::string>& tags, std::shared_ptr<const ExtraCommonTags> extra)
+MeterId::MeterId(const std::string& name, const std::unordered_map<std::string, std::string>& tags, const ExtraCommonTags* extra)
     : m_name(name), m_tags(ValidateTags(tags))
 {
     m_spectatord_id = ToSpectatorId(m_name, m_tags);
