@@ -2,16 +2,28 @@
 
 #include <util.h>
 
-#include <regex>
 #include <sstream>
 
 namespace spectator {
 
-const std::regex INVALID_CHARS("[^-._A-Za-z0-9~^]");
-
 static std::string Sanitize(const std::string& str)
 {
-    return std::regex_replace(str, INVALID_CHARS, "_");
+    std::string result;
+    result.reserve(str.size());
+    for (const char c : str)
+    {
+        if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
+            (c >= '0' && c <= '9') || c == '-' || c == '.' ||
+            c == '_' || c == '~' || c == '^')
+        {
+            result += c;
+        }
+        else
+        {
+            result += '_';
+        }
+    }
+    return result;
 }
 
 static std::string ToSpectatorId(const std::string& name, const std::unordered_map<std::string, std::string>& tags)
