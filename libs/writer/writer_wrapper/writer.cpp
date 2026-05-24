@@ -1,5 +1,6 @@
 #include <writer.h>
 
+#include <memory_writer.h>
 #include <writer_types.h>
 #include <logger.h>
 #include <stdexcept>
@@ -161,6 +162,17 @@ void Writer::Close()
     {
         Logger::error("Failed to close writer: {}", e.what());
     }
+}
+
+std::string Writer::DumpMemory()
+{
+    auto& instance = GetInstance();
+    if (instance.m_currentType != WriterType::Memory || !instance.m_impl) return {};
+    const auto* mw = static_cast<const MemoryWriter*>(instance.m_impl.get());
+    std::string result;
+    for (const auto& msg : mw->GetMessages())
+        result += msg;
+    return result;
 }
 
 }  // namespace spectator
