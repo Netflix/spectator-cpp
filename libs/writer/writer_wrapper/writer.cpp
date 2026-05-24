@@ -6,7 +6,6 @@
 
 namespace spectator {
 
-static constexpr auto NEW_LINE = '\n';
 
 Writer::~Writer()
 {
@@ -95,7 +94,7 @@ void Writer::ThreadSend()
                 return;
             }
             message = std::move(instance.buffer);
-            instance.buffer = std::string();
+            instance.buffer.clear();
             instance.buffer.reserve(instance.bufferSize);
         }
         instance.cv_receiver.notify_one();
@@ -117,16 +116,13 @@ void Writer::BufferedWrite(const std::string& message)
             return;
         }
         instance.buffer.append(message);
-        instance.buffer.push_back(NEW_LINE);
     }
     instance.buffer.size() >= instance.bufferSize ? instance.cv_sender.notify_one() : instance.cv_receiver.notify_one();
 }
 
 void Writer::NonBufferedWrite(const std::string& message)
 {
-    // Since this is a non-static method, we're already operating on an instance
-    // and can call the instance method directly
-    this->TryToSend(message + NEW_LINE);
+    this->TryToSend(message);
 }
 
 void Writer::Write(const std::string& message)

@@ -3,7 +3,9 @@
 #include <meter_id.h>
 #include <writer.h>
 
+#include <charconv>
 #include <string>
+#include <type_traits>
 
 namespace spectator {
 
@@ -26,8 +28,23 @@ class Meter
     template <typename T>
     inline void ConstructLine(const T& value) const
     {
-        m_line.replace(m_prefixSize, std::string::npos, std::to_string(value));
+        m_line.resize(m_prefixSize);
+        char buf[32];
+        char* end;
+        if constexpr (std::is_floating_point_v<T>)
+        {
+            auto [ptr, ec] = std::to_chars(buf, buf + sizeof(buf), value, std::chars_format::fixed, 6);
+            end = ptr;
+        }
+        else
+        {
+            auto [ptr, ec] = std::to_chars(buf, buf + sizeof(buf), value);
+            end = ptr;
+        }
+        m_line.append(buf, end);
+        m_line += '\n';
         Writer::GetInstance().Write(m_line);
+        m_line.pop_back();
     }
 
    protected:
