@@ -12,7 +12,7 @@ namespace spectator {
 
 struct ProtocolLine
 {
-    char symbol;
+    std::string symbol;
     MeterId id;
     std::string value;
 

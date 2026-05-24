@@ -56,11 +56,17 @@ MeterId MeterId::WithTags(const std::unordered_map<std::string, std::string>& ad
 MeterId::MeterId(const std::string& name, const std::unordered_map<std::string, std::string>& tags, std::shared_ptr<const ExtraCommonTags> extra)
     : m_name(name), m_tags(ValidateTags(tags))
 {
+    m_spectatord_id = ToSpectatorId(m_name, m_tags);
+
     if (extra && !extra->tags.empty())
     {
         m_tags.insert(extra->tags.begin(), extra->tags.end());
+        if (!extra->prefixString.empty())
+        {
+            m_spectatord_id += ',';
+            m_spectatord_id += extra->prefixString;
+        }
     }
-    m_spectatord_id = ToSpectatorId(m_name, m_tags);
 }
 
 std::string MeterId::to_string() const

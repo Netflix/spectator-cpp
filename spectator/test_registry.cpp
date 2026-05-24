@@ -164,7 +164,7 @@ TEST(RegistryTest, GaugeWithIdWithTtlSeconds)
     auto g = r.CreateGauge(r.CreateNewId("gauge", {{"my-tags", "bar"}}), 120);
     EXPECT_TRUE(memoryWriter->IsEmpty());
     g.Set(42);
-    EXPECT_EQ("g,120:gauge,extra-tags=foo,my-tags=bar:42.000000\n", memoryWriter->LastLine());
+    EXPECT_EQ("g,120:gauge,extra-tags=foo,my-tags=bar:42.000000\n", ParseProtocolLine(memoryWriter->LastLine()).value().to_string());
 }
 
 TEST(RegistryTest, GaugeWithTtlSeconds) {

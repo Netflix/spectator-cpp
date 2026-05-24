@@ -20,7 +20,7 @@ std::vector<std::string> split(const std::string& str, const char delimiter)
 
 std::optional<ProtocolLine> ParseProtocolLine(const std::string& line)
 {
-    char symbol{};
+    std::string symbol{};
     std::string name{};
     std::unordered_map<std::string, std::string> tags{};
     std::string value{};
@@ -32,11 +32,7 @@ std::optional<ProtocolLine> ParseProtocolLine(const std::string& line)
         return std::nullopt;
     }
 
-    auto symbolParts = split(mainParts[0], ',');
-    if (!symbolParts.empty() && !symbolParts[0].empty())
-    {
-        symbol = symbolParts[0][0];
-    }
+    symbol = mainParts[0];
 
     auto idParts = split(mainParts[1], ',');
     if (!idParts.empty())
