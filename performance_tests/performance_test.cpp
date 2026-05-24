@@ -5,7 +5,6 @@
 #include <optional>
 #include <unordered_map>
 #include <string>
-#include <cstdlib>
 #include <atomic>
 #include <thread>
 #include <vector>
@@ -102,60 +101,37 @@ int main(int argc, char* argv[])
     // Set maximum duration to 2 minutes
     constexpr int max_duration_seconds = 2 * 60;
     
-    // Track iterations and timing with atomic counter for thread safety
     std::atomic<unsigned long long> iterations{0};
-    auto start_time = std::chrono::steady_clock::now();
-    double total_elapsed{};
-    
-    unsigned int num_threads = 4;
-    num_threads = std::max(1u, std::min(16u, num_threads));
-    
-    std::cout << "Running performance test with " << num_threads << " threads..." << std::endl;
-    
-    // Flag to signal threads to stop
     std::atomic<bool> should_stop{false};
-    
-    // Thread function
-    auto thread_func = [&r, &config, &tags, &iterations, &should_stop]()
+
+    // Non-buffered mode uses a single thread because the underlying sender is not thread-safe
+    const unsigned int num_threads = config->bufferingEnabled ? 4u : 1u;
+    std::cout << "Running performance test with " << num_threads << " threads..." << std::endl;
+
+    auto thread_func = [&]()
     {
-        while (should_stop == false)
+        while (!should_stop)
         {
             r.CreateCounter(config->counterName, tags).Increment();
             iterations.fetch_add(1, std::memory_order_relaxed);
         }
     };
-    
-    // Create and start threads
+
     std::vector<std::thread> threads;
     for (unsigned int i = 0; i < num_threads; ++i)
-    {
         threads.emplace_back(thread_func);
-    }
-    
-    // Monitor progress
-    while (true) 
-    {
-        std::this_thread::sleep_for(std::chrono::seconds(6));
-        auto now = std::chrono::steady_clock::now();
-        auto elapsed = std::chrono::duration<double>(now - start_time).count();
-        
-        if (elapsed > max_duration_seconds)
-        {
-            total_elapsed = elapsed;
-            should_stop = true;
-            break;
-        }
-    }
-    
-    // Wait for all threads to finish
+
+    auto start_time = std::chrono::steady_clock::now();
+    std::this_thread::sleep_for(std::chrono::seconds(max_duration_seconds));
+    should_stop = true;
+
     for (auto& t : threads)
     {
-        if (t.joinable()) 
-        {
+        if (t.joinable())
             t.join();
-        }
     }
-    
+
+    double total_elapsed = std::chrono::duration<double>(std::chrono::steady_clock::now() - start_time).count();
     double rate_per_second = static_cast<double>(iterations) / total_elapsed;
     
     std::cout << "\nPerformance Test Summary:" << std::endl;
