@@ -67,6 +67,11 @@ bool IsEmptyOrWhitespace(const std::string& str)
 
 std::unordered_map<std::string, std::string> ValidateTags(const std::unordered_map<std::string, std::string>& tags)
 {
+    if (tags.empty())
+    {
+        return {};
+    }
+    
     std::unordered_map<std::string, std::string> valid_tags;
     for (const auto& tag : tags)
     {

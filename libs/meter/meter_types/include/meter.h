@@ -17,9 +17,12 @@ class Meter
     Meter(MeterId meter_id, const std::string& meter_type_symbol)
         : m_id(std::move(meter_id))
     {
-        m_line = meter_type_symbol + FIELD_SEPARATOR + m_id.GetSpectatordId() + FIELD_SEPARATOR;
+        m_line.reserve(meter_type_symbol.size() + m_id.GetSpectatordId().size() + 26);
+        m_line = meter_type_symbol;
+        m_line += FIELD_SEPARATOR;
+        m_line += m_id.GetSpectatordId();
+        m_line += FIELD_SEPARATOR;
         m_prefixSize = m_line.size();
-        m_line.reserve(m_prefixSize + 32);
     }
     virtual ~Meter() = default;
 
