@@ -90,7 +90,7 @@ int main(int argc, char* argv[])
     auto writerConfig = WriterConfig(config->writerType);
     if (config->bufferingEnabled)
     {
-        writerConfig = WriterConfig(config->writerType, 4096);
+        writerConfig = WriterConfig(config->writerType, 65507);
     }
     auto r = Registry(Config(writerConfig));
     std::unordered_map<std::string, std::string> tags = { 
