@@ -59,13 +59,13 @@ Registry::Registry(const Config& config) : m_config(config)
 
 MeterId Registry::CreateNewId(const std::string& name, const std::unordered_map<std::string, std::string>& tags) const
 {
-    MeterId new_meter_id(name, tags);
-
-    if (this->m_config.GetExtraTags().empty() == true)
+    const auto& extra = m_config.GetExtraTags();
+    if (!extra || extra->tags.empty())
     {
-        return new_meter_id;
+        return MeterId(name, tags);
     }
-    return new_meter_id.WithTags(this->m_config.GetExtraTags());
+
+    return MeterId(name, tags, extra);
 }
 
 AgeGauge Registry::CreateAgeGauge(const std::string& name, const std::unordered_map<std::string, std::string>& tags) const

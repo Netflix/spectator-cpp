@@ -64,7 +64,7 @@ TEST_F(ConfigTest, WriterConfigInitialization)
 
         EXPECT_EQ(config.GetWriterLocation(), "");
         EXPECT_EQ(config.GetWriterType(), WriterType::Memory);
-        EXPECT_TRUE(config.GetExtraTags().empty());
+        EXPECT_TRUE(config.GetExtraTags()->tags.empty());
     }
 
     // Test with UDP writer
@@ -95,7 +95,7 @@ TEST_F(ConfigTest, ExtraTags)
     // Empty tags
     {
         Config config(writerConfig, {});
-        EXPECT_TRUE(config.GetExtraTags().empty());
+        EXPECT_TRUE(config.GetExtraTags()->tags.empty());
     }
 
     // Valid tags
@@ -105,10 +105,10 @@ TEST_F(ConfigTest, ExtraTags)
 
         Config config(writerConfig, tags);
 
-        EXPECT_EQ(config.GetExtraTags().size(), 3);
-        EXPECT_EQ(config.GetExtraTags().at("app"), "test-app");
-        EXPECT_EQ(config.GetExtraTags().at("env"), "testing");
-        EXPECT_EQ(config.GetExtraTags().at("region"), "us-east-1");
+        EXPECT_EQ(config.GetExtraTags()->tags.size(), 3);
+        EXPECT_EQ(config.GetExtraTags()->tags.at("app"), "test-app");
+        EXPECT_EQ(config.GetExtraTags()->tags.at("env"), "testing");
+        EXPECT_EQ(config.GetExtraTags()->tags.at("region"), "us-east-1");
     }
 
     // Invalid tags (empty keys or values should be ignored)
@@ -118,10 +118,10 @@ TEST_F(ConfigTest, ExtraTags)
 
         Config config(writerConfig, tags);
 
-        EXPECT_EQ(config.GetExtraTags().size(), 1);
-        EXPECT_EQ(config.GetExtraTags().at("valid"), "value");
-        EXPECT_FALSE(config.GetExtraTags().count(""));
-        EXPECT_FALSE(config.GetExtraTags().count("empty-value"));
+        EXPECT_EQ(config.GetExtraTags()->tags.size(), 1);
+        EXPECT_EQ(config.GetExtraTags()->tags.at("valid"), "value");
+        EXPECT_FALSE(config.GetExtraTags()->tags.count(""));
+        EXPECT_FALSE(config.GetExtraTags()->tags.count("empty-value"));
     }
 }
 
@@ -133,7 +133,7 @@ TEST_F(ConfigTest, EnvironmentVariables)
     // No environment variables - already unset in SetUp()
     {
         Config config(writerConfig);
-        EXPECT_TRUE(config.GetExtraTags().empty());
+        EXPECT_TRUE(config.GetExtraTags()->tags.empty());
     }
 
     // With container name
@@ -143,8 +143,8 @@ TEST_F(ConfigTest, EnvironmentVariables)
 
         Config config(writerConfig);
 
-        EXPECT_EQ(config.GetExtraTags().size(), 1);
-        EXPECT_EQ(config.GetExtraTags().at("nf.container"), "test-container");
+        EXPECT_EQ(config.GetExtraTags()->tags.size(), 1);
+        EXPECT_EQ(config.GetExtraTags()->tags.at("nf.container"), "test-container");
     }
 
     // With process name
@@ -154,8 +154,8 @@ TEST_F(ConfigTest, EnvironmentVariables)
 
         Config config(writerConfig);
 
-        EXPECT_EQ(config.GetExtraTags().size(), 1);
-        EXPECT_EQ(config.GetExtraTags().at("nf.process"), "test-process");
+        EXPECT_EQ(config.GetExtraTags()->tags.size(), 1);
+        EXPECT_EQ(config.GetExtraTags()->tags.at("nf.process"), "test-process");
     }
 
     // With both environment variables
@@ -165,9 +165,9 @@ TEST_F(ConfigTest, EnvironmentVariables)
 
         Config config(writerConfig);
 
-        EXPECT_EQ(config.GetExtraTags().size(), 2);
-        EXPECT_EQ(config.GetExtraTags().at("nf.container"), "test-container");
-        EXPECT_EQ(config.GetExtraTags().at("nf.process"), "test-process");
+        EXPECT_EQ(config.GetExtraTags()->tags.size(), 2);
+        EXPECT_EQ(config.GetExtraTags()->tags.at("nf.container"), "test-container");
+        EXPECT_EQ(config.GetExtraTags()->tags.at("nf.process"), "test-process");
     }
 }
 
@@ -185,11 +185,11 @@ TEST_F(ConfigTest, MergingTags)
 
         Config config(writerConfig, tags);
 
-        EXPECT_EQ(config.GetExtraTags().size(), 4);
-        EXPECT_EQ(config.GetExtraTags().at("nf.container"), "test-container");
-        EXPECT_EQ(config.GetExtraTags().at("nf.process"), "test-process");
-        EXPECT_EQ(config.GetExtraTags().at("custom"), "value");
-        EXPECT_EQ(config.GetExtraTags().at("env"), "test");
+        EXPECT_EQ(config.GetExtraTags()->tags.size(), 4);
+        EXPECT_EQ(config.GetExtraTags()->tags.at("nf.container"), "test-container");
+        EXPECT_EQ(config.GetExtraTags()->tags.at("nf.process"), "test-process");
+        EXPECT_EQ(config.GetExtraTags()->tags.at("custom"), "value");
+        EXPECT_EQ(config.GetExtraTags()->tags.at("env"), "test");
     }
 
     // Override common tags with explicit env tags
@@ -201,8 +201,8 @@ TEST_F(ConfigTest, MergingTags)
 
         Config config(writerConfig, tags);
 
-        EXPECT_EQ(config.GetExtraTags().size(), 1);
-        EXPECT_EQ(config.GetExtraTags().at("nf.container"), "override-container");
+        EXPECT_EQ(config.GetExtraTags()->tags.size(), 1);
+        EXPECT_EQ(config.GetExtraTags()->tags.at("nf.container"), "override-container");
     }
 
     {
@@ -213,8 +213,8 @@ TEST_F(ConfigTest, MergingTags)
 
         Config config(writerConfig, tags);
 
-        EXPECT_EQ(config.GetExtraTags().size(), 2);
-        EXPECT_EQ(config.GetExtraTags().at("custom"), "value");
-        EXPECT_EQ(config.GetExtraTags().at("env"), "test");
+        EXPECT_EQ(config.GetExtraTags()->tags.size(), 2);
+        EXPECT_EQ(config.GetExtraTags()->tags.at("custom"), "value");
+        EXPECT_EQ(config.GetExtraTags()->tags.at("env"), "test");
     }
 }

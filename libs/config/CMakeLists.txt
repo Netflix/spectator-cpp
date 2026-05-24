@@ -9,6 +9,7 @@ target_include_directories(spectator-config
 target_link_libraries(spectator-config
     PUBLIC
     spectator-logger
+    spectator-meter-id
     spectator-writer-config
     spectator-utils
 )

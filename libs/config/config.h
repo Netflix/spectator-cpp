@@ -3,6 +3,7 @@
 #include <string>
 #include <unordered_map>
 
+#include <meter_id.h>
 #include <writer_config.h>
 
 namespace spectator {
@@ -18,7 +19,7 @@ class Config
     Config(Config&& other) = delete;
     Config& operator=(Config&& other) = delete;
 
-    const std::unordered_map<std::string, std::string>& GetExtraTags() const noexcept { return m_extraTags; }
+    std::shared_ptr<const ExtraCommonTags> GetExtraTags() const noexcept { return m_extraTags; }
 
     const std::string& GetWriterLocation() const noexcept { return m_writerConfig.GetLocation(); }
     const WriterType& GetWriterType() const noexcept { return m_writerConfig.GetType(); }
@@ -26,7 +27,8 @@ class Config
 
 
    private:
-    std::unordered_map<std::string, std::string> m_extraTags;
+    std::shared_ptr<const ExtraCommonTags> m_extraTags;
+
     WriterConfig m_writerConfig;
 };
 

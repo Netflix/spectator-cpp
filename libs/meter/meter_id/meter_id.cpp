@@ -1,73 +1,79 @@
 #include <meter_id.h>
 
 #include <util.h>
+
+#include <regex>
 #include <sstream>
 
 namespace spectator {
 
-// Define the static member
 const std::regex INVALID_CHARS("[^-._A-Za-z0-9~^]");
 
-
-
-std::string ReplaceInvalidChars(const std::string& s) { return std::regex_replace(s, INVALID_CHARS, "_"); }
-
-std::string ToSpectatorId(const std::string& name, const std::unordered_map<std::string, std::string>& tags)
+static std::string Sanitize(const std::string& str)
 {
-    std::ostringstream ss;
-    ss << ReplaceInvalidChars(name);
-    if (!tags.empty())
-    {
-        for (const auto& [fst, snd] : tags)
-        {
-            ss << "," << ReplaceInvalidChars(fst) << "=" << ReplaceInvalidChars(snd);
-        }
-    }
-    return ss.str();
+    return std::regex_replace(str, INVALID_CHARS, "_");
 }
 
-MeterId::MeterId(const std::string& name, const std::unordered_map<std::string, std::string>& tags)
-    : m_name(name), m_tags(ValidateTags(tags))
+static std::string ToSpectatorId(const std::string& name, const std::unordered_map<std::string, std::string>& tags)
 {
-    m_spectatord_id = ToSpectatorId(name, tags);
+    std::string id = Sanitize(name);
+
+    for (const auto& [key, val] : tags)
+    {
+        id += ',';
+        id += Sanitize(key);
+        id += '=';
+        id += Sanitize(val);
+    }
+
+    return id;
 }
 
 MeterId MeterId::WithTag(const std::string& key, const std::string& value) const
 {
-    auto new_tags = m_tags;
-    new_tags[key] = value;
-    return MeterId(m_name, new_tags);
+    MeterId result;
+    result.m_name = m_name;
+    result.m_tags = m_tags;
+    if (!IsEmptyOrWhitespace(key) && !IsEmptyOrWhitespace(value))
+    {
+        result.m_tags[key] = value;
+    }
+    result.m_spectatord_id = ToSpectatorId(result.m_name, result.m_tags);
+    return result;
 }
 
 MeterId MeterId::WithTags(const std::unordered_map<std::string, std::string>& additional_tags) const
 {
-    auto new_tags = m_tags;
-    for (const auto& [fst, snd] : additional_tags)
-    {
-        new_tags[fst] = snd;
-    }
-    return MeterId(m_name, new_tags);
+    MeterId result;
+    result.m_name = m_name;
+    result.m_tags = m_tags;
+    const auto validated = ValidateTags(additional_tags);
+    result.m_tags.insert(validated.begin(), validated.end());
+    result.m_spectatord_id = ToSpectatorId(result.m_name, result.m_tags);
+    return result;
 }
 
-MeterId MeterId::WithStat(const std::string& stat) const
+MeterId::MeterId(const std::string& name, const std::unordered_map<std::string, std::string>& tags, std::shared_ptr<const ExtraCommonTags> extra)
+    : m_name(name), m_tags(ValidateTags(tags))
 {
-    return WithTag("statistic", stat);
+    if (extra && !extra->tags.empty())
+    {
+        m_tags.insert(extra->tags.begin(), extra->tags.end());
+    }
+    m_spectatord_id = ToSpectatorId(m_name, m_tags);
 }
-
-bool MeterId::operator==(const MeterId& other) const { return m_name == other.m_name && m_tags == other.m_tags; }
 
 std::string MeterId::to_string() const
 {
+    std::map<std::string, std::string> sorted(m_tags.begin(), m_tags.end());
+
     std::ostringstream ss;
     ss << "MeterId(name=" << m_name << ", tags={";
     bool first = true;
-    for (const auto& [fst, snd] : m_tags)
+    for (const auto& [key, value] : sorted)
     {
-        if (!first)
-        {
-            ss << ", ";
-        }
-        ss << "'" << fst << "': '" << snd << "'";
+        if (!first) ss << ", ";
+        ss << "'" << key << "': '" << value << "'";
         first = false;
     }
     ss << "})";
@@ -75,23 +81,3 @@ std::string MeterId::to_string() const
 }
 
 }  // namespace spectator
-
-// Implementation of the hash function for MeterId
-size_t std::hash<spectator::MeterId>::operator()(const spectator::MeterId& id) const
-{
-    // Hash the name first
-    const size_t name_hash = std::hash<std::string>{}(id.GetName());
-
-    // Hash the tags
-    size_t tags_hash = 0;
-    for (const auto& [fst, snd] : id.GetTags())
-    {
-        // Combine key and value hashes
-        const size_t pair_hash = std::hash<std::string>{}(fst) ^ std::hash<std::string>{}(snd) << 1;
-        // Combine with the accumulated tags hash
-        tags_hash ^= pair_hash + 0x9e3779b9 + (tags_hash << 6) + (tags_hash >> 2);
-    }
-
-    // Combine name hash and tags hash
-    return name_hash ^ tags_hash << 1;
-}
