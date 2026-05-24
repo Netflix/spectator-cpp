@@ -56,4 +56,7 @@ std::optional<ProtocolLine> ParseProtocolLine(const std::string& line);
 
 bool IsEmptyOrWhitespace(const std::string& str);
 
+std::unordered_map<std::string, std::string> ValidateTags(const std::unordered_map<std::string, std::string>& tags);
+
+
 }  // namespace spectator

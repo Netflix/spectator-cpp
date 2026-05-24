@@ -20,15 +20,7 @@ struct ConfigConstants
 std::unordered_map<std::string, std::string> CalculateTags(
     const std::unordered_map<std::string, std::string>& tags)
 {
-    std::unordered_map<std::string, std::string> valid_tags;
-
-    for (const auto& [fst, snd] : tags)
-    {
-        if (IsEmptyOrWhitespace(fst) == false && IsEmptyOrWhitespace(snd) == false)
-        {
-            valid_tags[fst] = snd;
-        }
-    }
+    std::unordered_map<std::string, std::string> valid_tags = ValidateTags(tags);
 
     const char* container_name = std::getenv(ConfigConstants::EnvVarContainer);
     const char* process_name = std::getenv(ConfigConstants::EnvVarProcess);

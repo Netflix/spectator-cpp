@@ -8,19 +8,7 @@ namespace spectator {
 // Define the static member
 const std::regex INVALID_CHARS("[^-._A-Za-z0-9~^]");
 
-std::unordered_map<std::string, std::string> ValidateTags(const std::unordered_map<std::string, std::string>& tags)
-{
-    std::unordered_map<std::string, std::string> validTags{};
 
-    for (const auto& [key, value] : tags)
-    {
-        if (IsEmptyOrWhitespace(key) == false && IsEmptyOrWhitespace(value) == false)
-        {
-            validTags[key] = value;
-        }
-    }
-    return validTags;
-}
 
 std::string ReplaceInvalidChars(const std::string& s) { return std::regex_replace(s, INVALID_CHARS, "_"); }
 

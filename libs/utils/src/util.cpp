@@ -63,4 +63,17 @@ bool IsEmptyOrWhitespace(const std::string& str)
     return str.empty() || std::all_of(str.begin(), str.end(), [](unsigned char c) { return std::isspace(c); });
 }
 
+std::unordered_map<std::string, std::string> ValidateTags(const std::unordered_map<std::string, std::string>& tags)
+{
+    std::unordered_map<std::string, std::string> valid_tags;
+    for (const auto& tag : tags)
+    {
+        if (IsEmptyOrWhitespace(tag.first) == false && IsEmptyOrWhitespace(tag.second) == false)
+        {
+            valid_tags[tag.first] = tag.second;
+        }
+    }
+    return valid_tags;
+}
+
 }  // namespace spectator
