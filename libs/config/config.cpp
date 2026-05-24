@@ -55,9 +55,9 @@ Config::Config(const WriterConfig& writerConfig, const std::unordered_map<std::s
     for (const auto& [key, val] : m_extraTags.tags)
     {
         if (!first) m_extraTags.prefixString += ',';
-        m_extraTags.prefixString += key;
+        AppendSanitized(m_extraTags.prefixString, key);
         m_extraTags.prefixString += '=';
-        m_extraTags.prefixString += val;
+        AppendSanitized(m_extraTags.prefixString, val);
         first = false;
     }
 

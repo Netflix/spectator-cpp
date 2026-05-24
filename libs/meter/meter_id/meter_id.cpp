@@ -6,7 +6,7 @@
 
 namespace spectator {
 
-static void AppendSanitized(std::string& dest, const std::string& src)
+void AppendSanitized(std::string& dest, const std::string& src)
 {
     for (const char c : src)
     {

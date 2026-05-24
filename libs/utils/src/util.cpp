@@ -73,11 +73,12 @@ std::unordered_map<std::string, std::string> ValidateTags(const std::unordered_m
     }
     
     std::unordered_map<std::string, std::string> valid_tags;
-    for (const auto& tag : tags)
+    valid_tags.reserve(tags.size());
+    for (const auto& [key, val] : tags)
     {
-        if (IsEmptyOrWhitespace(tag.first) == false && IsEmptyOrWhitespace(tag.second) == false)
+        if (!IsEmptyOrWhitespace(key) && !IsEmptyOrWhitespace(val))
         {
-            valid_tags[tag.first] = tag.second;
+            valid_tags.emplace(key, val);
         }
     }
     return valid_tags;

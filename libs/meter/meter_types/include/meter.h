@@ -17,6 +17,7 @@ class Meter
     Meter(MeterId meter_id, const std::string& meter_type_symbol)
         : m_id(std::move(meter_id))
     {
+        // +26: 2 separators + up to 20 chars for uint64 max / double with 6dp + 1 newline + 3 buffer
         m_line.reserve(meter_type_symbol.size() + m_id.GetSpectatordId().size() + 26);
         m_line = meter_type_symbol;
         m_line += FIELD_SEPARATOR;

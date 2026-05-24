@@ -14,6 +14,7 @@ struct ExtraCommonTags
 };
 
 std::unordered_map<std::string, std::string> ValidateTags(const std::unordered_map<std::string, std::string>& tags);
+void AppendSanitized(std::string& dest, const std::string& src);
 
 class MeterId
 {
