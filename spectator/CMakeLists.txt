@@ -97,6 +97,31 @@ else()
     message(STATUS "pybind11 not found — skipping Python extension target")
 endif()
 
+# Node.js N-API native addon (cmake-js injects CMAKE_JS_VERSION when active)
+if(DEFINED CMAKE_JS_VERSION)
+    add_library(spectator_cpp_node SHARED node/spectator_napi.cpp ${SPECTATOR_SOURCES})
+    target_include_directories(spectator_cpp_node PRIVATE
+        ${CMAKE_JS_INC}
+        ${NODE_ADDON_API_DIR}
+        ${SPECTATOR_INCLUDE_DIRS}
+    )
+    target_link_libraries(spectator_cpp_node PRIVATE
+        ${CMAKE_JS_LIB}
+        spdlog::spdlog_header_only
+        Boost::boost
+        Boost::system
+    )
+    set_target_properties(spectator_cpp_node PROPERTIES
+        PREFIX ""
+        SUFFIX ".node"
+        OUTPUT_NAME "spectator_cpp"
+        POSITION_INDEPENDENT_CODE ON
+    )
+    message(STATUS "cmake-js detected — building Node.js N-API addon")
+else()
+    message(STATUS "cmake-js not detected — skipping Node.js addon target")
+endif()
+
 add_executable(registry-test test_registry.cpp)
 target_link_libraries(registry-test PRIVATE
     GTest::gtest 

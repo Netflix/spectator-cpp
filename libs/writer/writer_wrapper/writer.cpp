@@ -175,4 +175,11 @@ std::string Writer::DumpMemory()
     return result;
 }
 
+void Writer::ClearMemory()
+{
+    auto& instance = GetInstance();
+    if (instance.m_currentType != WriterType::Memory || !instance.m_impl) return;
+    static_cast<MemoryWriter*>(instance.m_impl.get())->Clear();
+}
+
 }  // namespace spectator

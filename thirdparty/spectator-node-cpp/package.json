@@ -1,0 +1,15 @@
+{
+  "name": "spectator-node-cpp",
+  "version": "0.1.0",
+  "description": "Node.js bindings for spectator-cpp — high-performance Netflix metrics client",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "scripts": {
+    "build": "cmake-js build --directory ../..",
+    "install": "cmake-js build --directory ../.."
+  },
+  "dependencies": {
+    "cmake-js": "^7.0.0",
+    "node-addon-api": "^8.0.0"
+  }
+}

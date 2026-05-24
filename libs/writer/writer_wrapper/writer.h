@@ -44,6 +44,9 @@ class Writer final : public Singleton<Writer>
     // Returns an empty string if the current writer is not a MemoryWriter.
     static std::string DumpMemory();
 
+    // Clears the MemoryWriter buffer. No-op if the current writer is not a MemoryWriter.
+    static void ClearMemory();
+
     std::unique_ptr<BaseWriter> m_impl;
     WriterType m_currentType = WriterType::Memory;  // Default type
     bool bufferingEnabled = false;
