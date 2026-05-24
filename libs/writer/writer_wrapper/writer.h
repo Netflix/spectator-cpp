@@ -17,16 +17,7 @@ class Writer final : public Singleton<Writer>
     friend class Singleton<Writer>;
     friend class Registry;
     friend class WriterTestHelper;
-    friend class AgeGauge;
-    friend class Counter;
-    friend class DistributionSummary;
-    friend class Gauge;
-    friend class MaxGauge;
-    friend class MonotonicCounter;
-    friend class MonotonicCounterUint;
-    friend class PercentileDistributionSummary;
-    friend class PercentileTimer;
-    friend class Timer;
+    friend class Meter;
 
     // Private constructor - enforces singleton pattern
     Writer() = default;

@@ -1,6 +1,8 @@
 #pragma once
 
 #include <meter_id.h>
+#include <writer.h>
+
 #include <string>
 
 namespace spectator {
@@ -10,38 +12,28 @@ class Meter
    public:
     static constexpr auto FIELD_SEPARATOR = ":";
 
-    Meter(const MeterId& meter_id, const std::string& meter_type_symbol)
-        : m_id(meter_id), m_meterTypeSymbol(meter_type_symbol)
+    Meter(MeterId meter_id, const std::string& meter_type_symbol)
+        : m_id(std::move(meter_id))
     {
+        m_line = meter_type_symbol + FIELD_SEPARATOR + m_id.GetSpectatordId() + FIELD_SEPARATOR;
+        m_prefixSize = m_line.size();
+        m_line.reserve(m_prefixSize + 32);
     }
     virtual ~Meter() = default;
 
     const MeterId& GetId() const noexcept { return m_id; }
 
-    const std::string& GetMeterTypeSymbol() const noexcept { return m_meterTypeSymbol; }
-    
     template <typename T>
-    inline std::string ConstructLine(const T& value) const
+    inline void ConstructLine(const T& value) const
     {
-        // Pre-calculate the required size to avoid reallocations
-        const auto& id_str = m_id.GetSpectatordId();
-        const auto value_str = std::to_string(value);
-        std::string result;
-        result.reserve(m_meterTypeSymbol.size() + id_str.size() + value_str.size() + 2); // +2 for two separators
-        
-        // Build the string with append operations (more efficient than + operator)
-        result.append(m_meterTypeSymbol);
-        result.append(FIELD_SEPARATOR);
-        result.append(id_str);
-        result.append(FIELD_SEPARATOR);
-        result.append(value_str);
-        
-        return result;
+        m_line.replace(m_prefixSize, std::string::npos, std::to_string(value));
+        Writer::GetInstance().Write(m_line);
     }
 
    protected:
     MeterId m_id;
-    std::string m_meterTypeSymbol;
+    size_t m_prefixSize{};
+    mutable std::string m_line;
 };
 
 }  // namespace spectator

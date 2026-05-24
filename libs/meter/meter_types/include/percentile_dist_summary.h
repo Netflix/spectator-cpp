@@ -2,7 +2,6 @@
 
 #include <meter.h>
 #include <meter_id.h>
-#include <writer.h>
 
 #include <cstdint>
 #include <string>
@@ -14,8 +13,8 @@ static constexpr auto PERCENTILE_DISTRIBUTION_SUMMARY_TYPE_SYMBOL = "D";
 class PercentileDistributionSummary final : public Meter
 {
    public:
-    explicit PercentileDistributionSummary(const MeterId& meter_id)
-        : Meter(meter_id, PERCENTILE_DISTRIBUTION_SUMMARY_TYPE_SYMBOL)
+    explicit PercentileDistributionSummary(MeterId meter_id)
+        : Meter(std::move(meter_id), PERCENTILE_DISTRIBUTION_SUMMARY_TYPE_SYMBOL)
     {
     }
 
@@ -23,8 +22,7 @@ class PercentileDistributionSummary final : public Meter
     {
         if (amount >= 0)
         {
-            auto line = this->ConstructLine(amount);
-            Writer::GetInstance().Write(line);
+            this->ConstructLine(amount);
         }
     }
 };
