@@ -56,7 +56,13 @@ std::optional<ProtocolLine> ParseProtocolLine(const std::string& line)
 
 bool IsEmptyOrWhitespace(const std::string& str)
 {
-    return str.empty() || std::all_of(str.begin(), str.end(), [](unsigned char c) { return std::isspace(c); });
+    if (str.empty()) return true;
+    for (const unsigned char c : str)
+    {
+        if (c != ' ' && c != '\t' && c != '\n' && c != '\r' && c != '\f' && c != '\v')
+            return false;
+    }
+    return true;
 }
 
 std::unordered_map<std::string, std::string> ValidateTags(const std::unordered_map<std::string, std::string>& tags)
