@@ -6,6 +6,7 @@
 #include <gtest/gtest.h>
 #include <fmt/core.h>
 #include <iostream>
+#include <regex>
 #include <thread>
 #include <chrono>
 #include <algorithm>

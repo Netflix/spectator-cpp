@@ -1,5 +1,7 @@
 #include <registry.h>
 
+#include <regex>
+
 namespace spectator {
 
 
