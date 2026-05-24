@@ -6,36 +6,28 @@
 
 namespace spectator {
 
-static std::string Sanitize(const std::string& str)
+static void AppendSanitized(std::string& dest, const std::string& src)
 {
-    std::string result;
-    result.reserve(str.size());
-    for (const char c : str)
+    for (const char c : src)
     {
-        if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
-            (c >= '0' && c <= '9') || c == '-' || c == '.' ||
-            c == '_' || c == '~' || c == '^')
-        {
-            result += c;
-        }
-        else
-        {
-            result += '_';
-        }
+        dest += ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') ||
+                 (c >= '0' && c <= '9') || c == '-' || c == '.' ||
+                 c == '_' || c == '~' || c == '^') ? c : '_';
     }
-    return result;
 }
 
 static std::string ToSpectatorId(const std::string& name, const std::unordered_map<std::string, std::string>& tags)
 {
-    std::string id = Sanitize(name);
+    std::string id;
+    id.reserve(64);
+    AppendSanitized(id, name);
 
     for (const auto& [key, val] : tags)
     {
         id += ',';
-        id += Sanitize(key);
+        AppendSanitized(id, key);
         id += '=';
-        id += Sanitize(val);
+        AppendSanitized(id, val);
     }
 
     return id;
@@ -54,9 +46,9 @@ MeterId MeterId::WithTag(const std::string& key, const std::string& value) const
         if (inserted)
         {
             result.m_spectatord_id += ',';
-            result.m_spectatord_id += Sanitize(key);
+            AppendSanitized(result.m_spectatord_id, key);
             result.m_spectatord_id += '=';
-            result.m_spectatord_id += Sanitize(value);
+            AppendSanitized(result.m_spectatord_id, value);
         }
         else
         {
@@ -81,9 +73,9 @@ MeterId MeterId::WithTags(const std::unordered_map<std::string, std::string>& ad
         if (inserted)
         {
             result.m_spectatord_id += ',';
-            result.m_spectatord_id += Sanitize(k);
+            AppendSanitized(result.m_spectatord_id, k);
             result.m_spectatord_id += '=';
-            result.m_spectatord_id += Sanitize(v);
+            AppendSanitized(result.m_spectatord_id, v);
         }
         else
         {
