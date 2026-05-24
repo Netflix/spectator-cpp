@@ -110,7 +110,7 @@ TEST_F(WriterWrapperUDSWriterTest, MultithreadedWrite)
     int actualIncrements = 0;
 
     // Verify every string in msgs follows the form counter.thread<digit>.<digit>
-    std::regex counter_regex(R"(c:counter\.thread\d+\.\d+:1.000000)");
+    std::regex counter_regex(R"(c:counter\.thread\d+\.\d+:1)");
     for (const auto& msg : msgs)
     {
         std::stringstream ss(msg);

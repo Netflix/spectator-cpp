@@ -52,6 +52,11 @@ class Meter
     }
 
    protected:
+    inline void WriteLine() const
+    {
+        Writer::GetInstance().Write(m_line);
+    }
+
     MeterId m_id;
     size_t m_prefixSize{};
     mutable std::string m_line;

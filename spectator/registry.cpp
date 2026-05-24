@@ -43,7 +43,12 @@ Registry::Registry(const Config& config) : m_config(config)
     if (config.GetWriterType() == WriterType::Memory)
     {
         Logger::info("Registry initializing Memory Writer");
-        Writer::Initialize(config.GetWriterType(), "", 0, this->m_config.GetWriterBufferSize()); 
+        Writer::Initialize(config.GetWriterType(), "", 0, this->m_config.GetWriterBufferSize());
+    }
+    else if (config.GetWriterType() == WriterType::Noop)
+    {
+        Logger::info("Registry initializing Noop Writer");
+        Writer::Initialize(config.GetWriterType(), "", 0, 0);
     }
     else if (config.GetWriterType() == WriterType::UDP)
     {

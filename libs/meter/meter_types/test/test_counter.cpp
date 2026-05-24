@@ -19,9 +19,9 @@ TEST_F(CounterTest, increment)
     Counter c(tid);
     EXPECT_TRUE(writer->IsEmpty());
     c.Increment();
-    EXPECT_EQ("c:counter:1.000000\n", writer->LastLine());
+    EXPECT_EQ("c:counter:1\n", writer->LastLine());
     c.Increment(2);
-    EXPECT_EQ("c:counter:2.000000\n", writer->LastLine());
+    EXPECT_EQ("c:counter:2\n", writer->LastLine());
 }
 
 TEST_F(CounterTest, incrementNegative)

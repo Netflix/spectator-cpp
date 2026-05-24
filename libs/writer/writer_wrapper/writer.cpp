@@ -37,6 +37,10 @@ void Writer::Initialize(WriterType type, const std::string& param, int port, uns
                 instance.m_impl = std::make_unique<MemoryWriter>();
                 Logger::info("WriterWrapper initialized as MemoryWriter");
                 break;
+            case WriterType::Noop:
+                instance.m_impl = std::make_unique<NoopWriter>();
+                Logger::info("WriterWrapper initialized as NoopWriter");
+                break;
             case WriterType::UDP:
                 instance.m_impl = std::make_unique<UDPWriter>(param, port);
                 Logger::info("WriterWrapper initialized as UDPWriter with host: {} and port: {}", param, port);

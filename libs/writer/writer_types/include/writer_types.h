@@ -1,6 +1,7 @@
 #pragma once
 
 #include "memory_writer.h"
+#include "noop_writer.h"
 #include "udp_writer.h"
 #include "uds_writer.h"
 
@@ -16,6 +17,7 @@ namespace spectator {
 enum class WriterType
 {
     Memory,
+    Noop,
     UDP,
     Unix
 };
@@ -23,6 +25,7 @@ enum class WriterType
 struct WriterTypes
 {
     static constexpr auto Memory = "memory";
+    static constexpr auto Noop   = "noop";
     static constexpr auto UDP = "udp";
     static constexpr auto Unix = "unix";
 
@@ -40,8 +43,9 @@ struct DefaultLocations
 
 inline const std::map<std::string_view, std::pair<WriterType, std::string_view>> TypeToLocationMap = {
     {WriterTypes::Memory, {WriterType::Memory, DefaultLocations::NoLocation}},
-    {WriterTypes::UDP, {WriterType::UDP, DefaultLocations::UDP}},
-    {WriterTypes::Unix, {WriterType::Unix, DefaultLocations::UDS}},
+    {WriterTypes::Noop,   {WriterType::Noop,   DefaultLocations::NoLocation}},
+    {WriterTypes::UDP,    {WriterType::UDP,     DefaultLocations::UDP}},
+    {WriterTypes::Unix,   {WriterType::Unix,    DefaultLocations::UDS}},
 };
 
 inline std::string WriterTypeToString(WriterType type)
@@ -50,6 +54,8 @@ inline std::string WriterTypeToString(WriterType type)
     {
         case WriterType::Memory:
             return WriterTypes::Memory;
+        case WriterType::Noop:
+            return WriterTypes::Noop;
         case WriterType::UDP:
             return WriterTypes::UDP;
         case WriterType::Unix:

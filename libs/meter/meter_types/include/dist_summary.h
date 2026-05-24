@@ -14,7 +14,7 @@ class DistributionSummary final : public Meter
    public:
     explicit DistributionSummary(MeterId meter_id) : Meter(std::move(meter_id), DisTRIBUTION_SUMMARY_TYPE_SYMBOL) {}
 
-    void Record(const double& amount) const
+    void Record(int64_t amount) const
     {
         if (amount >= 0)
         {

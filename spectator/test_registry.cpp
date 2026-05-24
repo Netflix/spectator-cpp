@@ -16,7 +16,7 @@ TEST(RegistryTest, Close)
     c.Increment();
 
     auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
-    EXPECT_EQ("c:counter:1.000000\n", memoryWriter->LastLine());
+    EXPECT_EQ("c:counter:1\n", memoryWriter->LastLine());
 
     memoryWriter->Close();
     EXPECT_TRUE(memoryWriter->IsEmpty());
@@ -64,19 +64,19 @@ TEST(RegistryTest, Counter)
     EXPECT_TRUE(memoryWriter->IsEmpty());
 
     c1.Increment();
-    EXPECT_EQ("c:counter:1.000000\n", memoryWriter->LastLine());
+    EXPECT_EQ("c:counter:1\n", memoryWriter->LastLine());
 
     c2.Increment();
-    EXPECT_EQ("c:counter,my-tags=bar:1.000000\n", memoryWriter->LastLine());
+    EXPECT_EQ("c:counter,my-tags=bar:1\n", memoryWriter->LastLine());
 
     c1.Increment(2);
-    EXPECT_EQ("c:counter:2.000000\n", memoryWriter->LastLine());
+    EXPECT_EQ("c:counter:2\n", memoryWriter->LastLine());
 
     c2.Increment(2);
-    EXPECT_EQ("c:counter,my-tags=bar:2.000000\n", memoryWriter->LastLine());
+    EXPECT_EQ("c:counter,my-tags=bar:2\n", memoryWriter->LastLine());
 
     r.CreateCounter("counter").Increment(3);
-    EXPECT_EQ("c:counter:3.000000\n", memoryWriter->LastLine());
+    EXPECT_EQ("c:counter:3\n", memoryWriter->LastLine());
 }
 
 TEST(RegistryTest, CounterWithId)
@@ -89,15 +89,15 @@ TEST(RegistryTest, CounterWithId)
     EXPECT_TRUE(memoryWriter->IsEmpty());
 
     c.Increment();
-    EXPECT_EQ("c:counter,extra-tags=foo,my-tags=bar:1.000000\n",
+    EXPECT_EQ("c:counter,extra-tags=foo,my-tags=bar:1\n",
               ParseProtocolLine(memoryWriter->LastLine()).value().to_string());
 
     c.Increment(2);
-    EXPECT_EQ("c:counter,extra-tags=foo,my-tags=bar:2.000000\n",
+    EXPECT_EQ("c:counter,extra-tags=foo,my-tags=bar:2\n",
               ParseProtocolLine(memoryWriter->LastLine()).value().to_string());
 
     r.CreateCounter("counter", {{"my-tags", "bar"}}).Increment(3);
-    EXPECT_EQ("c:counter,extra-tags=foo,my-tags=bar:3.000000\n",
+    EXPECT_EQ("c:counter,extra-tags=foo,my-tags=bar:3\n",
               ParseProtocolLine(memoryWriter->LastLine()).value().to_string());
 }
 
@@ -111,7 +111,7 @@ TEST(RegistryTest, DistributionSummary)
     EXPECT_TRUE(memoryWriter->IsEmpty());
 
     d.Record(42);
-    EXPECT_EQ("d:distribution_summary:42.000000\n", memoryWriter->LastLine());
+    EXPECT_EQ("d:distribution_summary:42\n", memoryWriter->LastLine());
 }
 
 TEST(RegistryTest, DistributionSummaryWithId)
@@ -124,7 +124,7 @@ TEST(RegistryTest, DistributionSummaryWithId)
     EXPECT_TRUE(memoryWriter->IsEmpty());
 
     d.Record(42);
-    EXPECT_EQ("d:distribution_summary,extra-tags=foo,my-tags=bar:42.000000\n",
+    EXPECT_EQ("d:distribution_summary,extra-tags=foo,my-tags=bar:42\n",
               ParseProtocolLine(memoryWriter->LastLine()).value().to_string());
 }
 
