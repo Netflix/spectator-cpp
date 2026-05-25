@@ -65,15 +65,28 @@ target_include_directories(spectator-shared PUBLIC ${SPECTATOR_INCLUDE_DIRS})
 target_link_libraries(spectator-shared PUBLIC spdlog::spdlog_header_only Boost::boost Boost::system)
 set_target_properties(spectator-shared PROPERTIES OUTPUT_NAME "spectator")
 
-# Static archive for Go (CGo) — PIC so it can also be embedded in the Python .so.
-# Consumers link: libspectator_c.a + libboost_system.a (both static via Conan) + -lstdc++
-# Result: zero runtime .so dependencies beyond glibc.
+# Fat static archive for Go (CGo) and any consumer that wants zero runtime dependencies.
+# Boost::system object files are extracted and merged into libspectator_c.a so that
+# consumers only need: -lspectator_c -lstdc++   (no separate -lboost_system required).
+# spdlog is header-only so nothing to merge for it.
 add_library(spectator-c-static STATIC ${SPECTATOR_SOURCES})
 target_include_directories(spectator-c-static PUBLIC ${SPECTATOR_INCLUDE_DIRS})
 target_link_libraries(spectator-c-static PUBLIC spdlog::spdlog_header_only Boost::boost Boost::system)
 set_target_properties(spectator-c-static PROPERTIES
     POSITION_INDEPENDENT_CODE ON
     OUTPUT_NAME "spectator_c"
+)
+
+# Post-build: merge Boost::system object files into libspectator_c.a.
+# We extract to a temp dir to avoid name collisions, then re-add to the archive.
+set(_FAT_TMP "${CMAKE_CURRENT_BINARY_DIR}/_fat_tmp")
+add_custom_command(TARGET spectator-c-static POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${_FAT_TMP}
+    COMMAND bash -c "cd ${_FAT_TMP} && ${CMAKE_AR} x $<TARGET_FILE:Boost::system>"
+    COMMAND bash -c "${CMAKE_AR} qcs $<TARGET_FILE:spectator-c-static> ${_FAT_TMP}/*.o"
+    COMMAND ${CMAKE_COMMAND} -E rm -rf ${_FAT_TMP}
+    COMMENT "Fat archive: merging Boost::system into libspectator_c.a"
+    VERBATIM
 )
 
 # pybind11 Python extension (builds spectator_cpp.so importable from Python)

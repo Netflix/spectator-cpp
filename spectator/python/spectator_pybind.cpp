@@ -1,155 +1,154 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include <age_gauge.h>
+#include <counter.h>
+#include <dist_summary.h>
+#include <gauge.h>
+#include <max_gauge.h>
+#include <monotonic_counter.h>
+#include <monotonic_counter_uint.h>
+#include <percentile_dist_summary.h>
+#include <percentile_timer.h>
 #include <registry.h>
+#include <timer.h>
 #include <config.h>
 #include <writer.h>
 #include <writer_config.h>
 
 #include <sstream>
+#include <memory>
 
 namespace py = pybind11;
 using Map = std::unordered_map<std::string, std::string>;
 
+// Helper: expose a heap-allocated meter returned by unique_ptr so Python GC
+// manages its lifetime — m_line lives as long as the Python object does.
+template <typename M>
+std::unique_ptr<M> make_meter(spectator::Registry& r,
+                               const std::string& name, const Map& tags)
+{
+    return std::make_unique<M>(r.CreateNewId(name, tags));
+}
+
 PYBIND11_MODULE(spectator_cpp, m)
 {
-    m.doc() = "spectator-cpp Python bindings — thin wrapper over the C++ spectator library";
+    m.doc() = "spectator-cpp Python bindings";
 
     // ------------------------------------------------------------------
     // WriterConfig
     // ------------------------------------------------------------------
-    py::class_<spectator::WriterConfig>(m, "WriterConfig",
-        "Configures how metrics are sent to spectatord.\n\n"
-        "location values: 'udp', 'udp://host:port', 'unix', 'unix:///path',\n"
-        "                 'memory', 'noop'")
-        .def(py::init<const std::string&>(), py::arg("location"),
-             "Create an unbuffered WriterConfig.")
+    py::class_<spectator::WriterConfig>(m, "WriterConfig")
+        .def(py::init<const std::string&>(), py::arg("location"))
         .def(py::init<const std::string&, unsigned int>(),
-             py::arg("location"), py::arg("buffer_size"),
-             "Create a buffered WriterConfig. buffer_size bytes are accumulated\n"
-             "before a single socket send. Use 60*1024 for high throughput.");
+             py::arg("location"), py::arg("buffer_size"));
 
     // ------------------------------------------------------------------
     // Config
     // ------------------------------------------------------------------
-    py::class_<spectator::Config>(m, "Config",
-        "Registry configuration combining writer settings with optional common tags.")
+    py::class_<spectator::Config>(m, "Config")
         .def(py::init<const spectator::WriterConfig&, const Map&>(),
-             py::arg("writer_config"),
-             py::arg("extra_tags") = Map{},
-             "Create a Config. extra_tags are merged into every metric.");
+             py::arg("writer_config"), py::arg("extra_tags") = Map{});
 
     // ------------------------------------------------------------------
-    // Registry
+    // Meter classes — Python holds a unique_ptr so m_line is reused
     // ------------------------------------------------------------------
-    py::class_<spectator::Registry>(m, "Registry",
-        "Main entry point. Create one per application, then call the meter\n"
-        "methods (counter_increment, gauge_set, timer_record, etc.) to record metrics.")
+
+    py::class_<spectator::Counter, std::unique_ptr<spectator::Counter>>(m, "Counter")
+        .def("increment", py::overload_cast<>(&spectator::Counter::Increment, py::const_))
+        .def("add", [](spectator::Counter& c, int64_t d) { c.Increment(d); },
+             py::arg("delta"));
+
+    py::class_<spectator::Gauge, std::unique_ptr<spectator::Gauge>>(m, "Gauge")
+        .def("set", &spectator::Gauge::Set, py::arg("value"));
+
+    py::class_<spectator::MaxGauge, std::unique_ptr<spectator::MaxGauge>>(m, "MaxGauge")
+        .def("set", &spectator::MaxGauge::Set, py::arg("value"));
+
+    py::class_<spectator::AgeGauge, std::unique_ptr<spectator::AgeGauge>>(m, "AgeGauge")
+        .def("set", &spectator::AgeGauge::Set, py::arg("seconds"))
+        .def("now", &spectator::AgeGauge::Now);
+
+    py::class_<spectator::MonotonicCounter, std::unique_ptr<spectator::MonotonicCounter>>(m, "MonotonicCounter")
+        .def("set", &spectator::MonotonicCounter::Set, py::arg("amount"));
+
+    py::class_<spectator::MonotonicCounterUint, std::unique_ptr<spectator::MonotonicCounterUint>>(m, "MonotonicCounterUint")
+        .def("set", &spectator::MonotonicCounterUint::Set, py::arg("amount"));
+
+    py::class_<spectator::Timer, std::unique_ptr<spectator::Timer>>(m, "Timer")
+        .def("record", &spectator::Timer::Record, py::arg("seconds"));
+
+    py::class_<spectator::PercentileTimer, std::unique_ptr<spectator::PercentileTimer>>(m, "PercentileTimer")
+        .def("record", &spectator::PercentileTimer::Record, py::arg("seconds"));
+
+    py::class_<spectator::DistributionSummary, std::unique_ptr<spectator::DistributionSummary>>(m, "DistributionSummary")
+        .def("record", &spectator::DistributionSummary::Record, py::arg("amount"));
+
+    py::class_<spectator::PercentileDistributionSummary, std::unique_ptr<spectator::PercentileDistributionSummary>>(m, "PercentileDistributionSummary")
+        .def("record", &spectator::PercentileDistributionSummary::Record, py::arg("amount"));
+
+    // ------------------------------------------------------------------
+    // Registry — factory methods return unique_ptr<Meter> so Python GC
+    // keeps each C++ object alive, reusing m_line across calls.
+    // ------------------------------------------------------------------
+    py::class_<spectator::Registry>(m, "Registry")
         .def(py::init<const spectator::Config&>(), py::arg("config"))
 
-        // Counter
-        .def("counter_increment",
+        .def("counter",
              [](spectator::Registry& r, const std::string& name, const Map& tags) {
-                 r.CreateCounter(name, tags).Increment();
-             },
-             py::arg("name"), py::arg("tags") = Map{},
-             "Increment a counter by 1.")
+                 return make_meter<spectator::Counter>(r, name, tags);
+             }, py::arg("name"), py::arg("tags") = Map{})
 
-        .def("counter_add",
-             [](spectator::Registry& r, const std::string& name, int64_t delta, const Map& tags) {
-                 r.CreateCounter(name, tags).Increment(delta);
-             },
-             py::arg("name"), py::arg("delta"), py::arg("tags") = Map{},
-             "Increment a counter by delta (must be > 0).")
-
-        // Gauge
-        .def("gauge_set",
-             [](spectator::Registry& r, const std::string& name, double value, const Map& tags) {
-                 r.CreateGauge(name, tags).Set(value);
-             },
-             py::arg("name"), py::arg("value"), py::arg("tags") = Map{},
-             "Set a gauge to the given value.")
-
-        .def("gauge_set_ttl",
-             [](spectator::Registry& r, const std::string& name, double value,
-                int ttl_seconds, const Map& tags) {
-                 r.CreateGauge(name, tags, ttl_seconds).Set(value);
-             },
-             py::arg("name"), py::arg("value"), py::arg("ttl_seconds"),
-             py::arg("tags") = Map{},
-             "Set a gauge with an expiry TTL in seconds.")
-
-        // MaxGauge
-        .def("max_gauge_set",
-             [](spectator::Registry& r, const std::string& name, double value, const Map& tags) {
-                 r.CreateMaxGauge(name, tags).Set(value);
-             },
-             py::arg("name"), py::arg("value"), py::arg("tags") = Map{},
-             "Update a max-gauge (tracks the maximum value seen).")
-
-        // AgeGauge
-        .def("age_gauge_set",
-             [](spectator::Registry& r, const std::string& name, double seconds, const Map& tags) {
-                 r.CreateAgeGauge(name, tags).Set(seconds);
-             },
-             py::arg("name"), py::arg("seconds"), py::arg("tags") = Map{},
-             "Set an age-gauge to the given number of seconds since the last event.")
-
-        .def("age_gauge_now",
+        .def("gauge",
              [](spectator::Registry& r, const std::string& name, const Map& tags) {
-                 r.CreateAgeGauge(name, tags).Now();
-             },
-             py::arg("name"), py::arg("tags") = Map{},
-             "Record the current time as the most recent event for this age-gauge.")
+                 return make_meter<spectator::Gauge>(r, name, tags);
+             }, py::arg("name"), py::arg("tags") = Map{})
 
-        // MonotonicCounter
-        .def("monotonic_counter_set",
-             [](spectator::Registry& r, const std::string& name, double amount, const Map& tags) {
-                 r.CreateMonotonicCounter(name, tags).Set(amount);
-             },
-             py::arg("name"), py::arg("amount"), py::arg("tags") = Map{},
-             "Update a monotonically-increasing counter (rate derived by spectatord).")
+        .def("gauge_ttl",
+             [](spectator::Registry& r, const std::string& name, int ttl, const Map& tags) {
+                 return std::make_unique<spectator::Gauge>(r.CreateNewId(name, tags), ttl);
+             }, py::arg("name"), py::arg("ttl_seconds"), py::arg("tags") = Map{})
 
-        .def("monotonic_counter_uint_set",
-             [](spectator::Registry& r, const std::string& name, uint64_t amount, const Map& tags) {
-                 r.CreateMonotonicCounterUint(name, tags).Set(amount);
-             },
-             py::arg("name"), py::arg("amount"), py::arg("tags") = Map{},
-             "Update a uint64 monotonically-increasing counter.")
+        .def("max_gauge",
+             [](spectator::Registry& r, const std::string& name, const Map& tags) {
+                 return make_meter<spectator::MaxGauge>(r, name, tags);
+             }, py::arg("name"), py::arg("tags") = Map{})
 
-        // Timer
-        .def("timer_record",
-             [](spectator::Registry& r, const std::string& name, double seconds, const Map& tags) {
-                 r.CreateTimer(name, tags).Record(seconds);
-             },
-             py::arg("name"), py::arg("seconds"), py::arg("tags") = Map{},
-             "Record a duration in seconds.")
+        .def("age_gauge",
+             [](spectator::Registry& r, const std::string& name, const Map& tags) {
+                 return make_meter<spectator::AgeGauge>(r, name, tags);
+             }, py::arg("name"), py::arg("tags") = Map{})
 
-        // PercentileTimer
-        .def("pct_timer_record",
-             [](spectator::Registry& r, const std::string& name, double seconds, const Map& tags) {
-                 r.CreatePercentTimer(name, tags).Record(seconds);
-             },
-             py::arg("name"), py::arg("seconds"), py::arg("tags") = Map{},
-             "Record a duration in seconds with percentile bucketing.")
+        .def("monotonic_counter",
+             [](spectator::Registry& r, const std::string& name, const Map& tags) {
+                 return make_meter<spectator::MonotonicCounter>(r, name, tags);
+             }, py::arg("name"), py::arg("tags") = Map{})
 
-        // DistributionSummary
-        .def("dist_record",
-             [](spectator::Registry& r, const std::string& name, int64_t amount, const Map& tags) {
-                 r.CreateDistributionSummary(name, tags).Record(amount);
-             },
-             py::arg("name"), py::arg("amount"), py::arg("tags") = Map{},
-             "Record a size or amount as a distribution summary.")
+        .def("monotonic_counter_uint",
+             [](spectator::Registry& r, const std::string& name, const Map& tags) {
+                 return make_meter<spectator::MonotonicCounterUint>(r, name, tags);
+             }, py::arg("name"), py::arg("tags") = Map{})
 
-        // PercentileDistributionSummary
-        .def("pct_dist_record",
-             [](spectator::Registry& r, const std::string& name, int64_t amount, const Map& tags) {
-                 r.CreatePercentDistributionSummary(name, tags).Record(amount);
-             },
-             py::arg("name"), py::arg("amount"), py::arg("tags") = Map{},
-             "Record a size or amount with percentile bucketing.")
+        .def("timer",
+             [](spectator::Registry& r, const std::string& name, const Map& tags) {
+                 return make_meter<spectator::Timer>(r, name, tags);
+             }, py::arg("name"), py::arg("tags") = Map{})
 
-        // Memory writer utility
+        .def("pct_timer",
+             [](spectator::Registry& r, const std::string& name, const Map& tags) {
+                 return make_meter<spectator::PercentileTimer>(r, name, tags);
+             }, py::arg("name"), py::arg("tags") = Map{})
+
+        .def("dist_summary",
+             [](spectator::Registry& r, const std::string& name, const Map& tags) {
+                 return make_meter<spectator::DistributionSummary>(r, name, tags);
+             }, py::arg("name"), py::arg("tags") = Map{})
+
+        .def("pct_dist_summary",
+             [](spectator::Registry& r, const std::string& name, const Map& tags) {
+                 return make_meter<spectator::PercentileDistributionSummary>(r, name, tags);
+             }, py::arg("name"), py::arg("tags") = Map{})
+
         .def("dump_lines",
              [](spectator::Registry&) {
                  std::string dump = spectator::Writer::DumpMemory();
@@ -159,7 +158,5 @@ PYBIND11_MODULE(spectator_cpp, m)
                  while (std::getline(ss, line))
                      if (!line.empty()) lines.push_back(line);
                  return lines;
-             },
-             "Return all lines written to the memory writer as a list of strings.\n"
-             "Only meaningful when the registry was created with WriterConfig('memory').");
+             });
 }

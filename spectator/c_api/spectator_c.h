@@ -173,6 +173,121 @@ void spectator_pct_dist_record(spectator_registry_t registry,
                                  const char** tag_vals,
                                  int num_tags);
 
+/* ==========================================================================
+ * Persistent meter handles
+ *
+ * Use these when a meter is called repeatedly (the common case).
+ * The C++ meter object — including its pre-allocated m_line buffer — is kept
+ * alive between calls, eliminating per-call allocation overhead.
+ *
+ * Lifecycle: _new() allocates, _destroy() frees. Use runtime.SetFinalizer
+ * (Go) or Python GC / Node.js ObjectWrap destructors to ensure cleanup.
+ * ========================================================================== */
+
+typedef void* spectator_counter_h;
+typedef void* spectator_gauge_h;
+typedef void* spectator_max_gauge_h;
+typedef void* spectator_age_gauge_h;
+typedef void* spectator_monotonic_counter_h;
+typedef void* spectator_monotonic_counter_uint_h;
+typedef void* spectator_timer_h;
+typedef void* spectator_pct_timer_h;
+typedef void* spectator_dist_h;
+typedef void* spectator_pct_dist_h;
+
+/* Counter */
+spectator_counter_h spectator_counter_new(spectator_registry_t registry,
+                                           const char* name,
+                                           const char** tag_keys,
+                                           const char** tag_vals,
+                                           int num_tags);
+void spectator_counter_handle_destroy(spectator_counter_h handle);
+void spectator_counter_handle_increment(spectator_counter_h handle);
+void spectator_counter_handle_add(spectator_counter_h handle, int64_t delta);
+
+/* Gauge — ttl_seconds < 0 means no TTL */
+spectator_gauge_h spectator_gauge_new(spectator_registry_t registry,
+                                       const char* name,
+                                       int ttl_seconds,
+                                       const char** tag_keys,
+                                       const char** tag_vals,
+                                       int num_tags);
+void spectator_gauge_handle_destroy(spectator_gauge_h handle);
+void spectator_gauge_handle_set(spectator_gauge_h handle, double value);
+
+/* MaxGauge */
+spectator_max_gauge_h spectator_max_gauge_new(spectator_registry_t registry,
+                                               const char* name,
+                                               const char** tag_keys,
+                                               const char** tag_vals,
+                                               int num_tags);
+void spectator_max_gauge_handle_destroy(spectator_max_gauge_h handle);
+void spectator_max_gauge_handle_set(spectator_max_gauge_h handle, double value);
+
+/* AgeGauge */
+spectator_age_gauge_h spectator_age_gauge_new(spectator_registry_t registry,
+                                               const char* name,
+                                               const char** tag_keys,
+                                               const char** tag_vals,
+                                               int num_tags);
+void spectator_age_gauge_handle_destroy(spectator_age_gauge_h handle);
+void spectator_age_gauge_handle_set(spectator_age_gauge_h handle, double seconds);
+void spectator_age_gauge_handle_now(spectator_age_gauge_h handle);
+
+/* MonotonicCounter */
+spectator_monotonic_counter_h spectator_monotonic_counter_new(spectator_registry_t registry,
+                                                               const char* name,
+                                                               const char** tag_keys,
+                                                               const char** tag_vals,
+                                                               int num_tags);
+void spectator_monotonic_counter_handle_destroy(spectator_monotonic_counter_h handle);
+void spectator_monotonic_counter_handle_set(spectator_monotonic_counter_h handle, double amount);
+
+/* MonotonicCounterUint */
+spectator_monotonic_counter_uint_h spectator_monotonic_counter_uint_new(spectator_registry_t registry,
+                                                                          const char* name,
+                                                                          const char** tag_keys,
+                                                                          const char** tag_vals,
+                                                                          int num_tags);
+void spectator_monotonic_counter_uint_handle_destroy(spectator_monotonic_counter_uint_h handle);
+void spectator_monotonic_counter_uint_handle_set(spectator_monotonic_counter_uint_h handle, uint64_t amount);
+
+/* Timer */
+spectator_timer_h spectator_timer_new(spectator_registry_t registry,
+                                       const char* name,
+                                       const char** tag_keys,
+                                       const char** tag_vals,
+                                       int num_tags);
+void spectator_timer_handle_destroy(spectator_timer_h handle);
+void spectator_timer_handle_record(spectator_timer_h handle, double seconds);
+
+/* PercentileTimer */
+spectator_pct_timer_h spectator_pct_timer_new(spectator_registry_t registry,
+                                               const char* name,
+                                               const char** tag_keys,
+                                               const char** tag_vals,
+                                               int num_tags);
+void spectator_pct_timer_handle_destroy(spectator_pct_timer_h handle);
+void spectator_pct_timer_handle_record(spectator_pct_timer_h handle, double seconds);
+
+/* DistributionSummary */
+spectator_dist_h spectator_dist_new(spectator_registry_t registry,
+                                     const char* name,
+                                     const char** tag_keys,
+                                     const char** tag_vals,
+                                     int num_tags);
+void spectator_dist_handle_destroy(spectator_dist_h handle);
+void spectator_dist_handle_record(spectator_dist_h handle, int64_t amount);
+
+/* PercentileDistributionSummary */
+spectator_pct_dist_h spectator_pct_dist_new(spectator_registry_t registry,
+                                              const char* name,
+                                              const char** tag_keys,
+                                              const char** tag_vals,
+                                              int num_tags);
+void spectator_pct_dist_handle_destroy(spectator_pct_dist_h handle);
+void spectator_pct_dist_handle_record(spectator_pct_dist_h handle, int64_t amount);
+
 /* --------------------------------------------------------------------------
  * Memory writer utilities
  * Only meaningful when the registry was created with writer_location "memory".
