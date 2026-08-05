@@ -15,7 +15,6 @@ target_link_libraries(spectator-writer-types
     PUBLIC
     spectator-logger
     Boost::boost
-    Boost::system
 )
 
 set(TEST_SOURCES
