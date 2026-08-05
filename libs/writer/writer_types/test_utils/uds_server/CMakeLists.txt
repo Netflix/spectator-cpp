@@ -12,7 +12,7 @@ target_compile_definitions(uds_server_lib
 )
 target_link_libraries(uds_server_lib
     PUBLIC
-    Boost::system
+    Boost::boost
     pthread
 )
 
@@ -27,5 +27,5 @@ target_include_directories(uds_server
 
 target_link_libraries(uds_server
     PUBLIC
-    Boost::system
+    Boost::boost
 )

@@ -35,7 +35,7 @@ bool UDPWriter::CreateSocket() try
         return false;
     }
     
-    m_endpoint = boost::asio::ip::udp::endpoint(boost::asio::ip::address::from_string(m_host), m_port);
+    m_endpoint = boost::asio::ip::udp::endpoint(boost::asio::ip::make_address(m_host), m_port);
     m_socketEstablished = true;
     Logger::info("UDPWriter: Socket created for {}:{}", m_host, m_port);
     return true;
