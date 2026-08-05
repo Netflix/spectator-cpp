@@ -1,10 +1,13 @@
 #pragma once
 
 #include <config.h>
-#include <logger.h>
 #include <meter_id.h>
 #include <meter_types.h>
 #include <writer.h>
+
+// Only for spdlog::level::level_enum. Deliberately not <logger.h>, which would
+// also drag in spdlog/async.h, fmt, and the spectator::Logger name.
+#include <spdlog/common.h>
 
 #include <memory>
 #include <string>
@@ -14,6 +17,11 @@
 #include <type_traits>
 
 namespace spectator {
+
+// Sets the severity threshold of the spectator logger. Lets callers adjust
+// logging without including <logger.h>, so spectator::Logger stays out of
+// consumers' namespaces. No-op if the logger failed to initialize.
+void SetLogLevel(spdlog::level::level_enum level);
 
 class Registry
 {
