@@ -5,11 +5,16 @@ class SpectatorCppConan(ConanFile):
     requires = (
         "spdlog/1.17.0",
         "gtest/1.17.0",
-        # Capped at 1.90.0: the boost/1.91.0 Conan recipe adds a cobalt_io_ssl component
-        # that requires OpenSSL, but the recipe never requires it, so the library is never
-        # built and package_info() fails. There is no without_cobalt_io_ssl option to
-        # disable it.
         "boost/1.90.0",
     )
+    # Boost.Cobalt is disabled because b2 builds an extra boost_cobalt_io_ssl library
+    # whenever it can find OpenSSL, but the boost/1.90.0 recipe does not list that library,
+    # so package_info() aborts with "built, but were not used in any boost module". The
+    # failure depends on whether OpenSSL headers happen to be visible on the build machine,
+    # which is why it broke CI but not local Linux builds. We do not use Cobalt, and
+    # disabling it stops b2 from building cobalt/cobalt_io/cobalt_io_ssl at all.
+    default_options = {
+        "boost/*:without_cobalt": True,
+    }
     tool_requires = ()
     generators = "CMakeDeps", "CMakeToolchain"
