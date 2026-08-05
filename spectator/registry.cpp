@@ -1,9 +1,21 @@
 #include <registry.h>
 
+// Not exposed by registry.h on purpose: keeping <logger.h> out of the public
+// header keeps spdlog and the spectator::Logger name out of consumers.
+#include <logger.h>
+
 namespace spectator {
 
+void SetLogLevel(spdlog::level::level_enum level)
+{
+    // GetLogger() yields nullptr when spdlog initialization failed.
+    if (auto* logger = Logger::GetLogger(); logger != nullptr)
+    {
+        logger->set_level(level);
+    }
+}
 
-std::pair<std::string, int> ParseUdpAddress(const std::string& address) 
+std::pair<std::string, int> ParseUdpAddress(const std::string& address)
 {
     std::regex pattern("udp://([0-9.]+):(\\d+)");
     std::smatch matches;
