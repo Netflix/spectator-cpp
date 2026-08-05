@@ -60,7 +60,7 @@ rm -f "$DEFAULT_PROFILE.bak"
 
 if [[ ! -d $BUILD_DIR ]]; then
   echo -e "${BLUE}==== install required dependencies ====${NC}"
-  conan install . --output-folder="$BUILD_DIR" --build="missing" --settings=build_type="$BUILD_TYPE"
+  conan install . --output-folder="$BUILD_DIR" --build="*" --settings=build_type="$BUILD_TYPE"
 fi
 
 pushd "$BUILD_DIR"
