@@ -50,14 +50,6 @@ inline std::string create_prefix(const Id& id, std::string_view type_name) {
   return res;
 }
 
-// Single thread-local send buffer shared across all StatelessMeter instantiations.
-// Non-template so all Pub types resolve to the same storage slot per thread.
-// Not re-entrant: callers must complete send() before the buffer is safe to reuse.
-inline std::string& tl_send_buf() {
-  thread_local std::string buf;
-  return buf;
-}
-
 template <typename T>
 T restrict(T amount, T min, T max) {
   auto r = amount;
@@ -88,19 +80,15 @@ class StatelessMeter {
  protected:
   void send(double value) {
     ensure_prefix();
-    auto& tl_msg = detail::tl_send_buf();
-    tl_msg.assign(value_prefix_);
 
     // Early exit: match absl::StrFormat("%f") behaviour for special values.
+    // These are passed straight through as literals -- no buffer needed.
     if (std::isnan(value)) {
-      tl_msg.append("nan");
-      publisher_->send(tl_msg);
+      publisher_->send(value_prefix_, std::string_view("nan"));
       return;
     }
-
     if (std::isinf(value)) {
-      tl_msg.append(value > 0 ? "inf" : "-inf");
-      publisher_->send(tl_msg);
+      publisher_->send(value_prefix_, std::string_view(value > 0 ? "inf" : "-inf"));
       return;
     }
 
@@ -111,19 +99,19 @@ class StatelessMeter {
     auto [ptr, ec] = std::to_chars(num_buf, num_buf + sizeof(num_buf), value,
                                     std::chars_format::fixed);
     if (ec == std::errc{}) {
-      tl_msg.append(num_buf, ptr);
-    } else {
-      // Fallback for subnormal values, which require up to 1076 chars in fixed
-      // notation. NaN/Inf are handled above, so this branch is subnormals only.
-      auto off = tl_msg.size();
-      tl_msg.resize(off + detail::kMaxFixedDoubleLen);
-      auto [heap_ptr, heap_ec] = std::to_chars(tl_msg.data() + off,
-                                               tl_msg.data() + tl_msg.size(), value,
-                                               std::chars_format::fixed);
-      assert(heap_ec == std::errc{});
-      tl_msg.resize(static_cast<size_t>(heap_ptr - tl_msg.data()));
+      publisher_->send(value_prefix_, std::string_view(num_buf, static_cast<size_t>(ptr - num_buf)));
+      return;
     }
-    publisher_->send(tl_msg);
+
+    // Slow path: didn't fit in 64 bytes. Only subnormal values hit this,
+    // which require up to 1076 chars in fixed notation (NaN/Inf are
+    // handled above).
+    std::string big(detail::kMaxFixedDoubleLen, '\0');
+    auto [heap_ptr, heap_ec] = std::to_chars(big.data(), big.data() + big.size(), value,
+                                             std::chars_format::fixed);
+    assert(heap_ec == std::errc{});
+    big.resize(static_cast<size_t>(heap_ptr - big.data()));
+    publisher_->send(value_prefix_, big);
   }
 
   void send_uint(uint64_t value) {
@@ -131,10 +119,7 @@ class StatelessMeter {
     char num_buf[24];
     auto [ptr, ec] = std::to_chars(num_buf, num_buf + sizeof(num_buf), value);
     assert(ec == std::errc{});
-    auto& tl_msg = detail::tl_send_buf();
-    tl_msg.assign(value_prefix_);
-    tl_msg.append(num_buf, ptr);
-    publisher_->send(tl_msg);
+    publisher_->send(value_prefix_, std::string_view(num_buf, static_cast<size_t>(ptr - num_buf)));
   }
 
  private:

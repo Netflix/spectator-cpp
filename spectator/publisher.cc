@@ -1,5 +1,6 @@
 #include "publisher.h"
 #include "logger.h"
+#include <array>
 #include <fmt/format.h>
 
 namespace spectator {
@@ -37,7 +38,9 @@ SpectatordPublisher::SpectatordPublisher(absl::string_view endpoint,
 }
 
 void SpectatordPublisher::setup_nop_sender() {
-  sender_ = [this](std::string_view msg) { logger_->trace("{}", msg); };
+  sender_ = [this](std::string_view prefix, std::string_view value) {
+    logger_->trace("{}{}", prefix, value);
+  };
 }
 
 void SpectatordPublisher::local_reconnect(absl::string_view path) {
@@ -76,8 +79,9 @@ void SpectatordPublisher::setup_unix_domain(absl::string_view path) {
     buffer_.clear();
   };
 
-  sender_ = [this](std::string_view msg) {
-    buffer_.append(msg);
+  sender_ = [this](std::string_view prefix, std::string_view value) {
+    buffer_.append(prefix);
+    buffer_.append(value);
     const auto now = std::chrono::steady_clock::now();
     const bool should_flush = buffer_.length() >= bytes_to_buffer_ ||
                         now - last_flush_time_ >= flush_interval_;
@@ -126,14 +130,16 @@ void SpectatordPublisher::udp_reconnect(
 void SpectatordPublisher::setup_udp(absl::string_view host_port) {
   auto endpoint = resolve_host_port(io_context_, host_port);
   udp_reconnect(endpoint);
-  sender_ = [endpoint, this](std::string_view msg) {
+  sender_ = [endpoint, this](std::string_view prefix, std::string_view value) {
+    std::array<asio::const_buffer, 2> buffers{asio::buffer(prefix.data(), prefix.size()),
+                                              asio::buffer(value.data(), value.size())};
     for (auto i = 0; i < 3; ++i) {
       try {
-        udp_socket_.send(asio::buffer(msg));
-        logger_->trace("Sent (udp): {}", msg);
+        udp_socket_.send(buffers);
+        logger_->trace("Sent (udp): {}{}", prefix, value);
         break;
       } catch (std::exception& e) {
-        logger_->warn("Unable to send {} - attempt {}/3", msg, i);
+        logger_->warn("Unable to send {}{} - attempt {}/3", prefix, value, i);
         udp_reconnect(endpoint);
       }
     }
