@@ -7,7 +7,9 @@
 namespace spectator {
 class TestPublisher {
  public:
-  void send(std::string_view msg) { messages.emplace_back(msg); }
+  void send(std::string_view prefix, std::string_view value) {
+    messages.emplace_back(std::string(prefix) + std::string(value));
+  }
   std::vector<std::string> SentMessages() { return messages; }
   void Reset() { messages.clear(); }
 

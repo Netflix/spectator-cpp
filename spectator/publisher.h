@@ -24,11 +24,12 @@ class SpectatordPublisher {
       std::shared_ptr<spdlog::logger> logger = DefaultLogger());
   SpectatordPublisher(const SpectatordPublisher&) = delete;
 
-  void send(std::string_view measurement) { sender_(measurement); };
+  // Sends a measured value for the given metric name prefix.
+  void send(std::string_view prefix, std::string_view value) { sender_(prefix, value); };
   void flush() { flusher_(); };
 
  protected:
-  using sender_fun = std::function<void(std::string_view)>;
+  using sender_fun = std::function<void(std::string_view, std::string_view)>;
   sender_fun sender_;
   using flusher_fun = std::function<void()>;
   flusher_fun flusher_ = []() {};
