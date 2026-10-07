@@ -2,6 +2,7 @@
 #include <cassert>
 #include <charconv>
 #include <cmath>
+#include <memory>
 #include "id.h"
 #include "absl/strings/str_cat.h"
 #include "absl/time/time.h"
@@ -105,13 +106,14 @@ class StatelessMeter {
 
     // Slow path: didn't fit in 64 bytes. Only subnormal values hit this,
     // which require up to 1076 chars in fixed notation (NaN/Inf are
-    // handled above).
-    std::string big(detail::kMaxFixedDoubleLen, '\0');
-    auto [heap_ptr, heap_ec] = std::to_chars(big.data(), big.data() + big.size(), value,
-                                             std::chars_format::fixed);
+    // handled above). Heap-allocate once per thread to avoid inflating
+    // stack frames on the hot path.
+    thread_local auto big = std::make_unique<char[]>(detail::kMaxFixedDoubleLen);
+    auto [heap_ptr, heap_ec] = std::to_chars(big.get(), big.get() + detail::kMaxFixedDoubleLen,
+                                             value, std::chars_format::fixed);
     assert(heap_ec == std::errc{});
-    big.resize(static_cast<size_t>(heap_ptr - big.data()));
-    publisher_->send(value_prefix_, big);
+    publisher_->send(value_prefix_,
+                     std::string_view(big.get(), static_cast<size_t>(heap_ptr - big.get())));
   }
 
   void send_uint(uint64_t value) {
