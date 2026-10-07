@@ -2,6 +2,31 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 def spectator_dependencies():
     http_archive(
+        name = "fmt",
+        build_file = "@spectator//third_party:fmtlib.BUILD",
+        strip_prefix = "fmt-8.0.1",
+        sha256 = "a627a56eab9554fc1e5dd9a623d0768583b3a383ff70a4312ba68f94c9d415bf",
+        urls = ["https://github.com/fmtlib/fmt/releases/download/8.0.1/fmt-8.0.1.zip"],
+    )
+
+    http_archive(
+        name = "spdlog",
+        build_file = "@spectator//third_party:spdlog.BUILD",
+        strip_prefix = "spdlog-1.9.1",
+        sha256 = "9a452cfa24408baccc9b2bc2d421d68172a7630c99e9504a14754be840d31a62",
+        urls = ["https://github.com/gabime/spdlog/archive/v1.9.1.tar.gz"],
+    )
+
+    http_archive(
+        name = "abseil-cpp",
+        urls = ["https://github.com/abseil/abseil-cpp/archive/17c954d90d5661e27db8fc5f086085690a8372d9.zip"],
+        strip_prefix = "abseil-cpp-17c954d90d5661e27db8fc5f086085690a8372d9",
+        sha256 = "aee7688bb669402c1322d9512d7992a6f361a70444e54d98a8709a8ad4dd60c3",
+        patches = ["@//bazel:abseil.patch"],
+        patch_args = ["-p1"],
+    )
+
+    http_archive(
         name = "com_google_googletest",
         urls = ["https://github.com/google/googletest/archive/release-1.10.0.tar.gz"],
         strip_prefix = "googletest-release-1.10.0",
