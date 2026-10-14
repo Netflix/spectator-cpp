@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <cstdint>
+#include <cstdlib>
 
 #include <registry.h>
 #include <writer_test_helper.h>
@@ -7,6 +8,23 @@
 #include <util.h>
 
 using namespace spectator;
+
+// Config adds nf.container and nf.process from these environment variables. Clear them before the tests run, so the
+// exact-output checks below also pass on hosts where the platform sets them. Registered from a global initializer
+// because this test uses gtest_main.
+class ClearEnvTagsEnvironment : public testing::Environment
+{
+   public:
+    void SetUp() override
+    {
+        unsetenv("NETFLIX_CONTAINER_NAME");
+        unsetenv("TITUS_CONTAINER_NAME");
+        unsetenv("NETFLIX_PROCESS_NAME");
+        unsetenv("TITUS_PROCESS_NAME");
+    }
+};
+
+testing::Environment* const clearEnvTagsEnvironment = testing::AddGlobalTestEnvironment(new ClearEnvTagsEnvironment);
 
 TEST(RegistryTest, Close)
 {

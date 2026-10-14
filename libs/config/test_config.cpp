@@ -43,14 +43,18 @@ class ConfigTest : public testing::Test
 {
    protected:
     // Create guards for each environment variable
+    EnvironmentVariableGuard netflixContainerGuard{"NETFLIX_CONTAINER_NAME"};
     EnvironmentVariableGuard containerGuard{"TITUS_CONTAINER_NAME"};
-    EnvironmentVariableGuard processGuard{"TITUS_PROCESS_NAME"};
+    EnvironmentVariableGuard processGuard{"NETFLIX_PROCESS_NAME"};
+    EnvironmentVariableGuard legacyProcessGuard{"TITUS_PROCESS_NAME"};
 
     void SetUp() override
     {
         // Ensure environment variables are unset before each test
+        netflixContainerGuard.unsetValue();
         containerGuard.unsetValue();
         processGuard.unsetValue();
+        legacyProcessGuard.unsetValue();
     }
 };
 
@@ -216,5 +220,160 @@ TEST_F(ConfigTest, MergingTags)
         EXPECT_EQ(config.GetExtraTags().size(), 2);
         EXPECT_EQ(config.GetExtraTags().at("custom"), "value");
         EXPECT_EQ(config.GetExtraTags().at("env"), "test");
+    }
+}
+
+// Test the nf.container sources: NETFLIX_CONTAINER_NAME first, TITUS_CONTAINER_NAME as the fallback
+TEST_F(ConfigTest, ContainerNameSources)
+{
+    WriterConfig writerConfig(WriterTypes::Memory);
+
+    // NETFLIX_CONTAINER_NAME wins over TITUS_CONTAINER_NAME
+    {
+        netflixContainerGuard.setValue("app");
+        containerGuard.setValue("main");
+
+        Config config(writerConfig);
+
+        EXPECT_EQ(config.GetExtraTags().size(), 1);
+        EXPECT_EQ(config.GetExtraTags().at("nf.container"), "app");
+    }
+
+    // An empty or whitespace-only NETFLIX_CONTAINER_NAME falls back to TITUS_CONTAINER_NAME
+    for (const char* blank : {"", "   "})
+    {
+        netflixContainerGuard.setValue(blank);
+        containerGuard.setValue("main");
+
+        Config config(writerConfig);
+
+        EXPECT_EQ(config.GetExtraTags().size(), 1);
+        EXPECT_EQ(config.GetExtraTags().at("nf.container"), "main");
+    }
+
+    // NETFLIX_CONTAINER_NAME alone
+    {
+        netflixContainerGuard.setValue("app");
+        containerGuard.unsetValue();
+
+        Config config(writerConfig);
+
+        EXPECT_EQ(config.GetExtraTags().size(), 1);
+        EXPECT_EQ(config.GetExtraTags().at("nf.container"), "app");
+    }
+
+    // Neither set: no nf.container
+    {
+        netflixContainerGuard.unsetValue();
+        containerGuard.unsetValue();
+
+        Config config(writerConfig);
+
+        EXPECT_FALSE(config.GetExtraTags().count("nf.container"));
+    }
+
+    // NETFLIX_CONTAINER_NAME wins over a passed-in nf.container
+    {
+        netflixContainerGuard.setValue("app");
+
+        std::unordered_map<std::string, std::string> tags = {{"nf.container", "passed-in"}};
+
+        Config config(writerConfig, tags);
+
+        EXPECT_EQ(config.GetExtraTags().size(), 1);
+        EXPECT_EQ(config.GetExtraTags().at("nf.container"), "app");
+    }
+}
+
+// Test the nf.process sources: NETFLIX_PROCESS_NAME first, the deprecated TITUS_PROCESS_NAME as the fallback
+TEST_F(ConfigTest, ProcessNameSources)
+{
+    WriterConfig writerConfig(WriterTypes::Memory);
+
+    // NETFLIX_PROCESS_NAME wins over TITUS_PROCESS_NAME
+    {
+        processGuard.setValue("processA");
+        legacyProcessGuard.setValue("legacy-process");
+
+        Config config(writerConfig);
+
+        EXPECT_EQ(config.GetExtraTags().size(), 1);
+        EXPECT_EQ(config.GetExtraTags().at("nf.process"), "processA");
+    }
+
+    // TITUS_PROCESS_NAME is used when NETFLIX_PROCESS_NAME is unset
+    {
+        processGuard.unsetValue();
+        legacyProcessGuard.setValue("legacy-process");
+
+        Config config(writerConfig);
+
+        EXPECT_EQ(config.GetExtraTags().size(), 1);
+        EXPECT_EQ(config.GetExtraTags().at("nf.process"), "legacy-process");
+    }
+
+    // TITUS_PROCESS_NAME is used when NETFLIX_PROCESS_NAME is empty or whitespace-only
+    for (const char* blank : {"", "   "})
+    {
+        processGuard.setValue(blank);
+        legacyProcessGuard.setValue("legacy-process");
+
+        Config config(writerConfig);
+
+        EXPECT_EQ(config.GetExtraTags().size(), 1);
+        EXPECT_EQ(config.GetExtraTags().at("nf.process"), "legacy-process");
+    }
+
+    // Empty values are ignored: no nf.process
+    {
+        processGuard.setValue("");
+        legacyProcessGuard.setValue("");
+
+        Config config(writerConfig);
+
+        EXPECT_FALSE(config.GetExtraTags().count("nf.process"));
+    }
+
+    // NETFLIX_PROCESS_NAME wins over a passed-in nf.process
+    {
+        processGuard.setValue("processA");
+        legacyProcessGuard.unsetValue();
+
+        std::unordered_map<std::string, std::string> tags = {{"nf.process", "passed-in"}};
+
+        Config config(writerConfig, tags);
+
+        EXPECT_EQ(config.GetExtraTags().size(), 1);
+        EXPECT_EQ(config.GetExtraTags().at("nf.process"), "processA");
+    }
+}
+
+// Test that includeEnvTags = false leaves out the environment-derived tags and keeps the passed-in ones
+TEST_F(ConfigTest, IncludeEnvTagsFalse)
+{
+    WriterConfig writerConfig(WriterTypes::Memory);
+    netflixContainerGuard.setValue("app");
+    containerGuard.setValue("main");
+    processGuard.setValue("processA");
+    legacyProcessGuard.setValue("legacy-process");
+
+    // No environment-derived tags
+    {
+        Config config(writerConfig, {}, false);
+
+        EXPECT_TRUE(config.GetExtraTags().empty());
+    }
+
+    // Passed-in tags are kept, including nf.container and nf.process
+    {
+        std::unordered_map<std::string, std::string> tags = {
+            {"custom", "value"}, {"nf.container", "passed-in"}, {"nf.process", "passed-in"}};
+
+        Config config(writerConfig, tags, false);
+
+        EXPECT_EQ(config.GetExtraTags().size(), 3);
+        EXPECT_EQ(config.GetExtraTags().at("custom"), "value");
+        EXPECT_EQ(config.GetExtraTags().at("nf.container"), "passed-in");
+        EXPECT_EQ(config.GetExtraTags().at("nf.process"), "passed-in");
     }
 }
