@@ -30,29 +30,34 @@ std::unordered_map<std::string, std::string> ValidateTags(const std::unordered_m
     return validTags;
 }
 
-// A byte loop rather than std::regex_replace, which was the dominant cost of creating a MeterId.
-std::string ReplaceInvalidChars(const std::string& s)
+// Appends s with each invalid byte replaced by '_'. A byte loop rather than std::regex_replace, which was the dominant
+// cost of creating a MeterId.
+void AppendValidChars(std::string& out, const std::string& s)
 {
-    std::string result{s};
-    for (char& c : result)
+    for (const char c : s)
     {
-        if (!IsValidChar(c))
-        {
-            c = '_';
-        }
+        out += IsValidChar(c) ? c : '_';
     }
-    return result;
 }
 
 std::string ToSpectatorId(const std::string& name, const std::unordered_map<std::string, std::string>& tags)
 {
-    std::string id = ReplaceInvalidChars(name);
+    // Each byte is kept or replaced by one byte, so the size is known up front and the id is allocated once.
+    std::size_t size = name.size();
+    for (const auto& [fst, snd] : tags)
+    {
+        size += 1 + fst.size() + 1 + snd.size();
+    }
+
+    std::string id;
+    id.reserve(size);
+    AppendValidChars(id, name);
     for (const auto& [fst, snd] : tags)
     {
         id += ',';
-        id += ReplaceInvalidChars(fst);
+        AppendValidChars(id, fst);
         id += '=';
-        id += ReplaceInvalidChars(snd);
+        AppendValidChars(id, snd);
     }
     return id;
 }
