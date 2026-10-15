@@ -31,6 +31,24 @@ TEST(MeterIdTest, IllegalCharsAreReplaced)
     EXPECT_EQ("test______^____-_~______________.___foo", id.GetSpectatordId());
 }
 
+TEST(MeterIdTest, IllegalCharsInTagsAreReplaced)
+{
+    const MeterId id("foo", {{"a b", "c/d"}});
+    EXPECT_EQ("foo,a_b=c_d", id.GetSpectatordId());
+}
+
+TEST(MeterIdTest, ValidCharsAreKept)
+{
+    const MeterId id("azAZ09-._~^");
+    EXPECT_EQ("azAZ09-._~^", id.GetSpectatordId());
+}
+
+TEST(MeterIdTest, EachNonAsciiByteIsReplaced)
+{
+    const MeterId id("caf\xc3\xa9");
+    EXPECT_EQ("caf__", id.GetSpectatordId());
+}
+
 TEST(MeterIdTest, LookupTags)
 {
     const MeterId id1("foo", {{"a", "1"}, {"b", "2"}, {"c", "3"}});

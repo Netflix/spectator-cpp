@@ -5,8 +5,16 @@
 
 namespace spectator {
 
-// Define the static member
-const std::regex INVALID_CHARS("[^-._A-Za-z0-9~^]");
+namespace {
+
+// The characters spectatord accepts in names and tags: [-._A-Za-z0-9~^]
+bool IsValidChar(const char c)
+{
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '.' ||
+           c == '_' || c == '~' || c == '^';
+}
+
+}  // namespace
 
 std::unordered_map<std::string, std::string> ValidateTags(const std::unordered_map<std::string, std::string>& tags)
 {
@@ -22,20 +30,31 @@ std::unordered_map<std::string, std::string> ValidateTags(const std::unordered_m
     return validTags;
 }
 
-std::string ReplaceInvalidChars(const std::string& s) { return std::regex_replace(s, INVALID_CHARS, "_"); }
+// A byte loop rather than std::regex_replace, which was the dominant cost of creating a MeterId.
+std::string ReplaceInvalidChars(const std::string& s)
+{
+    std::string result{s};
+    for (char& c : result)
+    {
+        if (!IsValidChar(c))
+        {
+            c = '_';
+        }
+    }
+    return result;
+}
 
 std::string ToSpectatorId(const std::string& name, const std::unordered_map<std::string, std::string>& tags)
 {
-    std::ostringstream ss;
-    ss << ReplaceInvalidChars(name);
-    if (!tags.empty())
+    std::string id = ReplaceInvalidChars(name);
+    for (const auto& [fst, snd] : tags)
     {
-        for (const auto& [fst, snd] : tags)
-        {
-            ss << "," << ReplaceInvalidChars(fst) << "=" << ReplaceInvalidChars(snd);
-        }
+        id += ',';
+        id += ReplaceInvalidChars(fst);
+        id += '=';
+        id += ReplaceInvalidChars(snd);
     }
-    return ss.str();
+    return id;
 }
 
 MeterId::MeterId(const std::string& name, const std::unordered_map<std::string, std::string>& tags)
