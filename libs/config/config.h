@@ -10,7 +10,12 @@ namespace spectator {
 class Config
 {
    public:
-    Config(const WriterConfig& writerConfig, const std::unordered_map<std::string, std::string>& extraTags = {});
+    // When includeEnvTags is true (the default), nf.container and nf.process are added from the environment and win
+    // over extraTags (see README.md). Pass false in a process that reports metrics on behalf of other containers or
+    // processes, such as a relay or an agent like atlas-system-agent's pod monitor, so its own identity does not
+    // overwrite their per-meter tags.
+    Config(const WriterConfig& writerConfig, const std::unordered_map<std::string, std::string>& extraTags = {},
+           bool includeEnvTags = true);
 
     ~Config() = default;
     Config(const Config& other) = default;
