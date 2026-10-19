@@ -4,6 +4,8 @@
 // header keeps spdlog and the spectator::Logger name out of consumers.
 #include <logger.h>
 
+#include <regex>
+
 namespace spectator {
 
 void SetLogLevel(spdlog::level::level_enum level)
