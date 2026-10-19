@@ -1,12 +1,39 @@
 #include <meter_id.h>
 
 #include <util.h>
+
+#include <array>
 #include <sstream>
 
 namespace spectator {
 
-// Define the static member
-const std::regex INVALID_CHARS("[^-._A-Za-z0-9~^]");
+namespace {
+
+// spectatord accepts only -._A-Za-z0-9~^ in names, tag keys and tag values; every other byte becomes '_'.
+// Built at compile time so sanitizing is one table lookup per byte (this replaces a std::regex_replace per string).
+constexpr std::array<bool, 256> MakeValidCharTable()
+{
+    std::array<bool, 256> table{};
+    for (char c = 'A'; c <= 'Z'; ++c) table[static_cast<unsigned char>(c)] = true;
+    for (char c = 'a'; c <= 'z'; ++c) table[static_cast<unsigned char>(c)] = true;
+    for (char c = '0'; c <= '9'; ++c) table[static_cast<unsigned char>(c)] = true;
+    for (const char c : {'-', '.', '_', '~', '^'}) table[static_cast<unsigned char>(c)] = true;
+    return table;
+}
+
+constexpr std::array<bool, 256> kValidChars = MakeValidCharTable();
+
+// Appends src to dest with invalid characters replaced by '_'. Grows dest once instead of once per character.
+void AppendSanitized(std::string& dest, const std::string& src)
+{
+    const size_t start = dest.size();
+    dest.resize(start + src.size());
+    char* out = dest.data() + start;
+    for (const char c : src)
+    {
+        *out++ = kValidChars[static_cast<unsigned char>(c)] ? c : '_';
+    }
+}
 
 std::unordered_map<std::string, std::string> ValidateTags(const std::unordered_map<std::string, std::string>& tags)
 {
@@ -22,21 +49,28 @@ std::unordered_map<std::string, std::string> ValidateTags(const std::unordered_m
     return validTags;
 }
 
-std::string ReplaceInvalidChars(const std::string& s) { return std::regex_replace(s, INVALID_CHARS, "_"); }
-
 std::string ToSpectatorId(const std::string& name, const std::unordered_map<std::string, std::string>& tags)
 {
-    std::ostringstream ss;
-    ss << ReplaceInvalidChars(name);
-    if (!tags.empty())
+    size_t size = name.size();
+    for (const auto& [key, value] : tags)
     {
-        for (const auto& [fst, snd] : tags)
-        {
-            ss << "," << ReplaceInvalidChars(fst) << "=" << ReplaceInvalidChars(snd);
-        }
+        size += key.size() + value.size() + 2;  // ',' and '='
     }
-    return ss.str();
+
+    std::string id;
+    id.reserve(size);
+    AppendSanitized(id, name);
+    for (const auto& [key, value] : tags)
+    {
+        id += ',';
+        AppendSanitized(id, key);
+        id += '=';
+        AppendSanitized(id, value);
+    }
+    return id;
 }
+
+}  // namespace
 
 MeterId::MeterId(const std::string& name, const std::unordered_map<std::string, std::string>& tags)
     : m_name(name), m_tags(ValidateTags(tags))

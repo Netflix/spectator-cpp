@@ -8,6 +8,7 @@
 #include <iostream>
 #include <thread>
 #include <chrono>
+#include <regex>
 #include <algorithm>
 
 #include "../writer_types/test_utils/uds_server/uds_server.h"
