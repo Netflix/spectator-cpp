@@ -17,7 +17,9 @@ add_executable(MeterID-test
 )
 
 target_link_libraries(MeterID-test PRIVATE
-    GTest::gtest 
+    GTest::gtest
     GTest::gtest_main
     spectator-meter-id
 )
+
+add_test(NAME MeterID-test COMMAND MeterID-test)

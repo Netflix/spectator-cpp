@@ -3,6 +3,8 @@
 #include <util.h>
 
 #include <array>
+#include <cstdint>
+#include <map>
 #include <sstream>
 
 namespace spectator {
@@ -35,13 +37,20 @@ void AppendSanitized(std::string& dest, const std::string& src)
     }
 }
 
+// A tag is published only if neither its key nor its value is empty or whitespace-only. ValidateTags (GetTags()) and
+// ToSpectatorId (the wire id) both use this, so the two always agree.
+bool IsValidTag(const std::string& key, const std::string& value)
+{
+    return IsEmptyOrWhitespace(key) == false && IsEmptyOrWhitespace(value) == false;
+}
+
 std::unordered_map<std::string, std::string> ValidateTags(const std::unordered_map<std::string, std::string>& tags)
 {
     std::unordered_map<std::string, std::string> validTags{};
 
     for (const auto& [key, value] : tags)
     {
-        if (IsEmptyOrWhitespace(key) == false && IsEmptyOrWhitespace(value) == false)
+        if (IsValidTag(key, value))
         {
             validTags[key] = value;
         }
@@ -49,8 +58,12 @@ std::unordered_map<std::string, std::string> ValidateTags(const std::unordered_m
     return validTags;
 }
 
-std::string ToSpectatorId(const std::string& name, const std::unordered_map<std::string, std::string>& tags)
+// all_tags_valid is true when ValidateTags dropped nothing, so the common case renders the map without re-checking
+// every tag. Otherwise the tags ValidateTags dropped are skipped here too.
+std::string ToSpectatorId(const std::string& name, const std::unordered_map<std::string, std::string>& tags,
+                          bool all_tags_valid)
 {
+    // Upper bound: it also counts tags skipped below, which only over-reserves when a tag is invalid.
     size_t size = name.size();
     for (const auto& [key, value] : tags)
     {
@@ -62,6 +75,10 @@ std::string ToSpectatorId(const std::string& name, const std::unordered_map<std:
     AppendSanitized(id, name);
     for (const auto& [key, value] : tags)
     {
+        if (all_tags_valid == false && IsValidTag(key, value) == false)
+        {
+            continue;
+        }
         id += ',';
         AppendSanitized(id, key);
         id += '=';
@@ -75,7 +92,10 @@ std::string ToSpectatorId(const std::string& name, const std::unordered_map<std:
 MeterId::MeterId(const std::string& name, const std::unordered_map<std::string, std::string>& tags)
     : m_name(name), m_tags(ValidateTags(tags))
 {
-    m_spectatord_id = ToSpectatorId(name, tags);
+    // The id must not contain the tags ValidateTags dropped: rendering every raw tag would publish e.g. "k=" or "_=v"
+    // while GetTags() reports neither. It still walks the caller's map, not m_tags, so the tag order on the wire is
+    // unchanged for valid input. Keys are unique, so equal sizes mean nothing was dropped.
+    m_spectatord_id = ToSpectatorId(m_name, tags, m_tags.size() == tags.size());
 }
 
 MeterId MeterId::WithTag(const std::string& key, const std::string& value) const
@@ -104,10 +124,13 @@ bool MeterId::operator==(const MeterId& other) const { return m_name == other.m_
 
 std::string MeterId::to_string() const
 {
+    // m_tags is unordered; sort so the output does not depend on the standard library's iteration order.
+    const std::map<std::string, std::string> sorted_tags(m_tags.begin(), m_tags.end());
+
     std::ostringstream ss;
     ss << "MeterId(name=" << m_name << ", tags={";
     bool first = true;
-    for (const auto& [fst, snd] : m_tags)
+    for (const auto& [fst, snd] : sorted_tags)
     {
         if (!first)
         {
@@ -122,22 +145,40 @@ std::string MeterId::to_string() const
 
 }  // namespace spectator
 
-// Implementation of the hash function for MeterId
+namespace {
+
+// splitmix64 finalizer. Spreads every input bit over the whole word so that summing many pair hashes below does not
+// cancel or cluster structure from the individual std::hash<std::string> values.
+constexpr uint64_t Mix(uint64_t x)
+{
+    x ^= x >> 30;
+    x *= 0xbf58476d1ce4e5b9ULL;
+    x ^= x >> 27;
+    x *= 0x94d049bb133111ebULL;
+    x ^= x >> 31;
+    return x;
+}
+
+constexpr uint64_t kGoldenRatio = 0x9e3779b97f4a7c15ULL;
+
+}  // namespace
+
+// Implementation of the hash function for MeterId.
+// operator== treats the tags as an unordered map, so equal ids can iterate their tags in different orders (different
+// insertion order or bucket count). The hash must not depend on that order: each tag pair is hashed on its own and the
+// results are summed, and addition is commutative.
 size_t std::hash<spectator::MeterId>::operator()(const spectator::MeterId& id) const
 {
-    // Hash the name first
-    const size_t name_hash = std::hash<std::string>{}(id.GetName());
+    const std::hash<std::string> hash_string;
 
-    // Hash the tags
-    size_t tags_hash = 0;
-    for (const auto& [fst, snd] : id.GetTags())
+    uint64_t tags_sum = 0;
+    for (const auto& [key, value] : id.GetTags())
     {
-        // Combine key and value hashes
-        const size_t pair_hash = std::hash<std::string>{}(fst) ^ std::hash<std::string>{}(snd) << 1;
-        // Combine with the accumulated tags hash
-        tags_hash ^= pair_hash + 0x9e3779b9 + (tags_hash << 6) + (tags_hash >> 2);
+        // The multiply makes the pair hash differ for {a: b} and {b: a}. Mixing each pair before the sum keeps a key
+        // associated with its own value; summing raw key and value hashes would make {a: 1, b: 2} and {a: 2, b: 1}
+        // collide.
+        tags_sum += Mix(hash_string(key) + hash_string(value) * kGoldenRatio);
     }
 
-    // Combine name hash and tags hash
-    return name_hash ^ tags_hash << 1;
+    return static_cast<size_t>(Mix(hash_string(id.GetName()) + kGoldenRatio + tags_sum));
 }
