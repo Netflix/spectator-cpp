@@ -20,6 +20,13 @@ Writer::~Writer()
         if (instance.sendingThread.joinable()) {
             instance.sendingThread.join();
         }
+        // ThreadSend sends only full buffers; send the rest so it is not lost at exit.
+        std::lock_guard<std::mutex> lock(instance.writeMutex);
+        if (!instance.buffer.empty())
+        {
+            instance.TryToSend(instance.buffer);
+            instance.buffer.clear();
+        }
     }
     this->Close();
 }

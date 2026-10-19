@@ -13,7 +13,8 @@ use cases. For this purpose a simple buffering functionality is implemented, and
 on by passing a buffer size to the `WriterConfig` constructor. It is important to note that, until this buffer
 fills up, the `Publisher` will not send any meters to the sidecar. Therefore, if your application doesn't emit
 meters at a high rate, you should either keep the buffer very small, or do not configure a buffer size at all,
-which will fall back to the "publish immediately" mode of operation.
+which will fall back to the "publish immediately" mode of operation. Meters still in the buffer when the process
+exits normally are sent as the writer shuts down.
 
 ## Local & IDE Configuration
 
