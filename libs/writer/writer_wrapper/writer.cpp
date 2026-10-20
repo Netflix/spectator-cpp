@@ -14,11 +14,28 @@ Writer::~Writer()
 
     if (instance.bufferingEnabled)
     {
-        instance.shutdown.store(true);
+        {
+            // Set under the mutex so ThreadSend cannot miss the wakeup between checking its wait predicate and blocking.
+            std::lock_guard<std::mutex> lock(instance.writeMutex);
+            instance.shutdown.store(true);
+        }
         instance.cv_receiver.notify_all();
         instance.cv_sender.notify_all();
         if (instance.sendingThread.joinable()) {
             instance.sendingThread.join();
+        }
+
+        // ThreadSend sends only full buffers; send the rest so it is not lost at exit. Take it out under the lock and
+        // send after releasing it, so threads still calling Write do not wait on the mutex during the send.
+        std::string remaining;
+        {
+            std::lock_guard<std::mutex> lock(instance.writeMutex);
+            remaining = std::move(instance.buffer);
+            instance.buffer.clear();
+        }
+        if (!remaining.empty())
+        {
+            instance.TryToSend(remaining);
         }
     }
     this->Close();

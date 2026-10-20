@@ -5,6 +5,11 @@
 
 #include <gtest/gtest.h>
 #include <fmt/core.h>
+#include <boost/asio.hpp>
+#include <boost/asio/local/datagram_protocol.hpp>
+#include <array>
+#include <cstdlib>
+#include <filesystem>
 #include <iostream>
 #include <thread>
 #include <chrono>
@@ -14,6 +19,38 @@
 #include "../writer_types/test_utils/uds_server/uds_server.h"
 
 using namespace spectator;
+
+// Runs in the death test child: records one meter with a buffer far larger than the line, then exits normally,
+// which destroys the Writer singleton.
+static void RecordOneCounterAndExit(const std::string& socketPath)
+{
+    WriterTestHelper::InitializeWriter(WriterType::Unix, socketPath, 0, 4096);
+    Counter counter(MeterId("shutdown.counter"));
+    counter.Increment();
+    std::exit(0);
+}
+
+// The buffered writer sends only full buffers, so a short-lived process may never fill one. The Writer is a
+// process-wide singleton, so the child process owns it here. Death test suites run before all other tests, so the
+// parent has not initialized the Writer or started any threads when it forks.
+TEST(WriterShutdownDeathTest, SendsBufferedLinesAtExit)
+{
+    using DatagramProtocol = boost::asio::local::datagram_protocol;
+    const std::string socketPath = "/tmp/test_uds_shutdown_socket";
+    std::filesystem::remove(socketPath);
+    boost::asio::io_context ioContext;
+    DatagramProtocol::socket socket(ioContext, DatagramProtocol::endpoint(socketPath));
+    socket.non_blocking(true);
+
+    EXPECT_EXIT(RecordOneCounterAndExit(socketPath), testing::ExitedWithCode(0), "");
+
+    std::array<char, 4096> buffer{};
+    boost::system::error_code ec;
+    const auto bytesRead = socket.receive(boost::asio::buffer(buffer), 0, ec);
+    std::filesystem::remove(socketPath);
+    ASSERT_FALSE(ec) << "nothing was sent at exit: " << ec.message();
+    EXPECT_EQ(std::string(buffer.data(), bytesRead), "c:shutdown.counter:1.000000\n");
+}
 
 // Test fixture for UDS Writer tests
 class WriterWrapperUDSWriterTest : public testing::Test
