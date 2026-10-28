@@ -34,6 +34,7 @@ foreach(test_file ${TEST_SOURCES})
         spectator-meter-types
         spectator-meter-id
         spectator-writer-wrapper
+        spectator-writer-test-support
     )
     
     # Add the test to CTest

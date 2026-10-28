@@ -18,7 +18,7 @@ class MonotonicCounter final : public Meter
     void Set(const double& amount) const
     {
         auto line = this->ConstructLine(amount);
-        Writer::GetInstance().Write(line);
+        Writer::Write(line);
     }
 };
 

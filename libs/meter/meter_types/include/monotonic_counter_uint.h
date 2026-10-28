@@ -18,7 +18,7 @@ class MonotonicCounterUint final : public Meter
     void Set(const uint64_t& amount) const
     {
         auto line = this->ConstructLine(amount);
-        Writer::GetInstance().Write(line);
+        Writer::Write(line);
     }
 };
 

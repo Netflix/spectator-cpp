@@ -1,7 +1,6 @@
 #pragma once
 
 #include <buffer_config.h>
-#include <pipeline_provider.h>
 #include <writer_types.h>
 
 #include <atomic>
@@ -15,7 +14,7 @@
 namespace spectator {
 
 namespace detail {
-class Pipeline;
+class WriterState;
 }  // namespace detail
 
 // The process-wide writer every meter sends its protocol lines through.
@@ -24,13 +23,9 @@ class Pipeline;
 // sink. Buffered, each writing thread appends to its own buffer. A thread's buffer is sent when it fills (or, with
 // drop-on-full, its lines are dropped and the drain thread is woken), when the drain thread runs every flush interval,
 // and when the thread exits. A thread's lines always arrive in the order it wrote them.
-class Writer final : private detail::PipelineProvider
+class Writer final
 {
    public:
-    // The single instance. It is never destroyed, so threads still running during static destruction can call it
-    // safely. An exit hook sends pending lines instead.
-    static Writer& GetInstance();
-
     Writer(const Writer&) = delete;
     Writer& operator=(const Writer&) = delete;
     Writer(Writer&&) = delete;
@@ -50,10 +45,15 @@ class Writer final : private detail::PipelineProvider
     friend class PercentileTimer;
     friend class Timer;
 
+    struct ThreadHandle;
     struct ExitGuard;
 
     Writer() = default;
     ~Writer() = default;
+
+    // The single instance. It is never destroyed, so threads still running during static destruction can call it
+    // safely. An exit hook sends pending lines instead.
+    static Writer& GetInstance();
 
     // ---- Used by Registry and the meters ----
 
@@ -78,27 +78,22 @@ class Writer final : private detail::PipelineProvider
 
     // ---- Internals ----
 
-    // Closes the current pipeline, then installs `next` (null to leave the writer uninitialized).
-    void Replace(std::shared_ptr<detail::Pipeline> next);
+    // Closes the current state, then installs `next` (null to leave the writer uninitialized).
+    void Replace(std::shared_ptr<detail::WriterState> next);
 
     // Called at static destruction: shuts down and refuses further Initialize calls.
     static void ShutdownAtExit();
 
-    // The current pipeline, or null (with a one-time warning) if the writer is not initialized. Thread sessions call
-    // this to connect.
-    std::shared_ptr<detail::Pipeline> CurrentPipeline() override;
+    // The current state, or null if the writer is not initialized. A thread handle takes one when it connects.
+    std::shared_ptr<detail::WriterState> SnapshotState();
 
-    // The current pipeline, or null, without a warning.
-    std::shared_ptr<detail::Pipeline> SnapshotPipeline();
-
+    // Logs once that metrics are being dropped because the writer is not initialized.
     void WarnNotInitialized();
 
-    // Guards m_pipeline, and serializes Replace so reconfiguring and shutting down never overlap.
+    // Guards m_state, and serializes Replace so reconfiguring and shutting down never overlap.
     std::mutex m_mutex;
-    std::shared_ptr<detail::Pipeline> m_pipeline;
+    std::shared_ptr<detail::WriterState> m_state;
 
-    // Lets a write skip the mutex while no pipeline is installed.
-    std::atomic<bool> m_hasPipeline{false};
     std::atomic<bool> m_exited{false};
     std::atomic<bool> m_warnedNotInitialized{false};
 };

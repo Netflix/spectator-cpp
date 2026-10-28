@@ -20,7 +20,7 @@ class Counter final : public Meter
         if (delta > 0)
         {
             auto line = this->ConstructLine(delta);
-            Writer::GetInstance().Write(line);
+            Writer::Write(line);
         }
     }
 };

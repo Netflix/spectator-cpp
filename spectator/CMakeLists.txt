@@ -10,11 +10,7 @@ add_library(spectator-registry
     ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_types/src/udp_writer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_types/src/uds_writer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_wrapper/src/writer.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_wrapper/src/sink.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_wrapper/src/pipeline.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_wrapper/src/thread_session.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_wrapper/src/thread_buffer.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_wrapper/src/thread_registry.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_wrapper/src/writer_state.cpp
 )
 
 target_include_directories(spectator-registry
@@ -43,5 +39,6 @@ target_link_libraries(registry-test PRIVATE
     GTest::gtest_main
     spectator-registry
     spectator-utils
+    spectator-writer-test-support
 )
 add_test(NAME registry-test COMMAND registry-test)
