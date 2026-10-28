@@ -7,14 +7,38 @@ It consists of a thin client designed to send metrics through [spectatord](https
 
 ## High-Volume Publishing
 
-By default, the library sends every meter change to the spectatord sidecar immediately. This involves a blocking
-`send` call and underlying system calls, and may not be the most efficient way to publish metrics in high-volume
-use cases. For this purpose a simple buffering functionality is implemented, and it can be turned
-on by passing a buffer size to the `WriterConfig` constructor. It is important to note that, until this buffer
-fills up, the `Publisher` will not send any meters to the sidecar. Therefore, if your application doesn't emit
-meters at a high rate, you should either keep the buffer very small, or do not configure a buffer size at all,
-which will fall back to the "publish immediately" mode of operation. Meters still in the buffer when the process
-exits normally are sent as the writer shuts down.
+By default, the library sends every meter change to the spectatord sidecar immediately, with one `send` system call
+per change. For high-volume use cases, turn on buffering by passing a buffer size to the `WriterConfig` constructor:
+
+```cpp
+// Buffer up to 60 KB per thread, sent at least every 5 seconds.
+WriterConfig writerConfig(WriterTypes::Unix, 60000);
+
+// Or set every option.
+WriterConfig writerConfig(WriterTypes::Unix, BufferConfig{
+    .size = 60000,
+    .flushInterval = std::chrono::seconds(1),
+    .dropOnFull = true,
+});
+```
+
+With buffering on:
+
+* Each thread that records meters appends to its own buffer, so threads don't contend with each other.
+* A background thread sends every buffer at least once per flush interval, 5 seconds by default. The interval bounds
+  how long a meter change can wait to be sent.
+* When a thread's buffer is full, that thread sends it and carries on, so nothing is lost. With `dropOnFull`, the new
+  line is dropped and counted instead, and the background thread is woken to empty the buffer. Use it when recording
+  a meter must never make a system call.
+* A thread's buffer is also sent when the thread exits, and every buffer is sent when the process exits normally.
+* The buffer size is capped at the largest datagram the socket can send: 65507 bytes on Linux, less on macOS. Each
+  buffer goes out as a single datagram.
+* A thread's meter changes arrive in the order it made them. Changes from different threads can arrive up to one flush
+  interval out of order, so a gauge set from several threads can briefly report an older value.
+* Memory use is about one buffer for each thread that records meters.
+* A send waits at most 100 ms for a sidecar that has stopped reading. A send that times out is logged and dropped.
+* Only the `udp` and `unix` writers buffer. The `memory` writer, used in tests, and the `none` writer, which discards
+  everything, send each change as it happens.
 
 ## Local & IDE Configuration
 

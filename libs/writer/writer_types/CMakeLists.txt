@@ -19,6 +19,7 @@ target_link_libraries(spectator-writer-types
 
 set(TEST_SOURCES
     test/test_memory_writer.cpp
+    test/test_noop_writer.cpp
     test/test_udp_writer.cpp
     test/test_uds_writer.cpp
 )
@@ -47,6 +48,7 @@ foreach(test_file ${TEST_SOURCES})
         spectator-writer-types
         udp_server_lib
         uds_server_lib
+        writer_test_support
     )
     
     # Add the test to CTest

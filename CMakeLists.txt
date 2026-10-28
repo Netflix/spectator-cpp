@@ -12,6 +12,7 @@ add_compile_options(-pedantic -Werror -Wall -Wno-missing-braces -fno-omit-frame-
 find_package(spdlog REQUIRED)
 find_package(GTest REQUIRED)
 find_package(Boost REQUIRED)
+find_package(Threads REQUIRED)
 
 include(CTest)
 

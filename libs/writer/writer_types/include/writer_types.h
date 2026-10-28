@@ -1,6 +1,8 @@
 #pragma once
 
+#include "buffer_config.h"
 #include "memory_writer.h"
+#include "noop_writer.h"
 #include "udp_writer.h"
 #include "uds_writer.h"
 
@@ -17,7 +19,8 @@ enum class WriterType
 {
     Memory,
     UDP,
-    Unix
+    Unix,
+    Noop
 };
 
 struct WriterTypes
@@ -25,6 +28,7 @@ struct WriterTypes
     static constexpr auto Memory = "memory";
     static constexpr auto UDP = "udp";
     static constexpr auto Unix = "unix";
+    static constexpr auto Noop = "none";
 
     // URL prefixes
     static constexpr auto UDPURL = "udp://";
@@ -42,6 +46,7 @@ inline const std::map<std::string_view, std::pair<WriterType, std::string_view>>
     {WriterTypes::Memory, {WriterType::Memory, DefaultLocations::NoLocation}},
     {WriterTypes::UDP, {WriterType::UDP, DefaultLocations::UDP}},
     {WriterTypes::Unix, {WriterType::Unix, DefaultLocations::UDS}},
+    {WriterTypes::Noop, {WriterType::Noop, DefaultLocations::NoLocation}},
 };
 
 inline std::string WriterTypeToString(WriterType type)
@@ -54,6 +59,8 @@ inline std::string WriterTypeToString(WriterType type)
             return WriterTypes::UDP;
         case WriterType::Unix:
             return WriterTypes::Unix;
+        case WriterType::Noop:
+            return WriterTypes::Noop;
         default:
             return "Unknown";
     }

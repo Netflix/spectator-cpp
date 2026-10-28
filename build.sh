@@ -53,7 +53,7 @@ fi
 ## Modify the default profile to set the compiler version and C++ standard
 DEFAULT_PROFILE="$HOME/.conan2/profiles/default"
 sed -i.bak -E \
-  -e 's/^compiler\.version=.*/compiler.version=15.2/' \
+  -e 's/^compiler\.version=.*/compiler.version=21/' \
   -e 's/^compiler\.cppstd=.*/compiler.cppstd=23/' \
   "$DEFAULT_PROFILE"
 rm -f "$DEFAULT_PROFILE.bak"

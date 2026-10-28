@@ -9,7 +9,12 @@ add_library(spectator-registry
     ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_types/src/memory_writer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_types/src/udp_writer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_types/src/uds_writer.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_wrapper/writer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_wrapper/src/writer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_wrapper/src/sink.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_wrapper/src/pipeline.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_wrapper/src/thread_session.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_wrapper/src/thread_buffer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_wrapper/src/thread_registry.cpp
 )
 
 target_include_directories(spectator-registry
@@ -21,7 +26,7 @@ target_include_directories(spectator-registry
     ${CMAKE_CURRENT_SOURCE_DIR}/../libs/utils/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_config
     ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_types/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_wrapper
+    ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_wrapper/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../libs/logger
 )
 
@@ -30,6 +35,7 @@ target_link_libraries(spectator-registry
     PUBLIC
     spdlog::spdlog
     Boost::boost
+    Threads::Threads
 )
 add_executable(registry-test test_registry.cpp)
 target_link_libraries(registry-test PRIVATE

@@ -104,8 +104,8 @@ int main(int argc, char* argv[])
     std::atomic<unsigned long long> iterations{0};
     std::atomic<bool> should_stop{false};
 
-    // Non-buffered mode uses a single thread because the underlying sender is not thread-safe
-    const unsigned int num_threads = config->bufferingEnabled ? 4u : 1u;
+    // Both modes are thread-safe, so they run with the same thread count and their rates compare directly.
+    constexpr unsigned int num_threads = 4u;
     std::cout << "Running performance test with " << num_threads << " threads..." << std::endl;
 
     auto thread_func = [&]()

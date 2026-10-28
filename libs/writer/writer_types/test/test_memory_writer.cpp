@@ -1,5 +1,8 @@
 #include <memory_writer.h>
 #include <gtest/gtest.h>
+#include <string>
+#include <thread>
+#include <vector>
 
 using namespace spectator;
 
@@ -49,4 +52,34 @@ TEST(MemoryWriterTest, LastLine)
 
     writer.Clear();
     EXPECT_EQ(writer.LastLine(), "");
+}
+TEST(MemoryWriterTest, ConcurrentWritesAreAllKept)
+{
+    MemoryWriter writer;
+    constexpr int kThreads = 8;
+    constexpr int kWritesPerThread = 1000;
+
+    std::vector<std::thread> threads;
+    for (int t = 0; t < kThreads; ++t)
+    {
+        threads.emplace_back(
+            [&writer, t]
+            {
+                for (int i = 0; i < kWritesPerThread; ++i)
+                {
+                    writer.Write("thread" + std::to_string(t));
+                }
+            });
+    }
+    // Reading while other threads write is safe.
+    while (writer.GetMessages().size() < kThreads * kWritesPerThread / 2)
+    {
+        std::this_thread::yield();
+    }
+    for (auto& thread : threads)
+    {
+        thread.join();
+    }
+
+    EXPECT_EQ(writer.GetMessages().size(), static_cast<std::size_t>(kThreads * kWritesPerThread));
 }

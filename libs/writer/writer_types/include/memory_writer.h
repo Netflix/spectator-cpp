@@ -1,28 +1,34 @@
 #pragma once
 
 #include <base_writer.h>
+
+#include <mutex>
 #include <string>
 #include <vector>
 
 namespace spectator {
 
+// Keeps every payload in memory, one entry per Write. Used by tests. It is safe to read from one thread while others
+// write; the accessors return copies for that reason.
 class MemoryWriter final : public BaseWriter
 {
    public:
     MemoryWriter() = default;
     ~MemoryWriter() override = default;
 
-    void Write(const std::string& message) override;
+    void Write(std::string_view message) override;
     void Close() override;
     void Clear();
 
-    const std::vector<std::string>& GetMessages() const noexcept { return m_messages; }
+    [[nodiscard]] std::vector<std::string> GetMessages() const;
 
-    const std::string& LastLine() const noexcept;
+    // The most recent payload, or an empty string when there is none.
+    [[nodiscard]] std::string LastLine() const;
 
-    bool IsEmpty() const noexcept { return m_messages.empty(); }
+    [[nodiscard]] bool IsEmpty() const;
 
    private:
+    mutable std::mutex m_mutex;
     std::vector<std::string> m_messages;
 };
 

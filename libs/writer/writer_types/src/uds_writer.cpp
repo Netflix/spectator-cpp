@@ -1,14 +1,21 @@
 #include <uds_writer.h>
 
+#include "socket_options.h"
+
 #include <logger.h>
 
 namespace spectator {
+
+namespace {
+constexpr int kSendAttempts = 3;
+}
 
 UDSWriter::UDSWriter(const std::string& socketPath)
     : m_socketPath(socketPath),
       m_ioContext(std::make_unique<boost::asio::io_context>()),
       m_socket(nullptr),
-      m_socketEstablished(false)
+      m_socketEstablished(false),
+      m_maxPayloadSize(detail::kMaxDatagramPayload)
 {
     if (false == CreateSocket())
     {
@@ -18,13 +25,14 @@ UDSWriter::UDSWriter(const std::string& socketPath)
 
 UDSWriter::~UDSWriter() { Close(); }
 
-bool UDSWriter::CreateSocket() try
+bool UDSWriter::CreateSocket()
+try
 {
     if (m_socketEstablished)
     {
         this->Close();
     }
-    
+
     boost::system::error_code ec;
     m_socket = std::make_unique<boost::asio::local::datagram_protocol::socket>(*m_ioContext);
     m_socket->open(boost::asio::local::datagram_protocol(), ec);
@@ -33,6 +41,12 @@ bool UDSWriter::CreateSocket() try
         Logger::error("UDS Writer: Failed to create socket - {}", ec.message());
         return false;
     }
+
+    if (const auto timeoutError = detail::SetSendTimeout(m_socket->native_handle()); timeoutError)
+    {
+        Logger::warn("UDS Writer: Failed to set a send timeout - {}", timeoutError.message());
+    }
+    m_maxPayloadSize = detail::MaxDatagramPayload(m_socket->native_handle());
 
     m_endpoint = boost::asio::local::datagram_protocol::endpoint(m_socketPath);
     m_socketEstablished = true;
@@ -45,28 +59,27 @@ catch (const boost::system::system_error& ex)
     return false;
 }
 
-bool UDSWriter::TryToSend(const std::string& message) try
+bool UDSWriter::TryToSend(std::string_view message)
 {
     boost::system::error_code ec;
-    for (int i = 0; i < 3; i++)
+    for (int attempt = 0; attempt < kSendAttempts; ++attempt)
     {
-        size_t sent = m_socket->send_to(boost::asio::buffer(message), m_endpoint, 0, ec);
-        if (ec || sent < message.size())
-        {   
-            Logger::error("UDS Writer: Failed to send message - {}, sent {} bytes out of {}", ec.message(), sent, message.size());
-            continue;
+        ec = detail::SendDatagram(m_socket->native_handle(), message, m_endpoint.data(),
+                                  static_cast<socklen_t>(m_endpoint.size()));
+        if (!ec)
+        {
+            return true;
         }
-        return true;
+        if (detail::IsSendTimeout(ec))
+        {
+            break;
+        }
     }
-    return false;
-}
-catch (const boost::system::system_error& ex)
-{
-    Logger::error("UDS Writer: Boost exception: {}", ex.what());
+    Logger::error("UDS Writer: Failed to send {} bytes to {} - {}", message.size(), m_socketPath, ec.message());
     return false;
 }
 
-void UDSWriter::Write(const std::string& message)
+void UDSWriter::Write(std::string_view message)
 {
     if (false == this->m_socketEstablished && false == this->CreateSocket())
     {
@@ -76,12 +89,12 @@ void UDSWriter::Write(const std::string& message)
 
     if (false == this->TryToSend(message))
     {
-        Logger::error("UDS Writer: Failed to send message: {}", message);
         this->Close();
     }
 }
 
-void UDSWriter::Close() try
+void UDSWriter::Close()
+try
 {
     this->m_socketEstablished = false;
     if (m_socket != nullptr && m_socket->is_open())

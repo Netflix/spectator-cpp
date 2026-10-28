@@ -1,26 +1,31 @@
 #include "uds_server.h"
-#include <boost/beast/core.hpp>
+
 #include <boost/asio.hpp>
 #include <boost/asio/local/datagram_protocol.hpp>
-#include <iostream>
-#include <array>
-#include <vector>
-#include <string>
-#include <thread>
-#include <mutex>
-#include <atomic>
+#include <poll.h>
+
 #include <filesystem>
+#include <iostream>
+#include <mutex>
+#include <thread>
 
-//---------- Message Storage Implementation ----------
+namespace {
 
-// Vector to store all received messages
-std::vector<std::string> uds_messages = {};
+std::vector<std::string> uds_messages;
 std::mutex uds_messages_mutex;
+std::atomic<bool> uds_server_ready{false};
 
-// Flag to control server shutdown
+// Larger than any datagram a writer sends, so nothing is truncated.
+constexpr std::size_t kReceiveBufferSize = 64 * 1024;
+// Room for bursts from many writer threads while this loop is busy.
+constexpr int kSocketReceiveBuffer = 4 * 1024 * 1024;
+// How often the loop checks uds_server_running while no data arrives.
+constexpr int kPollTimeoutMs = 20;
+
+}  // namespace
+
 std::atomic<bool> uds_server_running(true);
 
-// Expose functions to interact with the messages vector
 std::vector<std::string> get_uds_messages()
 {
     std::lock_guard<std::mutex> lock(uds_messages_mutex);
@@ -39,103 +44,84 @@ void add_uds_message(const std::string& message)
     uds_messages.push_back(message);
 }
 
-//---------- UDS Server Implementation ----------
+bool wait_for_uds_server(std::chrono::milliseconds timeout)
+{
+    const auto deadline = std::chrono::steady_clock::now() + timeout;
+    while (!uds_server_ready.load())
+    {
+        if (std::chrono::steady_clock::now() >= deadline)
+        {
+            return false;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    return true;
+}
 
-void listen_for_uds_messages()
+void listen_for_uds_messages(const std::string& socketPath)
 try
 {
-    // Path to the Unix domain socket
-    const std::string socket_path = "/tmp/test_uds_socket";
-
-    // Remove any existing socket file
-    std::filesystem::remove(socket_path);
+    std::filesystem::remove(socketPath);
 
     boost::asio::io_context io_context;
-
-    // Create and open a Unix domain datagram socket
-    const boost::asio::local::datagram_protocol::endpoint endpoint(socket_path);
     boost::asio::local::datagram_protocol::socket socket(io_context);
-    
+
     boost::system::error_code ec;
     socket.open(boost::asio::local::datagram_protocol(), ec);
     if (ec)
     {
-        std::cerr << "Error opening socket: " << ec.message() << std::endl;
+        std::cerr << "UDS server: failed to open socket: " << ec.message() << std::endl;
         return;
     }
-    
-    socket.bind(endpoint, ec);
+
+    // A failure here only makes drops under load more likely, so keep going.
+    socket.set_option(boost::asio::socket_base::receive_buffer_size(kSocketReceiveBuffer), ec);
+
+    socket.bind(boost::asio::local::datagram_protocol::endpoint(socketPath), ec);
     if (ec)
     {
-        std::cerr << "Error binding to endpoint: " << ec.message() << std::endl;
+        std::cerr << "UDS server: failed to bind " << socketPath << ": " << ec.message() << std::endl;
         return;
     }
-
-    // Set to non-blocking mode
     socket.non_blocking(true);
+    uds_server_ready = true;
 
-    std::cout << "UDS datagram server listening on " << socket_path << std::endl;
-
-    // Buffer for reading data
-    std::array<char, 2048> buffer{};
+    std::vector<char> buffer(kReceiveBufferSize);
     while (uds_server_running)
     {
-        try
+        pollfd pollFd{socket.native_handle(), POLLIN, 0};
+        if (::poll(&pollFd, 1, kPollTimeoutMs) <= 0)
         {
-            // Client endpoint to receive the sender's address
-            boost::asio::local::datagram_protocol::endpoint sender_endpoint;
+            continue;
+        }
+
+        // Read everything that is queued before waiting again.
+        for (;;)
+        {
             boost::system::error_code read_ec;
-            std::size_t bytes_read = 0;
-            
-            // Try to receive a datagram
-            bytes_read = socket.receive_from(boost::asio::buffer(buffer), sender_endpoint, 0, read_ec);
-                
-            // Handle the case where no data is available
-            if (read_ec == boost::asio::error::would_block) {
-                // No data available, wait a bit and try again
-                std::this_thread::sleep_for(std::chrono::milliseconds(10));
-                continue;
+            const std::size_t bytes_read = socket.receive(boost::asio::buffer(buffer), 0, read_ec);
+            if (read_ec == boost::asio::error::would_block)
+            {
+                break;
             }
-            
             if (read_ec)
             {
-                std::cerr << "Error reading from socket: " << read_ec.message() << std::endl;
-                continue; // Continue to next iteration instead of breaking, as each datagram is independent
+                std::cerr << "UDS server: receive failed: " << read_ec.message() << std::endl;
+                break;
             }
-
-            if (bytes_read == buffer.size())
-            {
-                std::cout << "Warning: Received data might have been truncated (buffer full)" << std::endl;
-            }
-
-            // Create string from received data and store it
-            std::string message(buffer.data(), bytes_read);
-            add_uds_message(message);
-            auto current_messages = get_uds_messages();
-            std::cout << "Received datagram: " << message << std::endl;
-            std::cout << "Total messages stored: " << current_messages.size() << std::endl;
-        }
-        catch (const std::exception& e)
-        {
-            std::cerr << "Exception in datagram server: " << e.what() << std::endl;
+            add_uds_message(std::string(buffer.data(), bytes_read));
         }
     }
 
-    std::cout << "UDS datagram server shutting down..." << std::endl;
-
-    // Close the socket
-    socket.close();
-
-    // Clean up the socket file on exit
-    std::filesystem::remove(socket_path);
+    uds_server_ready = false;
+    socket.close(ec);
+    std::filesystem::remove(socketPath);
 }
 catch (const std::exception& e)
 {
+    uds_server_ready = false;
     std::cerr << "Exception in UDS server: " << e.what() << std::endl;
-    return;
 }
-
-//---------- Main Function ----------
 
 // Only compile the main function when building the executable, not the library
 #ifndef UDS_SERVER_LIB_ONLY

@@ -1,13 +1,16 @@
 #include <udp_writer.h>
 
-#include <gtest/gtest.h>
+#include <udp_server.h>
+#include <wait_for.h>
 
-#include "../test_utils/udp_server/udp_server.h"  // Include our new header for UDP server interaction
-#include <thread>
+#include <gtest/gtest.h>
 #include <chrono>
-#include <algorithm>  // For std::find
+#include <string>
+#include <thread>
+#include <vector>
 
 using namespace spectator;
+using spectator::test::WaitFor;
 
 // Test fixture for UDP Writer tests
 class UDPWriterTest : public testing::Test
@@ -15,45 +18,25 @@ class UDPWriterTest : public testing::Test
    protected:
     void SetUp() override
     {
-        // Clear any existing messages from previous tests
         clear_udp_messages();
-        
-        // By default, start the server for most tests
         StartServer();
     }
 
-    void TearDown() override
-    {
-        StopServer();
-    }
-
+    void TearDown() override { StopServer(); }
 
     void StartServer()
     {
-        if (!server_thread.joinable()) // Only start if not already running
+        if (!server_thread.joinable())
         {
-            // Set the server to run
             udp_server_running = true;
-
-            // Start the UDS server in a separate thread
-            server_thread = std::thread(
-                []
-                {
-                    // This calls our server function directly
-                    listen_for_udp_messages();
-                });
-
-            // Give the server time to start
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            server_thread = std::thread([] { listen_for_udp_messages(kDefaultUdpServerPort); });
+            ASSERT_TRUE(wait_for_udp_server());
         }
     }
 
     void StopServer()
     {
-        // Signal the server to stop
         udp_server_running = false;
-
-        // Terminate the server thread
         if (server_thread.joinable())
         {
             server_thread.join();
@@ -65,130 +48,82 @@ class UDPWriterTest : public testing::Test
 
 TEST_F(UDPWriterTest, SendMessage)
 {
-    // Create a UDP writer that will connect to localhost:1234
-    UDPWriter writer("127.0.0.1", 12345);
-
-    // Define our test message
+    UDPWriter writer("127.0.0.1", kDefaultUdpServerPort);
     const std::string test_message = "Hello from UDP Writer Test";
 
-    // Send a test message
     writer.Write(test_message);
 
-    // Give time for the message to be processed
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-    // Get current messages and verify the message was received
-    const auto messages = get_udp_messages();
-    ASSERT_FALSE(messages.empty());
-
-    // Check that our message is in the vector
-    bool message_found = false;
-    for (const auto& msg : messages)
-    {
-        if (msg == test_message)
-        {
-            message_found = true;
-            break;
-        }
-    }
-    ASSERT_TRUE(message_found);
+    ASSERT_TRUE(WaitFor([] { return !get_udp_messages().empty(); }));
+    EXPECT_EQ(get_udp_messages().back(), test_message);
 }
 
 TEST_F(UDPWriterTest, CloseAndReopen)
 {
-    UDPWriter writer("127.0.0.1", 12345);
-    std::string message1 = "Initial message";
+    UDPWriter writer("127.0.0.1", kDefaultUdpServerPort);
+    const std::string message1 = "Initial message";
     writer.Write(message1);
+    ASSERT_TRUE(WaitFor([] { return get_udp_messages().size() == 1; }));
+    EXPECT_EQ(get_udp_messages().back(), message1);
 
-    // Wait for message processing
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-    // Verify first message
-    auto messages = get_udp_messages();
-    ASSERT_FALSE(messages.empty());
-    ASSERT_EQ(messages.back(), message1);
-
-    // Close the writer
     writer.Close();
 
-    // Create a new writer
-    UDPWriter writer2("127.0.0.1", 12345);
-    std::string message2 = "Message after reopening";
+    UDPWriter writer2("127.0.0.1", kDefaultUdpServerPort);
+    const std::string message2 = "Message after reopening";
     writer2.Write(message2);
-
-    // Wait for message processing
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-    // Verify second message
-    messages = get_udp_messages();
-    ASSERT_GE(messages.size(), 2);
-    ASSERT_EQ(messages.back(), message2);
+    ASSERT_TRUE(WaitFor([] { return get_udp_messages().size() == 2; }));
+    EXPECT_EQ(get_udp_messages().back(), message2);
 }
 
 TEST_F(UDPWriterTest, SendMultipleMessages)
 {
-    UDPWriter writer("127.0.0.1", 12345);
-
-    // Define test messages
+    UDPWriter writer("127.0.0.1", kDefaultUdpServerPort);
     const std::vector<std::string> test_messages = {"Message 1", "Message 2", "Message 3"};
 
-    // Send several messages in succession
     for (const auto& msg : test_messages)
     {
         writer.Write(msg);
     }
 
-    // Give time for messages to be processed
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-    // Get received messages and verify
-    const auto received_messages = get_udp_messages();
-
-    // Verify we received at least the number of messages we sent
-    ASSERT_EQ(received_messages.size(), test_messages.size());
-
-    ASSERT_EQ(test_messages.at(0), received_messages.at(0));
-    ASSERT_EQ(test_messages.at(1), received_messages.at(1));
-    ASSERT_EQ(test_messages.at(2), received_messages.at(2));
+    // One datagram per Write, in order.
+    ASSERT_TRUE(WaitFor([&] { return get_udp_messages().size() >= test_messages.size(); }));
+    EXPECT_EQ(get_udp_messages(), test_messages);
 }
 
 TEST_F(UDPWriterTest, ClientReconnectsWhenServerStartsLater)
 {
-    // First, stop the server that was started in SetUp
     StopServer();
-    
-    // Clear any existing messages
     clear_udp_messages();
-    
-    // Create a client before the server is available
-    UDPWriter writer("127.0.0.1", 12345);
 
-    // Try to send a message while server is not running
-    // This should fail silently (UDSWriter logs errors but doesn't throw)
+    // Nothing receives these; the writer logs any error and carries on.
+    UDPWriter writer("127.0.0.1", kDefaultUdpServerPort);
     for (int i = 0; i < 3; ++i)
     {
-        const std::string test_message_before = "Message sent before server starts";
-        writer.Write(test_message_before);
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        writer.Write("Message sent before server starts");
     }
-    
-    // Verify no messages were received (server wasn't running)
-    auto messages = get_udp_messages();
-    EXPECT_TRUE(messages.empty()) << "Expected no messages when server is not running";
-    
-    // Now start the server
+    // Loopback delivery is asynchronous on macOS: a datagram can still be queued in the kernel when sendto returns.
+    // Give the kernel time to drop these, or the server started below could bind the port first and receive them.
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    EXPECT_TRUE(get_udp_messages().empty()) << "Expected no messages when server is not running";
+
     StartServer();
-    
-    // Try to send a message after server is started
-    // The UDSWriter should automatically reconnect on the next Write call
+
     const std::string test_message_after = "Message sent after server starts";
     writer.Write(test_message_after);
-    
-    // Give time for the message to be processed
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
-    
-    // Verify the message was received
-    messages = get_udp_messages();
-    EXPECT_TRUE(messages.size() == 1);
-    EXPECT_TRUE(messages.at(0) == test_message_after);
+    ASSERT_TRUE(WaitFor([] { return !get_udp_messages().empty(); }));
+    EXPECT_EQ(get_udp_messages(), std::vector<std::string>{test_message_after});
+}
+
+TEST_F(UDPWriterTest, MaxPayloadSizeFitsInOneDatagram)
+{
+    UDPWriter writer("127.0.0.1", kDefaultUdpServerPort);
+    const auto maxPayload = writer.MaxPayloadSize();
+    ASSERT_GT(maxPayload, 0u);
+    ASSERT_LE(maxPayload, 65507u);
+
+    // The limit comes from the socket's send buffer (9216 bytes on macOS by default), so a payload of exactly that
+    // size must arrive whole.
+    const std::string payload(maxPayload, 'x');
+    writer.Write(payload);
+    ASSERT_TRUE(WaitFor([] { return !get_udp_messages().empty(); }));
+    EXPECT_EQ(get_udp_messages().back().size(), maxPayload);
 }

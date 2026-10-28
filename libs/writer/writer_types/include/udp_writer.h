@@ -13,8 +13,9 @@ class UDPWriter final : public BaseWriter
    public:
     UDPWriter(const std::string& host, int port);
     ~UDPWriter() override;
-    void Write(const std::string& message) override;
+    void Write(std::string_view message) override;
     void Close() override;
+    [[nodiscard]] std::size_t MaxPayloadSize() const noexcept override { return m_maxPayloadSize; }
 
    private:
     std::string m_host;
@@ -23,9 +24,10 @@ class UDPWriter final : public BaseWriter
     std::unique_ptr<boost::asio::ip::udp::socket> m_socket;
     boost::asio::ip::udp::endpoint m_endpoint;
     bool m_socketEstablished;
-    
+    std::size_t m_maxPayloadSize;
+
     bool CreateSocket();
-    bool TryToSend(const std::string& message);
+    bool TryToSend(std::string_view message);
 };
 
 }  // namespace spectator

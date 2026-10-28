@@ -1,15 +1,22 @@
 #include <udp_writer.h>
 
+#include "socket_options.h"
+
 #include <logger.h>
 
 namespace spectator {
 
-UDPWriter::UDPWriter(const std::string& host, int port) : 
-    m_host(host), 
-    m_port(port),
-    m_io_context(std::make_unique<boost::asio::io_context>()),
-    m_socket(nullptr), 
-    m_socketEstablished(false)
+namespace {
+constexpr int kSendAttempts = 3;
+}
+
+UDPWriter::UDPWriter(const std::string& host, int port)
+    : m_host(host),
+      m_port(port),
+      m_io_context(std::make_unique<boost::asio::io_context>()),
+      m_socket(nullptr),
+      m_socketEstablished(false),
+      m_maxPayloadSize(detail::kMaxDatagramPayload)
 {
     if (false == CreateSocket())
     {
@@ -19,7 +26,8 @@ UDPWriter::UDPWriter(const std::string& host, int port) :
 
 UDPWriter::~UDPWriter() { Close(); }
 
-bool UDPWriter::CreateSocket() try
+bool UDPWriter::CreateSocket()
+try
 {
     if (m_socketEstablished)
     {
@@ -34,7 +42,13 @@ bool UDPWriter::CreateSocket() try
         Logger::error("UDPWriter: Failed to create socket - {}", ec.message());
         return false;
     }
-    
+
+    if (const auto timeoutError = detail::SetSendTimeout(m_socket->native_handle()); timeoutError)
+    {
+        Logger::warn("UDPWriter: Failed to set a send timeout - {}", timeoutError.message());
+    }
+    m_maxPayloadSize = detail::MaxDatagramPayload(m_socket->native_handle());
+
     m_endpoint = boost::asio::ip::udp::endpoint(boost::asio::ip::make_address(m_host), m_port);
     m_socketEstablished = true;
     Logger::info("UDPWriter: Socket created for {}:{}", m_host, m_port);
@@ -46,28 +60,27 @@ catch (const boost::system::system_error& ex)
     return false;
 }
 
-bool UDPWriter::TryToSend(const std::string& message) try
+bool UDPWriter::TryToSend(std::string_view message)
 {
     boost::system::error_code ec;
-    for (int i = 0; i < 3; i++)
+    for (int attempt = 0; attempt < kSendAttempts; ++attempt)
     {
-        size_t sent = m_socket->send_to(boost::asio::buffer(message.data(), message.size()), m_endpoint, 0, ec);
-        if (ec || sent < message.size())
-        {   
-            Logger::error("UDP Writer: Failed to send message - {}, sent {} bytes out of {}", ec.message(), sent, message.size());
-            continue;
+        ec = detail::SendDatagram(m_socket->native_handle(), message, m_endpoint.data(),
+                                  static_cast<socklen_t>(m_endpoint.size()));
+        if (!ec)
+        {
+            return true;
         }
-        return true;
+        if (detail::IsSendTimeout(ec))
+        {
+            break;
+        }
     }
-    return false;
-}
-catch (const boost::system::system_error& ex)
-{
-    Logger::error("UDP Writer: Boost exception: {}", ex.what());
+    Logger::error("UDP Writer: Failed to send {} bytes to {}:{} - {}", message.size(), m_host, m_port, ec.message());
     return false;
 }
 
-void UDPWriter::Write(const std::string& message)
+void UDPWriter::Write(std::string_view message)
 {
     if (false == this->m_socketEstablished && false == this->CreateSocket())
     {
@@ -75,17 +88,17 @@ void UDPWriter::Write(const std::string& message)
         return;
     }
 
-    if (TryToSend(message) == false)
+    if (false == TryToSend(message))
     {
-        Logger::error("UDP Writer: Failed to send message: {}", message);
         this->Close();
     }
 }
 
-void UDPWriter::Close() try
+void UDPWriter::Close()
+try
 {
     this->m_socketEstablished = false;
-    if(m_socket && m_socket->is_open())
+    if (m_socket && m_socket->is_open())
     {
         boost::system::error_code ec;
         m_socket->close(ec);

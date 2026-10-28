@@ -50,10 +50,22 @@ WriterConfig::WriterConfig(const std::string& type)
 }
 
 WriterConfig::WriterConfig(const std::string& type, const unsigned int bufferSize)
-    : WriterConfig(type)  // Constructor delegation
+    : WriterConfig(type, BufferConfig{.size = bufferSize})
 {
-    m_bufferSize = bufferSize;
-    Logger::info("WriterConfig buffering enabled with size: {}", m_bufferSize);
+}
+
+WriterConfig::WriterConfig(const std::string& type, const BufferConfig& bufferConfig) : WriterConfig(type)
+{
+    if (bufferConfig.flushInterval <= std::chrono::milliseconds::zero())
+    {
+        throw std::invalid_argument("WriterConfig: the flush interval must be positive");
+    }
+    m_bufferConfig = bufferConfig;
+    if (m_bufferConfig.size > 0)
+    {
+        Logger::info("WriterConfig buffering enabled with size: {}, flush interval: {} ms, drop on full: {}",
+                     m_bufferConfig.size, m_bufferConfig.flushInterval.count(), m_bufferConfig.dropOnFull);
+    }
 }
 
 }  // namespace spectator

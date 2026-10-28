@@ -50,25 +50,31 @@ std::string ParseUnixAddress(const std::string& address)
     return matches[1].str();
 }
 
-Registry::Registry(const Config& config) : m_config(config) 
+Registry::Registry(const Config& config) : m_config(config)
 {
+    const auto& buffer = this->m_config.GetWriterBufferConfig();
     if (config.GetWriterType() == WriterType::Memory)
     {
         Logger::info("Registry initializing Memory Writer");
-        Writer::Initialize(config.GetWriterType(), "", 0, this->m_config.GetWriterBufferSize()); 
+        Writer::Initialize(config.GetWriterType(), "", 0, buffer);
+    }
+    else if (config.GetWriterType() == WriterType::Noop)
+    {
+        Logger::info("Registry initializing Noop Writer");
+        Writer::Initialize(config.GetWriterType(), "", 0, buffer);
     }
     else if (config.GetWriterType() == WriterType::UDP)
     {
         auto [ip, port] = ParseUdpAddress(this->m_config.GetWriterLocation());
         Logger::info("Registry initializing UDP Writer at {}:{}", ip, port);
-        Writer::Initialize(config.GetWriterType(), ip, port, this->m_config.GetWriterBufferSize()); 
+        Writer::Initialize(config.GetWriterType(), ip, port, buffer);
     }
     else if (config.GetWriterType() == WriterType::Unix)
     {
         auto socketPath = ParseUnixAddress(this->m_config.GetWriterLocation());
         Logger::info("Registry initializing UDS Writer at {}", socketPath);
-        Writer::Initialize(config.GetWriterType(), socketPath, 0, this->m_config.GetWriterBufferSize()); 
-    }    
+        Writer::Initialize(config.GetWriterType(), socketPath, 0, buffer);
+    }
 }
 
 MeterId Registry::CreateNewId(const std::string& name, const std::unordered_map<std::string, std::string>& tags) const

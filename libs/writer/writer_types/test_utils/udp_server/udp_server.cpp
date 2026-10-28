@@ -1,23 +1,29 @@
 #include "udp_server.h"
+
 #include <boost/asio.hpp>
+#include <poll.h>
+
 #include <iostream>
-#include <array>
-#include <vector>
-#include <string>
-#include <thread>
 #include <mutex>
-#include <atomic>
+#include <thread>
 
-//---------- Message Storage Implementation ----------
+namespace {
 
-// Vector to store all received messages
-std::vector<std::string> messages = {};
+std::vector<std::string> messages;
 std::mutex messages_mutex;
+std::atomic<bool> udp_server_ready{false};
 
-// Flag to control server shutdown
+// Larger than any datagram a writer sends, so nothing is truncated.
+constexpr std::size_t kReceiveBufferSize = 64 * 1024;
+// Room for bursts from many writer threads while this loop is busy.
+constexpr int kSocketReceiveBuffer = 4 * 1024 * 1024;
+// How often the loop checks udp_server_running while no data arrives.
+constexpr int kPollTimeoutMs = 20;
+
+}  // namespace
+
 std::atomic<bool> udp_server_running(true);
 
-// Expose functions to interact with the messages vector
 std::vector<std::string> get_udp_messages()
 {
     std::lock_guard<std::mutex> lock(messages_mutex);
@@ -36,84 +42,73 @@ void add_message(const std::string& message)
     messages.push_back(message);
 }
 
-//---------- UDP Server Implementation ----------
+bool wait_for_udp_server(std::chrono::milliseconds timeout)
+{
+    const auto deadline = std::chrono::steady_clock::now() + timeout;
+    while (!udp_server_ready.load())
+    {
+        if (std::chrono::steady_clock::now() >= deadline)
+        {
+            return false;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    return true;
+}
 
-void listen_for_udp_messages()
+void listen_for_udp_messages(int port)
 try
 {
-    constexpr auto port = 12345;
-
     boost::asio::io_context io_context;
-
-    // Create an IPv4 socket bound to localhost (127.0.0.1) and port 1234
-    const boost::asio::ip::udp::endpoint endpoint(boost::asio::ip::make_address("127.0.0.1"), port);
     boost::asio::ip::udp::socket socket(io_context, boost::asio::ip::udp::v4());
 
-    try
+    // A failure here only makes drops under load more likely, so keep going.
+    boost::system::error_code ec;
+    socket.set_option(boost::asio::socket_base::receive_buffer_size(kSocketReceiveBuffer), ec);
+
+    socket.bind(boost::asio::ip::udp::endpoint(boost::asio::ip::make_address("127.0.0.1"), port), ec);
+    if (ec)
     {
-        socket.bind(endpoint);
-        std::cout << "Socket bound to IPv4 localhost (127.0.0.1):" << port << std::endl;
+        std::cerr << "UDP server: failed to bind 127.0.0.1:" << port << ": " << ec.message() << std::endl;
+        return;
     }
-    catch (const std::exception& e)
-    {
-        std::cerr << "Error binding socket: " << e.what() << "\n";
-        throw;
-    }
-
-    std::array<char, 2048> buffer{};
-    boost::asio::ip::udp::endpoint sender_endpoint;
-
-    std::cout << "UDP server listening on 127.0.0.1:" << port << " (IPv4 localhost)\n";
-
-    // Configure socket with a small timeout so we can check the run flag
     socket.non_blocking(true);
+    udp_server_ready = true;
 
+    std::vector<char> buffer(kReceiveBufferSize);
     while (udp_server_running)
     {
-        try
+        pollfd pollFd{socket.native_handle(), POLLIN, 0};
+        if (::poll(&pollFd, 1, kPollTimeoutMs) <= 0)
         {
-            const std::size_t bytes_received = socket.receive_from(boost::asio::buffer(buffer), sender_endpoint);
-
-            if (bytes_received == buffer.size())
-            {
-                std::cout << "Warning: Received datagram might have been truncated (buffer full)" << std::endl;
-            }
-
-            // Create string from received data and store it in the messages vector
-            std::string message(buffer.data(), bytes_received);
-
-            // Add the message to our global message storage
-            add_message(message);
-
-            // Get the current count of messages
-            auto current_messages = get_udp_messages();
-
-            std::cout << "Received from " << sender_endpoint << ": " << message << std::endl;
-            std::cout << "Total messages stored: " << current_messages.size() << std::endl;
+            continue;
         }
-        catch (const boost::system::system_error& e)
+
+        // Read everything that is queued before waiting again.
+        for (;;)
         {
-            if (e.code() == boost::asio::error::would_block)
+            boost::system::error_code read_ec;
+            const std::size_t bytes_received = socket.receive(boost::asio::buffer(buffer), 0, read_ec);
+            if (read_ec == boost::asio::error::would_block)
             {
-                // No data available, just wait a bit and try again
-                std::this_thread::sleep_for(std::chrono::milliseconds(50));
-            }
-            else
-            {
-                std::cerr << "Error receiving data: " << e.what() << std::endl;
                 break;
             }
+            if (read_ec)
+            {
+                std::cerr << "UDP server: receive failed: " << read_ec.message() << std::endl;
+                break;
+            }
+            add_message(std::string(buffer.data(), bytes_received));
         }
     }
-    std::cout << "UDP server shutting down..." << std::endl;
+
+    udp_server_ready = false;
 }
 catch (const std::exception& e)
 {
-    std::cerr << "Exception in UDP server: " << e.what() << "\n";
-    return;
+    udp_server_ready = false;
+    std::cerr << "Exception in UDP server: " << e.what() << std::endl;
 }
-
-//---------- Main Function ----------
 
 // Only compile the main function when building the executable, not the library
 #ifndef UDP_SERVER_LIB_ONLY

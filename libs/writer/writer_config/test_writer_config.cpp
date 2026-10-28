@@ -3,6 +3,7 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
+#include <chrono>
 #include <cstdlib>
 #include <optional>
 
@@ -119,4 +120,46 @@ TEST_F(WriterConfigTest, EdgeCases)
         EXPECT_EQ(config.GetType(), WriterType::UDP);
         EXPECT_EQ(config.GetLocation(), "udp://");
     }
+}
+TEST_F(WriterConfigTest, NoneTypeIsNoop)
+{
+    const WriterConfig config(WriterTypes::Noop);
+    EXPECT_EQ(config.GetType(), WriterType::Noop);
+    EXPECT_EQ(config.GetLocation(), DefaultLocations::NoLocation);
+    EXPECT_EQ(WriterTypeToString(WriterType::Noop), "none");
+}
+
+TEST_F(WriterConfigTest, BufferDefaults)
+{
+    const WriterConfig config(WriterTypes::UDP);
+    EXPECT_EQ(config.GetBufferSize(), 0u);
+    EXPECT_EQ(config.GetFlushInterval(), std::chrono::seconds(5));
+    EXPECT_FALSE(config.GetDropOnFull());
+}
+
+TEST_F(WriterConfigTest, BufferSizeConstructorKeepsOtherDefaults)
+{
+    const WriterConfig config(WriterTypes::Unix, 4096);
+    EXPECT_EQ(config.GetBufferSize(), 4096u);
+    EXPECT_EQ(config.GetFlushInterval(), std::chrono::seconds(5));
+    EXPECT_FALSE(config.GetDropOnFull());
+}
+
+TEST_F(WriterConfigTest, BufferConfigConstructor)
+{
+    const WriterConfig config(WriterTypes::UDP,
+                              BufferConfig{.size = 8192, .flushInterval = std::chrono::milliseconds(250), .dropOnFull = true});
+    EXPECT_EQ(config.GetType(), WriterType::UDP);
+    EXPECT_EQ(config.GetBufferSize(), 8192u);
+    EXPECT_EQ(config.GetFlushInterval(), std::chrono::milliseconds(250));
+    EXPECT_TRUE(config.GetDropOnFull());
+    EXPECT_EQ(config.GetBufferConfig().size, 8192u);
+}
+
+TEST_F(WriterConfigTest, NonPositiveFlushIntervalThrows)
+{
+    EXPECT_THROW(WriterConfig(WriterTypes::UDP, BufferConfig{.size = 1024, .flushInterval = std::chrono::milliseconds(0)}),
+                 std::invalid_argument);
+    EXPECT_THROW(WriterConfig(WriterTypes::UDP, BufferConfig{.size = 1024, .flushInterval = std::chrono::milliseconds(-1)}),
+                 std::invalid_argument);
 }

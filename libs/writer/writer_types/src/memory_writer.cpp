@@ -1,34 +1,37 @@
 #include <memory_writer.h>
 
-#include <logger.h>
-
 namespace spectator {
 
-void MemoryWriter::Write(const std::string& message)
+void MemoryWriter::Write(std::string_view message)
 {
-    this->m_messages.push_back(message);
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_messages.emplace_back(message);
 }
 
-void MemoryWriter::Close()
-{
-    this->Clear();
-}
+void MemoryWriter::Close() { Clear(); }
 
 void MemoryWriter::Clear()
 {
-    this->m_messages.clear();
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_messages.clear();
 }
 
-const std::string& MemoryWriter::LastLine() const noexcept
+std::vector<std::string> MemoryWriter::GetMessages() const
 {
-    static const std::string emptyString{};
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_messages;
+}
 
-    if (true == m_messages.empty())
-    {
-        return emptyString;
-    }
+std::string MemoryWriter::LastLine() const
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_messages.empty() ? std::string() : m_messages.back();
+}
 
-    return this->m_messages.back();
+bool MemoryWriter::IsEmpty() const
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_messages.empty();
 }
 
 }  // namespace spectator
