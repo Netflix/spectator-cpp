@@ -26,6 +26,20 @@ class ClearEnvTagsEnvironment : public testing::Environment
 
 testing::Environment* const clearEnvTagsEnvironment = testing::AddGlobalTestEnvironment(new ClearEnvTagsEnvironment);
 
+// The writer is configured once per process, and each test builds its own Registry and expects an empty MemoryWriter.
+// Start every test from an unconfigured writer, so the Registry the test creates configures it.
+class ResetWriterListener : public testing::EmptyTestEventListener
+{
+   public:
+    void OnTestStart(const testing::TestInfo&) override { WriterTestHelper::Reset(); }
+};
+
+const bool resetWriterListenerAdded = []
+{
+    testing::UnitTest::GetInstance()->listeners().Append(new ResetWriterListener);
+    return true;
+}();
+
 TEST(RegistryTest, Close)
 {
     auto config = Config(WriterConfig(WriterTypes::Memory));

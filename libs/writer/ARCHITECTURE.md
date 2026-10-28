@@ -22,67 +22,75 @@ writer_types/      transports and type definitions (no threading)
   test_utils/                UDP and UDS receive servers, WaitFor, RecordingWriter
 writer_config/     WriterConfig: type, location, BufferConfig
 writer_wrapper/
-  include/writer.h           Writer facade declaration
-  include/sink.h             Sink: mutex-guarded transport
-  include/thread_buffer.h    ThreadBuffer: one thread's accumulation buffer
-  include/thread_registry.h  ThreadRegistry: roster of buffers, drain thread, reaping
-  include/writer_test_helper.h  test-only friend of Writer
-  src/                       writer.cpp (facade, ThreadHandle, exit flush), sink.cpp, thread_buffer.cpp,
-                             thread_registry.cpp
-  test/                      test_writer.cpp, test_thread_buffer.cpp, test_thread_registry.cpp
+  include/writer.h           Writer: the whole production wrapper (declaration)
+  src/writer.cpp             Writer, ThreadBuffer, ThreadHandle, ExitGuard
+  test/writer_test_helper.h  test-only friend of Writer
+  test/test_writer.cpp       Writer through the singleton: UDS, UDP, death tests, modes
+  test/test_writer_buffers.cpp   buffering, draining and shutdown on standalone writers
 ```
 
 New `.cpp` files must also be added to the explicit source list in `spectator/CMakeLists.txt`.
 
-## 3. Flow
+## 3. Model
 
 ```text
-Counter::Increment() -> Writer::Write(line)
-  unbuffered: Sink::Send(line + '\n')
-  buffered:   ThreadHandle (thread_local) -> ThreadBuffer::Append(line)
-                fits                  append
-                full, dropOnFull      count the drop, wake the drain thread
-                full, !dropOnFull     send own buffer through the Sink, then append
-                line > capacity       send pending, then the line alone
+Writer
+ +-- transport             every send goes through one mutex
+ +-- drain thread          sends the buffers on an interval
+ +-- registry of buffers   one ThreadBuffer per writing thread
 
-ThreadRegistry drain thread, every flushInterval or when woken by a drop:
-  each buffer: copy and clear pending, Sink::Send; then forget closed buffers
-
-Thread exit: ~ThreadHandle -> ThreadBuffer::Close() (sends the rest)
+Each writing thread
+ +-- a reference to its registered buffer, plus a guard that flushes it at thread exit
 ```
 
-## 4. Components
+The four flows:
 
-- **Sink**: one transport and a mutex. Every send goes through it, so threads share one socket. `Send` returns false
-  once closed. No chunking: the buffer capacity is clamped to `BaseWriter::MaxPayloadSize()`, so a full buffer is one
-  datagram. UDP and UDS report `min(65507, SO_SNDBUF)`; they set `SO_SNDTIMEO` to 100 ms so a stalled receiver can't
-  block a sender.
-- **ThreadBuffer**: `pending` string, `dataMutex`, `sendMutex`, atomic `closed`. The owning thread calls `Append`.
-  Others call `Drain` and `Close`. An optional `onDrop` callback is how the registry learns of drops.
-- **ThreadRegistry**: roster (`shared_ptr<ThreadBuffer>`), the drain `std::thread` (declared last), drop counter.
-  `Register`, `DrainOnce`, `Close`, `Size`, `Dropped`.
-- **Writer**: leaky singleton. Holds `m_sink`, `m_registry` (null when unbuffered), and `m_mutex`, which serializes
-  `Initialize`, `Shutdown` and attaching. Threads attach to the current configuration on their first write.
+```text
+Write        Writer::Write -> ThreadHandle: this thread's buffer -> Writer::Append
+               unbuffered: Writer::WriteLine sends line + '\n' as one datagram
+               fits                  append
+               line > capacity       send pending, then the line alone
+               full, dropOnFull      count the drop, wake the drain thread
+               full                  send own buffer, then append
+Drain        every flushInterval, or woken by a drop: visit each registered buffer -> send its pending bytes,
+             then forget closed buffers
+Thread exit  ~ThreadHandle -> RetireBuffer: flush and close the buffer
+Shutdown     stop and join the drain thread -> retire every buffer -> close the transport
+```
+
+## 4. Pieces
+
+- **Writer** is a singleton that is never destroyed, and is configured once, by one thread. It owns the
+  transport, the settings (capacity, drop policy, flush interval), the roster, the drain thread and the shutdown
+  sequence. `Writer::Write` is private; the meters are friends.
+- **ThreadBuffer** is a plain struct: `pending`, `dataMutex`, `sendMutex` and an atomic `closed`. The Writer performs
+  append, drain and retire on it. The registry, the owning thread and a drain snapshot share it through `shared_ptr`,
+  because a drain pass can overlap the thread's exit.
+- **ThreadHandle** (private to the Writer, `thread_local`) holds the thread's buffer reference and a scratch string for
+  unbuffered sends. Its destructor retires the buffer and sets `t_handleGone`, a trivially destructible flag. A write
+  that arrives after that, such as from a late `thread_local` destructor, goes through `SendDirect`.
+- **ExitGuard** runs `ShutdownAtExit` at static destruction, before the Logger is destroyed.
+- **Transport**: UDP and UDS report `min(65507, SO_SNDBUF)` as their largest datagram, and set `SO_SNDTIMEO` to 100 ms
+  so a stalled receiver can't block a sender. The capacity is clamped to that limit, so a full buffer is one datagram.
 
 ## 5. Concurrency rules
 
-- Lock order: `Writer::m_mutex`, then registry `Close` (joins the drain thread, takes the pass mutex), then roster
-  mutex, then buffer `dataMutex`, then `sendMutex`, then the Sink mutex. The drain thread never takes `m_mutex`.
+- Lock order: shutdownMutex, passMutex, rosterMutex, a buffer's dataMutex, that buffer's sendMutex, transportMutex.
+  drainMutex is never held while taking another.
 - Whoever takes a buffer's pending content takes `sendMutex` **before** releasing `dataMutex`. That keeps each thread's
-  lines in order. `Drain` releases `dataMutex` before sending, so appends never wait for I/O.
+  lines in order. A drain pass releases `dataMutex` before sending, so appends never wait for I/O.
 - The owning thread holds `dataMutex` across I/O only when it sends its own full buffer or an oversized line.
-- `stop` is written only under the drain mutex. A drop wakes the drain thread through the same mutex.
-- The Sink is closed only after every buffer that uses it is closed.
+- `m_stop` is written only under the drain mutex. A drop wakes the drain thread through the same mutex.
+- `m_configured` is stored with release ordering after the settings and transport are in place. A thread that loads it
+  with acquire ordering can read them. Nothing else guards them, so `Initialize` must not run concurrently with itself.
+- The transport is closed only after every buffer is closed.
 
 ## 6. Lifecycle
 
-- **Initialize**: builds the transport, Sink and registry first, so a throw leaves the old setup running. Then, under
-  `m_mutex`: close the old registry (join, flush all buffers), close the old Sink, install the new pair. Threads find
-  their old buffer or sink closed on the next write and attach to the new one.
-- **Thread exit**: the handle's destructor sends the thread's lines and closes the buffer. The drain thread forgets it
-  on its next pass. A `thread_local` destructor that writes afterwards sends its line directly (`t_handleDestroyed`).
-- **Process exit**: the `Writer` is never destroyed. A function-local `ExitFlush` runs `Shutdown` at static
-  destruction, before the Logger is destroyed, and refuses later `Initialize` calls.
+- **Initialize**: the first call wins. A later call logs a warning and is ignored, as is any call after the exit flush.
+  `Registry` calls it. Each `Registry` still applies its own extra tags to its meters.
+- **Thread exit**: the handle retires the buffer, which sends its lines. The drain thread forgets it on its next pass.
+- **Process exit**: the `Writer` is never destroyed. `ExitGuard` runs `Shutdown`, and writes after that are dropped.
 - **Fork** is not supported.
 
 ## 7. Guarantees
@@ -95,16 +103,22 @@ Thread exit: ~ThreadHandle -> ThreadBuffer::Close() (sends the rest)
 
 ## 8. Extending
 
-- **New transport**: implement `BaseWriter` (and `MaxPayloadSize()` if it has a limit). Add the `WriterType`
-  enumerator, name, `TypeToLocationMap` entry and `WriterTypeToString` case. Add a case to `Writer::Initialize` and a
-  branch in `Registry::Registry`. Decide in `Writer::Initialize` whether it buffers. Add the `.cpp` to
+- **New transport**: implement `BaseWriter` (and `MaxPayloadSize()` if it has a limit). Add the `WriterType` enumerator,
+  name, `TypeToLocationMap` entry and `WriterTypeToString` case. Add a case to `MakeTransport` in `writer.cpp` and a
+  branch in `Registry::Registry`. Decide in `EffectiveBufferConfig` whether it buffers. Add the `.cpp` to
   `spectator/CMakeLists.txt`.
-- **New tunable**: add it to `BufferConfig`, then to `WriterConfig` and `Config` getters, and use it in
-  `Writer::Install` or `RegistryOptions`.
+- **New tunable**: add it to `BufferConfig`, then to the `WriterConfig` and `Config` getters, and read it in
+  `Writer::Configure`.
 
 ## 9. Tests
 
-CTest names: `writer_test`, `thread_buffer_test`, `thread_registry_test`, `writer_config_test`, `test_memory_writer`,
-`test_noop_writer`, `test_udp_writer`, `test_uds_writer`. Tests use `WaitFor` instead of fixed sleeps. Each binary has
-its own socket path or port, so `ctest -j` is safe, except `test_udp_writer` and `writer_test`'s UDP case, which use
-different ports on purpose.
+CTest names: `writer_test`, `writer_buffers_test`, `writer_config_test`, `test_memory_writer`, `test_noop_writer`,
+`test_udp_writer`, `test_uds_writer`.
+
+- The writer is configured once per process, so tests reset it. `WriterTestHelper::Reset` destroys the process-wide
+  writer and constructs a fresh one in the same storage, and the `Initialize` helpers call it first. `test_registry.cpp`
+  does the same from a gtest listener. Reset lives in the test helper and one private `Writer` hook, not in any
+  production path.
+- `test_writer_buffers.cpp` builds standalone `Writer` objects over a recording transport. It drives the register,
+  append and retire operations directly, so it doesn't depend on thread-exit handlers.
+- Tests use `WaitFor` instead of fixed sleeps. Each binary has its own socket path or port, so `ctest -j` is safe.

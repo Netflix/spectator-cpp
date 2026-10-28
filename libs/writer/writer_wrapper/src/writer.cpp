@@ -1,17 +1,51 @@
 #include <writer.h>
 
-#include "writer_state.h"
-
 #include <logger.h>
 
+#include <algorithm>
+#include <exception>
+#include <new>
 #include <stdexcept>
 
 namespace spectator {
 
-using detail::WriteResult;
-using detail::WriterState;
+namespace detail {
+
+// One thread's pending lines. Two mutexes keep a thread's lines in the order they were written without making appends
+// wait for I/O:
+// - dataMutex guards `pending` and `closed`. It is held only for short work, except by the owning thread while it
+//   sends its own full buffer, and by RetireBuffer.
+// - sendMutex is taken, while dataMutex is still held, by whoever takes the pending content, and held until that
+//   content is sent. Content taken later therefore can't be sent first.
+struct ThreadBuffer
+{
+    std::mutex dataMutex;
+    std::mutex sendMutex;
+    std::string pending;
+    // Written under dataMutex. Read without it by the drain pass when it forgets closed buffers.
+    std::atomic<bool> closed{false};
+};
+
+}  // namespace detail
+
+using detail::ThreadBuffer;
 
 namespace {
+
+// Keeps `now + interval` far from overflowing however large the configured interval is.
+constexpr std::chrono::milliseconds kMaxFlushInterval = std::chrono::hours(24);
+
+// A full buffer is sent as one datagram, so it can't be larger than the transport allows.
+std::size_t ChooseCapacity(unsigned int requested, std::size_t transportLimit)
+{
+    if (requested > transportLimit)
+    {
+        Logger::warn("Writer: buffer size {} exceeds the largest datagram this transport can send; using {}", requested,
+                     transportLimit);
+        return transportLimit;
+    }
+    return requested;
+}
 
 std::unique_ptr<BaseWriter> MakeTransport(WriterType type, const std::string& param, int port)
 {
@@ -52,30 +86,38 @@ thread_local bool t_handleGone = false;
 
 }  // namespace
 
-// The calling thread's connection to the Writer's current state: the state itself and, when buffering, this thread's
-// own buffer. One exists per thread, created on its first write and destroyed when the thread exits, which sends the
-// thread's pending lines.
+// ---- Thread handle and exit guard ----
+
+// What the calling thread keeps: a reference to its registered buffer, and a guard that flushes the buffer when the
+// thread exits. One exists per thread, created on its first write.
 struct Writer::ThreadHandle
 {
-    // A write whose state is replaced mid-write reconnects and tries again, at most this many times.
-    static constexpr int kMaxAttempts = 3;
-
-    // Sends or buffers `line` for the calling thread. The line is dropped if the writer is not initialized.
+    // Appends `line` to the calling thread's buffer, registering the buffer on the thread's first buffered write.
     static void Write(Writer& writer, std::string_view line)
     {
         if (t_handleGone)
         {
-            WriteWithoutHandle(writer, line);
+            // This thread's handle has already run its cleanup, so a new buffer would never be flushed.
+            writer.SendDirect(line);
             return;
         }
-        Current().WriteWithReconnect(writer, line);
+        Current().WriteVia(writer, line);
+    }
+
+    // Forgets the calling thread's buffer. The Writer closed it already.
+    static void DisconnectCurrentThread() noexcept
+    {
+        if (!t_handleGone)
+        {
+            Current().buffer.reset();
+        }
     }
 
     ~ThreadHandle()
     {
         if (buffer)
         {
-            state->CloseBuffer(*buffer);
+            GetInstance().RetireBuffer(*buffer);
         }
         t_handleGone = true;
     }
@@ -94,75 +136,31 @@ struct Writer::ThreadHandle
         return handle;
     }
 
-    void WriteWithReconnect(Writer& writer, std::string_view line)
+    void WriteVia(Writer& writer, std::string_view line)
     {
-        for (int attempt = 0; attempt < kMaxAttempts; ++attempt)
+        if (!buffer)
         {
-            if (!state)
+            if (!writer.m_configured.load(std::memory_order_acquire))
             {
-                auto current = writer.SnapshotState();
-                if (!current)
-                {
-                    writer.WarnNotInitialized();
-                    return;
-                }
-                if (!Connect(std::move(current)))
-                {
-                    continue;
-                }
-            }
-            if (Send(line) == WriteResult::Consumed)
-            {
+                writer.WarnNotInitialized();
                 return;
             }
-            // The state was replaced or shut down after this thread connected. Closing it already sent this thread's
-            // buffer, so just forget it.
-            Disconnect();
-        }
-    }
-
-    // For thread_local destructors that run after this thread's handle is gone: sends the line on its own, without
-    // creating a new handle that nothing would flush.
-    static void WriteWithoutHandle(Writer& writer, std::string_view line)
-    {
-        if (auto current = writer.SnapshotState())
-        {
-            std::string scratch;
-            current->WriteLine(line, scratch);
-        }
-    }
-
-    // Returns false if the state was closed before a buffer could be registered.
-    bool Connect(std::shared_ptr<WriterState> next)
-    {
-        std::shared_ptr<WriterState::ThreadBuffer> nextBuffer;
-        if (next->IsBuffered())
-        {
-            nextBuffer = next->RegisterBuffer();
-            if (!nextBuffer)
+            if (!writer.IsBuffered())
             {
-                return false;
+                writer.WriteLine(line, scratch);
+                return;
+            }
+            buffer = writer.RegisterBuffer();
+            if (!buffer)
+            {
+                return;  // the writer has shut down
             }
         }
-        state = std::move(next);
-        buffer = std::move(nextBuffer);
-        return true;
+        writer.Append(*buffer, line);
     }
 
-    void Disconnect() noexcept
-    {
-        buffer.reset();
-        state.reset();
-    }
-
-    WriteResult Send(std::string_view line)
-    {
-        return buffer ? state->Append(*buffer, line) : state->WriteLine(line, scratch);
-    }
-
-    std::shared_ptr<WriterState> state;
-    // Null when unbuffered.
-    std::shared_ptr<WriterState::ThreadBuffer> buffer;
+    // Null until the first buffered write, and always null when unbuffered.
+    std::shared_ptr<ThreadBuffer> buffer;
     // Reused by unbuffered sends.
     std::string scratch;
 };
@@ -176,7 +174,7 @@ struct Writer::ExitGuard
     ~ExitGuard() { Writer::ShutdownAtExit(); }
 };
 
-// ---- Instance ----
+// ---- Configuration ----
 
 Writer& Writer::GetInstance()
 {
@@ -191,14 +189,17 @@ Writer& Writer::GetInstance()
     return *instance;
 }
 
-// ---- Configuration ----
-
 void Writer::Initialize(WriterType type, const std::string& param, int port, const BufferConfig& buffer)
 {
+    Writer& writer = GetInstance();
+    if (!writer.CanInitialize())
+    {
+        Logger::warn("Writer is already initialized or has shut down; ignoring the new configuration");
+        return;
+    }
     try
     {
-        auto transport = MakeTransport(type, param, port);
-        GetInstance().Replace(std::make_shared<WriterState>(std::move(transport), EffectiveBufferConfig(type, buffer)));
+        writer.Configure(MakeTransport(type, param, port), EffectiveBufferConfig(type, buffer));
     }
     catch (const std::exception& e)
     {
@@ -207,46 +208,326 @@ void Writer::Initialize(WriterType type, const std::string& param, int port, con
     }
 }
 
-void Writer::InitializeWithTransport(std::unique_ptr<BaseWriter> transport, const BufferConfig& buffer)
+bool Writer::CanInitialize() const noexcept
 {
-    GetInstance().Replace(std::make_shared<WriterState>(std::move(transport), buffer));
+    // After the exit flush nothing would send a new buffer, so a Registry created that late is ignored too.
+    return !m_configured.load(std::memory_order_acquire) && !m_exited.load(std::memory_order_relaxed);
 }
 
-void Writer::Shutdown() { GetInstance().Replace(nullptr); }
-
-void Writer::ShutdownAtExit()
+void Writer::Configure(std::unique_ptr<BaseWriter> transport, const BufferConfig& config)
 {
-    Writer& writer = GetInstance();
-    writer.m_exited.store(true, std::memory_order_relaxed);
-    writer.Replace(nullptr);
-}
+    m_transport = std::move(transport);
+    m_capacity = ChooseCapacity(config.size, m_transport->MaxPayloadSize());
+    m_dropOnFull = config.dropOnFull;
+    m_flushInterval = std::clamp(config.flushInterval, std::chrono::milliseconds(1), kMaxFlushInterval);
 
-void Writer::Replace(std::shared_ptr<WriterState> next)
-{
-    std::lock_guard<std::mutex> lock(m_mutex);
-    if (next && m_exited.load(std::memory_order_relaxed))
+    if (IsBuffered())
     {
-        // The exit flush already ran, so nothing would send this state's buffers.
-        next->Close();
-        return;
+        Logger::info("Writer buffering enabled: {} bytes per thread, flush interval {} ms, drop on full: {}", m_capacity,
+                     m_flushInterval.count(), m_dropOnFull);
+        try
+        {
+            m_drainThread = std::thread(&Writer::DrainLoop, this);
+        }
+        catch (...)
+        {
+            m_capacity = 0;
+            m_transport.reset();
+            throw;
+        }
     }
-    // Stop and join the old drain thread and send its buffers before the new state takes over. Threads still
-    // connected to the old state find it closed on their next write and reconnect to the current one.
-    if (m_state)
-    {
-        m_state->Close();
-    }
-    m_state = std::move(next);
+    m_configured.store(true, std::memory_order_release);
 }
 
 // ---- Writing ----
 
 void Writer::Write(std::string_view line) { ThreadHandle::Write(GetInstance(), line); }
 
-std::shared_ptr<WriterState> Writer::SnapshotState()
+void Writer::WriteLine(std::string_view line, std::string& scratch)
 {
-    std::lock_guard<std::mutex> lock(m_mutex);
-    return m_state;
+    scratch.assign(line);
+    scratch.push_back('\n');
+    SendPayload(scratch);
+}
+
+void Writer::SendDirect(std::string_view line)
+{
+    if (!m_configured.load(std::memory_order_acquire))
+    {
+        return;
+    }
+    std::string payload;
+    WriteLine(line, payload);
+}
+
+std::shared_ptr<ThreadBuffer> Writer::RegisterBuffer()
+{
+    if (!IsBuffered())
+    {
+        return nullptr;
+    }
+    auto buffer = std::make_shared<ThreadBuffer>();
+    std::lock_guard<std::mutex> lock(m_rosterMutex);
+    if (m_rosterClosed)
+    {
+        return nullptr;
+    }
+    m_roster.push_back(buffer);
+    return buffer;
+}
+
+void Writer::Append(ThreadBuffer& buffer, std::string_view line)
+{
+    const std::size_t bytesNeeded = line.size() + 1;  // the line and its newline
+
+    std::unique_lock<std::mutex> data(buffer.dataMutex);
+    if (buffer.closed.load(std::memory_order_relaxed))
+    {
+        return;
+    }
+
+    if (buffer.pending.size() + bytesNeeded <= m_capacity)
+    {
+        AddToPending(buffer, line);
+    }
+    else if (bytesNeeded > m_capacity)
+    {
+        SendOversizedLine(buffer, line);
+    }
+    else if (m_dropOnFull)
+    {
+        data.unlock();
+        RecordDroppedLine();
+    }
+    else
+    {
+        SendPendingThenAdd(buffer, line);
+    }
+}
+
+void Writer::AddToPending(ThreadBuffer& buffer, std::string_view line)
+{
+    buffer.pending.append(line);
+    buffer.pending.push_back('\n');
+}
+
+void Writer::SendOversizedLine(ThreadBuffer& buffer, std::string_view line)
+{
+    std::lock_guard<std::mutex> send(buffer.sendMutex);
+    SendAndClearPending(buffer);
+
+    std::string payload;
+    payload.reserve(line.size() + 1);
+    payload.append(line);
+    payload.push_back('\n');
+    SendPayload(payload);
+}
+
+void Writer::SendPendingThenAdd(ThreadBuffer& buffer, std::string_view line)
+{
+    std::lock_guard<std::mutex> send(buffer.sendMutex);
+    SendAndClearPending(buffer);
+    AddToPending(buffer, line);
+}
+
+void Writer::SendAndClearPending(ThreadBuffer& buffer)
+{
+    if (!buffer.pending.empty())
+    {
+        SendPayload(buffer.pending);
+        buffer.pending.clear();
+    }
+}
+
+// ---- Draining ----
+
+void Writer::RunDrainPass()
+{
+    std::lock_guard<std::mutex> pass(m_passMutex);
+    {
+        std::lock_guard<std::mutex> lock(m_rosterMutex);
+        m_snapshot.assign(m_roster.begin(), m_roster.end());
+    }
+    for (const auto& buffer : m_snapshot)
+    {
+        DrainBuffer(*buffer, m_scratch);
+    }
+    m_snapshot.clear();
+
+    std::lock_guard<std::mutex> lock(m_rosterMutex);
+    std::erase_if(m_roster, [](const std::shared_ptr<ThreadBuffer>& buffer)
+                  { return buffer->closed.load(std::memory_order_acquire); });
+}
+
+void Writer::DrainBuffer(ThreadBuffer& buffer, std::string& scratch)
+{
+    std::unique_lock<std::mutex> data(buffer.dataMutex);
+    if (buffer.closed.load(std::memory_order_relaxed) || buffer.pending.empty())
+    {
+        return;
+    }
+    scratch.assign(buffer.pending);
+    buffer.pending.clear();
+
+    // Take sendMutex before releasing dataMutex, so a later flush by the owning thread can't overtake this content.
+    std::lock_guard<std::mutex> send(buffer.sendMutex);
+    data.unlock();
+    SendPayload(scratch);
+}
+
+void Writer::RecordDroppedLine()
+{
+    m_dropped.fetch_add(1, std::memory_order_relaxed);
+    if (m_earlyDrainRequested.exchange(true, std::memory_order_acq_rel))
+    {
+        return;
+    }
+    // Taking the mutex orders this request against the drain thread's predicate check, so a drain thread that has
+    // just checked and is about to wait still sees the notification.
+    {
+        std::lock_guard<std::mutex> lock(m_drainMutex);
+    }
+    m_drainCv.notify_one();
+}
+
+void Writer::DrainLoop()
+{
+    std::uint64_t reportedDrops = 0;
+    auto lastWarning = std::chrono::steady_clock::now();
+
+    std::unique_lock<std::mutex> lock(m_drainMutex);
+    while (!m_stop)
+    {
+        const auto deadline = std::chrono::steady_clock::now() + m_flushInterval;
+        m_drainCv.wait_until(lock, deadline,
+                             [this] { return m_stop || m_earlyDrainRequested.load(std::memory_order_acquire); });
+        if (m_stop)
+        {
+            break;
+        }
+        // Cleared before the pass, so a drop during the pass asks for another one.
+        m_earlyDrainRequested.store(false, std::memory_order_release);
+
+        lock.unlock();
+        RunDrainPass();
+        WarnAboutDrops(reportedDrops, lastWarning);
+        lock.lock();
+    }
+}
+
+void Writer::WarnAboutDrops(std::uint64_t& reported, std::chrono::steady_clock::time_point& lastWarning)
+{
+    // At most one warning per flush interval, so early drains under sustained overload don't flood the log.
+    const auto now = std::chrono::steady_clock::now();
+    const auto dropped = DroppedLines();
+    if (dropped == reported || now - lastWarning < m_flushInterval)
+    {
+        return;
+    }
+    Logger::warn("Writer dropped {} lines because a thread's buffer was full", dropped - reported);
+    reported = dropped;
+    lastWarning = now;
+}
+
+// ---- Thread exit ----
+
+void Writer::RetireBuffer(ThreadBuffer& buffer)
+{
+    std::lock_guard<std::mutex> data(buffer.dataMutex);
+    if (buffer.closed.load(std::memory_order_relaxed))
+    {
+        return;
+    }
+    {
+        std::lock_guard<std::mutex> send(buffer.sendMutex);
+        SendAndClearPending(buffer);
+    }
+    std::string().swap(buffer.pending);
+    buffer.closed.store(true, std::memory_order_release);
+}
+
+// ---- Shutdown ----
+
+Writer::~Writer() { Shutdown(); }
+
+void Writer::Shutdown()
+{
+    std::lock_guard<std::mutex> shutdown(m_shutdownMutex);
+
+    // 1. Stop and join the drain thread.
+    {
+        std::lock_guard<std::mutex> lock(m_drainMutex);
+        m_stop = true;
+    }
+    m_drainCv.notify_all();
+    if (m_drainThread.joinable())
+    {
+        m_drainThread.join();
+    }
+
+    // 2. Send and close every buffer. Registration stops first, so no new buffer can appear.
+    std::lock_guard<std::mutex> pass(m_passMutex);
+    std::vector<std::shared_ptr<ThreadBuffer>> buffers;
+    {
+        std::lock_guard<std::mutex> lock(m_rosterMutex);
+        m_rosterClosed = true;
+        buffers.swap(m_roster);
+    }
+    for (const auto& buffer : buffers)
+    {
+        RetireBuffer(*buffer);
+    }
+
+    // 3. Close the transport. Every buffer is closed, so nothing can send to it anymore.
+    CloseTransport();
+}
+
+void Writer::ShutdownAtExit()
+{
+    Writer& writer = GetInstance();
+    writer.m_exited.store(true, std::memory_order_relaxed);
+    writer.Shutdown();
+}
+
+// ---- Transport ----
+
+void Writer::SendPayload(std::string_view payload)
+{
+    std::lock_guard<std::mutex> lock(m_transportMutex);
+    if (m_transportClosed)
+    {
+        return;
+    }
+    try
+    {
+        m_transport->Write(payload);
+    }
+    catch (const std::exception& e)
+    {
+        Logger::error("Writer: failed to send {} bytes: {}", payload.size(), e.what());
+    }
+}
+
+void Writer::CloseTransport()
+{
+    std::lock_guard<std::mutex> lock(m_transportMutex);
+    if (m_transportClosed)
+    {
+        return;
+    }
+    m_transportClosed = true;
+    if (!m_transport)
+    {
+        return;
+    }
+    try
+    {
+        m_transport->Close();
+    }
+    catch (const std::exception& e)
+    {
+        Logger::error("Failed to close writer: {}", e.what());
+    }
 }
 
 void Writer::WarnNotInitialized()
@@ -260,30 +541,33 @@ void Writer::WarnNotInitialized()
 
 // ---- Test hooks ----
 
-BaseWriter* Writer::GetImpl()
+void Writer::InitializeWithTransport(std::unique_ptr<BaseWriter> transport, const BufferConfig& buffer)
 {
-    auto state = GetInstance().SnapshotState();
-    return state ? state->Transport() : nullptr;
+    GetInstance().Configure(std::move(transport), buffer);
 }
 
-void Writer::Flush()
+BaseWriter* Writer::GetImpl() { return GetInstance().m_transport.get(); }
+
+void Writer::Flush() { GetInstance().RunDrainPass(); }
+
+std::uint64_t Writer::DroppedCount() { return GetInstance().DroppedLines(); }
+
+std::size_t Writer::RegisteredBufferCount() { return GetInstance().BufferCount(); }
+
+std::size_t Writer::BufferCount() const
 {
-    if (auto state = GetInstance().SnapshotState())
-    {
-        state->RunDrainPass();
-    }
+    std::lock_guard<std::mutex> lock(m_rosterMutex);
+    return m_roster.size();
 }
 
-std::uint64_t Writer::DroppedCount()
+void Writer::ResetForTesting()
 {
-    auto state = GetInstance().SnapshotState();
-    return state ? state->DroppedCount() : 0;
-}
-
-std::size_t Writer::RegisteredBufferCount()
-{
-    auto state = GetInstance().SnapshotState();
-    return state ? state->BufferCount() : 0;
+    Writer& writer = GetInstance();
+    ThreadHandle::DisconnectCurrentThread();
+    // Destroying the writer runs the shutdown sequence. The new one reuses its storage, so the pointer that
+    // GetInstance returns stays valid.
+    writer.~Writer();
+    new (&writer) Writer();
 }
 
 }  // namespace spectator

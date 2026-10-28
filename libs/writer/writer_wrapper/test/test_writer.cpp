@@ -1,5 +1,4 @@
 #include <counter.h>
-#include <gauge.h>
 #include <meter_id.h>
 #include <writer_test_helper.h>
 
@@ -17,9 +16,7 @@
 #include <chrono>
 #include <cstdlib>
 #include <filesystem>
-#include <map>
 #include <regex>
-#include <set>
 #include <sstream>
 #include <string>
 #include <thread>
@@ -356,78 +353,6 @@ TEST_F(WriterUdpTest, BufferedLinesFromManyThreadsArrive)
     {
         EXPECT_LE(datagram.size(), 1024u);
     }
-}
-
-TEST(WriterReconfigureTest, ReinitializingUnderLoadLosesNothingAndKeepsEachThreadsOrder)
-{
-    auto recording = std::make_shared<Recording>();
-    const BufferConfig buffered{.size = 256, .flushInterval = std::chrono::milliseconds(1)};
-    WriterTestHelper::InitializeWithTransport(std::make_unique<RecordingWriter>(recording, 0), buffered);
-
-    constexpr int kThreads = 4;
-    constexpr int kSetsPerThread = 20000;
-    std::atomic<bool> start{false};
-    std::atomic<int> finished{0};
-    std::vector<std::thread> threads;
-    for (int t = 0; t < kThreads; ++t)
-    {
-        threads.emplace_back(
-            [t, &start, &finished]
-            {
-                while (!start.load())
-                {
-                    std::this_thread::yield();
-                }
-                Gauge gauge(MeterId(fmt::format("reinit.t{}", t)));
-                for (int i = 0; i < kSetsPerThread; ++i)
-                {
-                    gauge.Set(i);
-                }
-                ++finished;
-            });
-    }
-
-    // Switch between buffered and unbuffered configurations, each with its own transport, while the threads write.
-    start = true;
-    int generation = 1;
-    for (; generation <= 10 || finished.load() < kThreads; ++generation)
-    {
-        WriterTestHelper::InitializeWithTransport(std::make_unique<RecordingWriter>(recording, generation),
-                                                  generation % 2 == 0 ? buffered : BufferConfig{});
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }
-    for (auto& thread : threads)
-    {
-        thread.join();
-    }
-    WriterTestHelper::Shutdown();
-
-    // In arrival order, each gauge's values must count up from 0 with none missing or repeated, and once a thread's
-    // line reaches a newer transport, none of its later lines may reach an older one.
-    std::map<std::string, int> nextValue;
-    std::map<std::string, int> lastTransport;
-    std::set<int> transportsUsed;
-    for (const auto& datagram : recording->Datagrams())
-    {
-        transportsUsed.insert(datagram.transport);
-        for (const auto& line : SplitLines({datagram.payload}))
-        {
-            const auto first = line.find(':');
-            const auto last = line.rfind(':');
-            ASSERT_NE(first, last) << line;
-            const auto name = line.substr(first + 1, last - first - 1);
-            const auto value = static_cast<int>(std::stod(line.substr(last + 1)));
-            ASSERT_EQ(value, nextValue[name]) << name << " lost or reordered a line";
-            ++nextValue[name];
-            ASSERT_GE(datagram.transport, lastTransport[name]) << name << " went back to an older configuration";
-            lastTransport[name] = datagram.transport;
-        }
-    }
-    for (int t = 0; t < kThreads; ++t)
-    {
-        EXPECT_EQ(nextValue[fmt::format("reinit.t{}", t)], kSetsPerThread);
-    }
-    EXPECT_GT(transportsUsed.size(), 2u) << "the test should exercise several configurations";
 }
 
 TEST(WriterBufferingTest, CapacityIsClampedToTheTransportLimit)

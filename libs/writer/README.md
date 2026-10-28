@@ -67,19 +67,21 @@ This component handles configuration of writers:
 
 ### Writer Wrapper (`writer_wrapper`)
 
-The process-wide `Writer` singleton that every meter writes through. It is built from three parts:
+The process-wide `Writer` that every meter writes through. It is configured once, then owns everything:
 
-- **`Sink`** wraps one transport, a single socket. A mutex serializes every send, so the writing threads and the
-  drain thread share one socket.
-- **`ThreadBuffer`** is one thread's accumulation buffer of newline-terminated lines. It never holds more than the
-  transport's largest payload, so a full buffer is always sent with a single write.
-- **`ThreadRegistry`** is the roster of every thread's buffer, plus the drain thread that empties them. It runs a pass
-  every flush interval, or sooner after a drop. Each pass sends each buffer's lines, then forgets the buffers of
-  threads that have exited.
+- **The transport**, a single socket. A mutex serializes every send, so the writing threads and the drain thread share
+  it.
+- **A registry of buffers**, one `ThreadBuffer` per writing thread. A buffer holds newline-terminated lines and never
+  more than the transport's largest payload, so a full buffer is always sent with a single write.
+- **The drain thread**, which sends every buffer every flush interval, or sooner after a drop, and forgets the buffers
+  of threads that have exited.
+
+Each writing thread keeps a reference to its own buffer, plus a small guard that flushes the buffer when the thread
+exits.
 
 The buffer size selects one of two modes:
 
-- **Unbuffered** (size 0, and always for `memory` and `none`): every line goes straight to the sink.
+- **Unbuffered** (size 0, and always for `memory` and `none`): every line goes straight to the transport.
 - **Buffered** (size above 0, for `udp` and `unix`):
   - A thread registers a buffer on its first write. After that, appending takes one uncontended lock.
   - When a buffer is full, the default is that the writing thread sends it and carries on, so nothing is lost.
@@ -92,10 +94,11 @@ Behavior:
 - **Ordering:** a thread's lines arrive in the order it wrote them. Lines from different threads can arrive up to one
   flush interval out of order.
 - **Thread exit:** a thread's buffer is sent when the thread exits, and the drain thread forgets it on its next pass.
-- **Reconfiguration:** each `Initialize` stops and joins the old drain thread, sends every buffer, and closes the old
-  sink, then installs the new configuration. Threads move to the new configuration on their next write.
+- **Initialization:** the writer is configured once per process, by one thread. Creating another `Registry` logs a
+  warning and its writer settings are ignored. Each `Registry` still keeps its own extra tags.
 - **Process exit:** pending lines are sent when the process exits normally. The `Writer` itself is never destroyed, so
-  a thread still writing during exit can't touch a destroyed object; its later lines are dropped.
+  a thread still writing during exit can't touch a destroyed object; its later lines are dropped. A `thread_local`
+  destructor that writes after its thread's guard has run sends the line on its own.
 - **Fork:** forking after the writer has started its drain thread is not supported.
 
 A new transport, such as shared memory, only needs to implement `BaseWriter`. It can report `MaxPayloadSize()` if it
@@ -107,7 +110,7 @@ These components work together to provide a flexible metric output system:
 
 1. `writer_types` defines the available writer types, their default locations and the transports
 2. `writer_config` handles parsing and validating configuration values
-3. `writer_wrapper` instantiates the transport and buffers, drains and sends every meter's lines
+3. `writer_wrapper` owns the transport and the per-thread buffers, and drains and sends every meter's lines
 
 ## Best Practices
 

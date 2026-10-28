@@ -1,4 +1,4 @@
-#include "writer_state.h"
+#include <writer_test_helper.h>
 
 #include <recording_writer.h>
 #include <wait_for.h>
@@ -15,22 +15,44 @@
 
 using namespace spectator;
 using namespace std::chrono_literals;
-using spectator::detail::WriteResult;
-using spectator::detail::WriterState;
+using spectator::detail::ThreadBuffer;
 using spectator::test::Recording;
 using spectator::test::RecordingWriter;
 using spectator::test::WaitFor;
 using Payloads = std::vector<std::string>;
 
-class WriterStateTest : public testing::Test
+// A standalone Writer over a transport, with the buffer operations under short names.
+class TestWriter
+{
+   public:
+    TestWriter(std::unique_ptr<BaseWriter> transport, const BufferConfig& config)
+        : m_writer(WriterTestHelper::MakeWriter(std::move(transport), config))
+    {
+    }
+
+    bool IsBuffered() const { return WriterTestHelper::IsBuffered(*m_writer); }
+    std::shared_ptr<ThreadBuffer> RegisterBuffer() { return WriterTestHelper::RegisterBuffer(*m_writer); }
+    void Append(ThreadBuffer& buffer, std::string_view line) { WriterTestHelper::Append(*m_writer, buffer, line); }
+    void RetireBuffer(ThreadBuffer& buffer) { WriterTestHelper::RetireBuffer(*m_writer, buffer); }
+    void WriteLine(std::string_view line, std::string& scratch) { WriterTestHelper::WriteLine(*m_writer, line, scratch); }
+    void RunDrainPass() { WriterTestHelper::RunDrainPass(*m_writer); }
+    void Shutdown() { WriterTestHelper::Shutdown(*m_writer); }
+    std::uint64_t DroppedCount() const { return WriterTestHelper::DroppedCount(*m_writer); }
+    std::size_t BufferCount() const { return WriterTestHelper::BufferCount(*m_writer); }
+
+   private:
+    std::unique_ptr<Writer> m_writer;
+};
+
+class WriterBuffersTest : public testing::Test
 {
    protected:
-    // A state over a recording transport. The default flush interval is long, so only the tests that want the drain
+    // A writer over a recording transport. The default flush interval is long, so only the tests that want the drain
     // thread to run set a short one.
-    std::unique_ptr<WriterState> MakeState(unsigned int size, bool dropOnFull = false,
+    std::unique_ptr<TestWriter> MakeState(unsigned int size, bool dropOnFull = false,
                                            std::chrono::milliseconds flushInterval = 1h)
     {
-        return std::make_unique<WriterState>(std::make_unique<RecordingWriter>(recording),
+        return std::make_unique<TestWriter>(std::make_unique<RecordingWriter>(recording),
                                              BufferConfig{.size = size, .flushInterval = flushInterval,
                                                           .dropOnFull = dropOnFull});
     }
@@ -40,37 +62,37 @@ class WriterStateTest : public testing::Test
 
 // ---- Unbuffered ----
 
-TEST_F(WriterStateTest, UnbufferedSendsEachLineAsItsOwnDatagram)
+TEST_F(WriterBuffersTest, UnbufferedSendsEachLineAsItsOwnDatagram)
 {
     auto state = MakeState(0);
     EXPECT_FALSE(state->IsBuffered());
     EXPECT_EQ(state->RegisterBuffer(), nullptr);
 
     std::string scratch;
-    EXPECT_EQ(state->WriteLine("c:a:1", scratch), WriteResult::Consumed);
-    EXPECT_EQ(state->WriteLine("c:b:2", scratch), WriteResult::Consumed);
+    state->WriteLine("c:a:1", scratch);
+    state->WriteLine("c:b:2", scratch);
     EXPECT_EQ(recording->Payloads(), (Payloads{"c:a:1\n", "c:b:2\n"}));
 }
 
-TEST_F(WriterStateTest, UnbufferedWriteAfterCloseIsClosed)
+TEST_F(WriterBuffersTest, UnbufferedWriteAfterCloseIsDropped)
 {
     auto state = MakeState(0);
-    state->Close();
+    state->Shutdown();
 
     std::string scratch;
-    EXPECT_EQ(state->WriteLine("c:a:1", scratch), WriteResult::Closed);
+    state->WriteLine("c:a:1", scratch);
     EXPECT_EQ(recording->Count(), 0u);
 }
 
 // ---- Buffer behavior ----
 
-TEST_F(WriterStateTest, HoldsLinesUntilDrained)
+TEST_F(WriterBuffersTest, HoldsLinesUntilDrained)
 {
     auto state = MakeState(64);
     auto buffer = state->RegisterBuffer();
     ASSERT_NE(buffer, nullptr);
-    EXPECT_EQ(state->Append(*buffer, "c:a:1"), WriteResult::Consumed);
-    EXPECT_EQ(state->Append(*buffer, "c:b:2"), WriteResult::Consumed);
+    state->Append(*buffer, "c:a:1");
+    state->Append(*buffer, "c:b:2");
     EXPECT_EQ(recording->Count(), 0u);
 
     state->RunDrainPass();
@@ -81,7 +103,7 @@ TEST_F(WriterStateTest, HoldsLinesUntilDrained)
     EXPECT_EQ(recording->Count(), 1u);
 }
 
-TEST_F(WriterStateTest, ExactFitStaysBufferedAndOneMoreByteFlushes)
+TEST_F(WriterBuffersTest, ExactFitStaysBufferedAndOneMoreByteFlushes)
 {
     auto state = MakeState(8);
     auto buffer = state->RegisterBuffer();
@@ -96,17 +118,17 @@ TEST_F(WriterStateTest, ExactFitStaysBufferedAndOneMoreByteFlushes)
     EXPECT_EQ(datagrams[0].payload, "abc\ndef\n");
     EXPECT_EQ(datagrams[0].sender, std::this_thread::get_id());
 
-    state->CloseBuffer(*buffer);
+    state->RetireBuffer(*buffer);
     EXPECT_EQ(recording->Payloads(), (Payloads{"abc\ndef\n", "g\n"}));
 }
 
-TEST_F(WriterStateTest, DropOnFullDropsTheLineAndWakesTheDrainThread)
+TEST_F(WriterBuffersTest, DropOnFullDropsTheLineAndWakesTheDrainThread)
 {
     auto state = MakeState(16, /*dropOnFull=*/true);  // a one-hour interval, so only the early wake can drain
     auto buffer = state->RegisterBuffer();
     state->Append(*buffer, "0123456");
     state->Append(*buffer, "0123456");
-    EXPECT_EQ(state->Append(*buffer, "x"), WriteResult::Consumed) << "a dropped line is consumed, not retried";
+    state->Append(*buffer, "x");
     EXPECT_EQ(state->DroppedCount(), 1u);
 
     ASSERT_TRUE(WaitFor([&] { return recording->Count() == 1; }, 2s));
@@ -115,23 +137,23 @@ TEST_F(WriterStateTest, DropOnFullDropsTheLineAndWakesTheDrainThread)
     EXPECT_NE(datagrams[0].sender, std::this_thread::get_id()) << "in drop mode the writing thread never sends";
 
     // The buffer has room again.
-    EXPECT_EQ(state->Append(*buffer, "y"), WriteResult::Consumed);
+    state->Append(*buffer, "y");
     EXPECT_EQ(state->DroppedCount(), 1u);
 }
 
-TEST_F(WriterStateTest, OversizedLineIsSentAloneAfterPendingLinesInBothModes)
+TEST_F(WriterBuffersTest, OversizedLineIsSentAloneAfterPendingLinesInBothModes)
 {
     for (const bool dropOnFull : {false, true})
     {
         SCOPED_TRACE(dropOnFull ? "drop on full" : "flush on full");
         auto testRecording = std::make_shared<Recording>();
-        WriterState state(std::make_unique<RecordingWriter>(testRecording),
+        TestWriter state(std::make_unique<RecordingWriter>(testRecording),
                           BufferConfig{.size = 8, .flushInterval = 1h, .dropOnFull = dropOnFull});
         auto buffer = state.RegisterBuffer();
 
         state.Append(*buffer, "ab");
         const std::string oversized(20, 'x');
-        EXPECT_EQ(state.Append(*buffer, oversized), WriteResult::Consumed);
+        state.Append(*buffer, oversized);
         EXPECT_EQ(testRecording->Payloads(), (Payloads{"ab\n", oversized + "\n"}));
         EXPECT_EQ(state.DroppedCount(), 0u) << "an oversized line is never dropped";
 
@@ -141,31 +163,31 @@ TEST_F(WriterStateTest, OversizedLineIsSentAloneAfterPendingLinesInBothModes)
     }
 }
 
-TEST_F(WriterStateTest, CloseBufferSendsPendingLinesAndLaterAppendsAreClosed)
+TEST_F(WriterBuffersTest, RetireBufferSendsPendingLinesAndLaterAppendsAreDropped)
 {
     auto state = MakeState(64);
     auto buffer = state->RegisterBuffer();
     state->Append(*buffer, "c:a:1");
 
-    state->CloseBuffer(*buffer);
+    state->RetireBuffer(*buffer);
     EXPECT_EQ(recording->Payloads(), (Payloads{"c:a:1\n"}));
-    EXPECT_EQ(state->Append(*buffer, "c:b:1"), WriteResult::Closed);
+    state->Append(*buffer, "c:b:1");
 
-    // Closing again and draining a closed buffer send nothing.
-    state->CloseBuffer(*buffer);
+    // Appending to, closing again and draining a closed buffer send nothing.
+    state->RetireBuffer(*buffer);
     state->RunDrainPass();
     EXPECT_EQ(recording->Count(), 1u);
 }
 
-TEST_F(WriterStateTest, CloseBufferWithNothingPendingSendsNothing)
+TEST_F(WriterBuffersTest, RetireBufferWithNothingPendingSendsNothing)
 {
     auto state = MakeState(64);
     auto buffer = state->RegisterBuffer();
-    state->CloseBuffer(*buffer);
+    state->RetireBuffer(*buffer);
     EXPECT_EQ(recording->Count(), 0u);
 }
 
-TEST_F(WriterStateTest, LinesStayInOrderWhileTheDrainRacesTheWriter)
+TEST_F(WriterBuffersTest, LinesStayInOrderWhileTheDrainRacesTheWriter)
 {
     // A small capacity makes the writing thread flush often, while another thread drains in a tight loop. Every line
     // must still arrive exactly once and in the order it was written.
@@ -185,11 +207,11 @@ TEST_F(WriterStateTest, LinesStayInOrderWhileTheDrainRacesTheWriter)
         });
     for (int i = 0; i < kLines; ++i)
     {
-        ASSERT_EQ(state->Append(*buffer, std::to_string(i)), WriteResult::Consumed);
+        state->Append(*buffer, std::to_string(i));
     }
     stop = true;
     drainer.join();
-    state->CloseBuffer(*buffer);
+    state->RetireBuffer(*buffer);
 
     const auto lines = recording->Lines();
     ASSERT_EQ(lines.size(), static_cast<std::size_t>(kLines));
@@ -203,16 +225,16 @@ TEST_F(WriterStateTest, LinesStayInOrderWhileTheDrainRacesTheWriter)
     }
 }
 
-TEST_F(WriterStateTest, BufferSizeIsClampedToTheTransportLimit)
+TEST_F(WriterBuffersTest, BufferSizeIsClampedToTheTransportLimit)
 {
-    WriterState state(std::make_unique<RecordingWriter>(recording, 0, 100),
+    TestWriter state(std::make_unique<RecordingWriter>(recording, 0, 100),
                       BufferConfig{.size = 1000, .flushInterval = 1h});
     auto buffer = state.RegisterBuffer();
     for (int i = 0; i < 50; ++i)
     {
         state.Append(*buffer, "c:clamp:1.000000");
     }
-    state.Close();
+    state.Shutdown();
 
     EXPECT_EQ(recording->Lines().size(), 50u);
     EXPECT_GT(recording->Count(), 1u);
@@ -224,11 +246,11 @@ TEST_F(WriterStateTest, BufferSizeIsClampedToTheTransportLimit)
 
 // ---- Drain thread and roster ----
 
-TEST_F(WriterStateTest, IntervalDrainSendsPartialBuffers)
+TEST_F(WriterBuffersTest, IntervalDrainSendsPartialBuffers)
 {
     auto state = MakeState(1024, false, 50ms);
     auto buffer = state->RegisterBuffer();
-    ASSERT_EQ(state->Append(*buffer, "c:a:1"), WriteResult::Consumed);
+    state->Append(*buffer, "c:a:1");
 
     ASSERT_TRUE(WaitFor([&] { return recording->Count() == 1; }));
     const auto datagrams = recording->Datagrams();
@@ -236,16 +258,16 @@ TEST_F(WriterStateTest, IntervalDrainSendsPartialBuffers)
     EXPECT_NE(datagrams[0].sender, std::this_thread::get_id()) << "the drain thread sends partial buffers";
 }
 
-TEST_F(WriterStateTest, BuffersOfExitedThreadsAreSentAtOnceAndReaped)
+TEST_F(WriterBuffersTest, BuffersOfExitedThreadsAreSentAtOnceAndReaped)
 {
     auto state = MakeState(1024, false, 20ms);
     std::thread worker(
         [&]
         {
             auto buffer = state->RegisterBuffer();
-            ASSERT_EQ(state->Append(*buffer, "c:from.worker:1"), WriteResult::Consumed);
+            state->Append(*buffer, "c:from.worker:1");
             // What a thread's handle does when the thread exits.
-            state->CloseBuffer(*buffer);
+            state->RetireBuffer(*buffer);
             EXPECT_EQ(recording->Payloads(), (Payloads{"c:from.worker:1\n"})) << "sent at exit, not at the next pass";
         });
     worker.join();
@@ -254,14 +276,14 @@ TEST_F(WriterStateTest, BuffersOfExitedThreadsAreSentAtOnceAndReaped)
     EXPECT_EQ(recording->Count(), 1u);
 }
 
-TEST_F(WriterStateTest, RunDrainPassSendsAndReaps)
+TEST_F(WriterBuffersTest, RunDrainPassSendsAndReaps)
 {
     auto state = MakeState(1024);
     auto live = state->RegisterBuffer();
     auto exited = state->RegisterBuffer();
     state->Append(*live, "c:live:1");
     state->Append(*exited, "c:exited:1");
-    state->CloseBuffer(*exited);
+    state->RetireBuffer(*exited);
     EXPECT_EQ(state->BufferCount(), 2u);
 
     state->RunDrainPass();
@@ -271,7 +293,7 @@ TEST_F(WriterStateTest, RunDrainPassSendsAndReaps)
 
 // ---- Shutdown ----
 
-TEST_F(WriterStateTest, CloseSendsEverythingClosesEveryBufferAndTheTransport)
+TEST_F(WriterBuffersTest, ShutdownSendsEverythingClosesEveryBufferAndTheTransport)
 {
     auto state = MakeState(1024);
     auto a = state->RegisterBuffer();
@@ -280,22 +302,22 @@ TEST_F(WriterStateTest, CloseSendsEverythingClosesEveryBufferAndTheTransport)
     state->Append(*b, "c:b:1");
 
     const auto start = std::chrono::steady_clock::now();
-    state->Close();
-    EXPECT_LT(std::chrono::steady_clock::now() - start, 1s) << "Close must not wait for the interval";
+    state->Shutdown();
+    EXPECT_LT(std::chrono::steady_clock::now() - start, 1s) << "Shutdown must not wait for the interval";
 
     auto lines = recording->Lines();
     std::sort(lines.begin(), lines.end());
     EXPECT_EQ(lines, (std::vector<std::string>{"c:a:1", "c:b:1"}));
-    EXPECT_EQ(state->Append(*a, "c:a:2"), WriteResult::Closed);
+    state->Append(*a, "c:a:2");
     EXPECT_EQ(state->RegisterBuffer(), nullptr);
     std::string scratch;
-    EXPECT_EQ(state->WriteLine("c:late:1", scratch), WriteResult::Closed);
+    state->WriteLine("c:late:1", scratch);
 
-    state->Close();
-    EXPECT_EQ(recording->Count(), 1u + 1u) << "a second Close sends nothing more";
+    state->Shutdown();
+    EXPECT_EQ(recording->Count(), 2u) << "a second Shutdown, and writes after Shutdown, send nothing more";
 }
 
-TEST_F(WriterStateTest, CloseRightAfterStartDoesNotWaitForTheInterval)
+TEST_F(WriterBuffersTest, ShutdownRightAfterStartDoesNotWaitForTheInterval)
 {
     // Closing while the drain thread is between checking for a stop and starting its wait is the lost-wakeup race.
     // Repeating it makes hitting that window likely; a lost wakeup would block for an hour.
@@ -303,12 +325,12 @@ TEST_F(WriterStateTest, CloseRightAfterStartDoesNotWaitForTheInterval)
     for (int i = 0; i < 200; ++i)
     {
         auto state = MakeState(64);
-        state->Close();
+        state->Shutdown();
     }
     EXPECT_LT(std::chrono::steady_clock::now() - start, 10s);
 }
 
-TEST_F(WriterStateTest, ManyThreadsKeepTheirOrderAndLoseNothing)
+TEST_F(WriterBuffersTest, ManyThreadsKeepTheirOrderAndLoseNothing)
 {
     constexpr unsigned int kCapacity = 256;
     constexpr int kThreads = 8;
@@ -324,17 +346,16 @@ TEST_F(WriterStateTest, ManyThreadsKeepTheirOrderAndLoseNothing)
                 auto buffer = state->RegisterBuffer();
                 for (int i = 0; i < kLinesPerThread; ++i)
                 {
-                    ASSERT_EQ(state->Append(*buffer, "t" + std::to_string(t) + ":" + std::to_string(i)),
-                              WriteResult::Consumed);
+                    state->Append(*buffer, "t" + std::to_string(t) + ":" + std::to_string(i));
                 }
-                state->CloseBuffer(*buffer);
+                state->RetireBuffer(*buffer);
             });
     }
     for (auto& thread : threads)
     {
         thread.join();
     }
-    state->Close();
+    state->Shutdown();
 
     std::map<int, int> nextSequence;
     std::size_t total = 0;
@@ -355,7 +376,7 @@ TEST_F(WriterStateTest, ManyThreadsKeepTheirOrderAndLoseNothing)
     }
 }
 
-TEST_F(WriterStateTest, DropModeWritersNeverWaitForAStalledTransport)
+TEST_F(WriterBuffersTest, DropModeWritersNeverWaitForAStalledTransport)
 {
     auto state = MakeState(64, /*dropOnFull=*/true, 1ms);
     auto buffer = state->RegisterBuffer();
@@ -367,7 +388,7 @@ TEST_F(WriterStateTest, DropModeWritersNeverWaitForAStalledTransport)
         Recording& recording;
         ~Unblock() { recording.Unblock(); }
     } unblockOnExit{*recording};
-    ASSERT_EQ(state->Append(*buffer, "c:first:1"), WriteResult::Consumed);
+    state->Append(*buffer, "c:first:1");
     ASSERT_TRUE(WaitFor([&] { return recording->BlockedWriters() == 1; }));
 
     // The writer must finish every append while the drain thread is stuck: lines are buffered or dropped, never sent
@@ -387,5 +408,5 @@ TEST_F(WriterStateTest, DropModeWritersNeverWaitForAStalledTransport)
     recording->Unblock();
     writer.join();
     EXPECT_GT(state->DroppedCount(), 0u);
-    state->Close();
+    state->Shutdown();
 }
