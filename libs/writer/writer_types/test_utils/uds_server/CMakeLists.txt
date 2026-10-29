@@ -13,7 +13,7 @@ target_compile_definitions(uds_server_lib
 target_link_libraries(uds_server_lib
     PUBLIC
     Boost::boost
-    pthread
+    Threads::Threads
 )
 
 # UDS Server executable
@@ -28,4 +28,5 @@ target_include_directories(uds_server
 target_link_libraries(uds_server
     PUBLIC
     Boost::boost
+    Threads::Threads
 )
