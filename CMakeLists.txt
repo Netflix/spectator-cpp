@@ -12,6 +12,8 @@ add_compile_options(-pedantic -Werror -Wall -Wno-missing-braces -fno-omit-frame-
 find_package(spdlog REQUIRED)
 find_package(GTest REQUIRED)
 find_package(Boost REQUIRED)
+# Boost.Asio is header-only (Boost::boost), so nothing else pulls in the thread library for us.
+find_package(Threads REQUIRED)
 
 include(CTest)
 

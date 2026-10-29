@@ -13,7 +13,7 @@ target_compile_definitions(udp_server_lib
 target_link_libraries(udp_server_lib
     PUBLIC
     Boost::boost
-    pthread
+    Threads::Threads
 )
 
 # UDP Server executable
@@ -28,4 +28,5 @@ target_include_directories(udp_server
 target_link_libraries(udp_server
     PUBLIC
     Boost::boost
+    Threads::Threads
 )
