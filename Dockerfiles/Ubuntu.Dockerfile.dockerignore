@@ -1,2 +1,3 @@
-# Ignore copying the default build folder if it exists
-cmake-build/
+# Ignore copying the build folders and the host's virtual environment, which the image rebuilds for Linux
+cmake-build*/
+venv/
