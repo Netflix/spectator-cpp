@@ -50,12 +50,15 @@ if [[ ! -f "$HOME/.conan2/profiles/default" ]]; then
   conan profile detect
 fi
 
-## Modify the default profile to set the compiler version and C++ standard
+## Modify the default profile to set the C++ standard, and on Linux the compiler version. On macOS, `conan profile detect`
+## records the Apple clang version itself.
 DEFAULT_PROFILE="$HOME/.conan2/profiles/default"
-sed -i.bak -E \
-  -e 's/^compiler\.version=.*/compiler.version=15.2/' \
-  -e 's/^compiler\.cppstd=.*/compiler.cppstd=23/' \
-  "$DEFAULT_PROFILE"
+PROFILE_EDITS=(-e 's/^compiler\.cppstd=.*/compiler.cppstd=23/')
+if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+  # The build requires gcc-15 (checked above), and Conan accepts the major version for gcc.
+  PROFILE_EDITS+=(-e 's/^compiler\.version=.*/compiler.version=15/')
+fi
+sed -i.bak -E "${PROFILE_EDITS[@]}" "$DEFAULT_PROFILE"
 rm -f "$DEFAULT_PROFILE.bak"
 
 if [[ ! -d $BUILD_DIR ]]; then
