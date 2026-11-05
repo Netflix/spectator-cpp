@@ -3,6 +3,7 @@
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
 
+#include <chrono>
 #include <cstdlib>
 #include <optional>
 
@@ -98,6 +99,63 @@ TEST_F(WriterConfigTest, BufferingConstructor)
     const WriterConfig config(WriterTypes::UDP, 2048);
     EXPECT_EQ(config.GetType(), WriterType::UDP);
     EXPECT_EQ(config.GetBufferSize(), 2048);
+}
+
+TEST_F(WriterConfigTest, BufferingDefaults)
+{
+    // Without buffering
+    {
+        const WriterConfig config(WriterTypes::UDP);
+        EXPECT_EQ(config.GetBufferSize(), 0u);
+        EXPECT_EQ(config.GetFlushInterval(), BufferingDefaults::FlushInterval);
+        EXPECT_EQ(config.GetFullBufferPolicy(), BufferingDefaults::FullBuffer);
+    }
+
+    // With a buffer size only
+    {
+        const WriterConfig config(WriterTypes::UDP, 2048);
+        EXPECT_EQ(config.GetFlushInterval(), std::chrono::milliseconds(1000));
+        EXPECT_EQ(config.GetFullBufferPolicy(), FullBufferPolicy::Block);
+    }
+}
+
+TEST_F(WriterConfigTest, FlushIntervalAndFullBufferPolicy)
+{
+    // Both given
+    {
+        const WriterConfig config(WriterTypes::Unix, 4096, std::chrono::milliseconds(250), FullBufferPolicy::Drop);
+        EXPECT_EQ(config.GetType(), WriterType::Unix);
+        EXPECT_EQ(config.GetBufferSize(), 4096u);
+        EXPECT_EQ(config.GetFlushInterval(), std::chrono::milliseconds(250));
+        EXPECT_EQ(config.GetFullBufferPolicy(), FullBufferPolicy::Drop);
+    }
+
+    // A flush interval alone leaves the default policy, and may be given in another unit
+    {
+        const WriterConfig config(WriterTypes::UDP, 2048, std::chrono::seconds(5));
+        EXPECT_EQ(config.GetFlushInterval(), std::chrono::milliseconds(5000));
+        EXPECT_EQ(config.GetFullBufferPolicy(), FullBufferPolicy::Block);
+    }
+
+    // The send policy
+    {
+        const WriterConfig config(WriterTypes::UDP, 2048, std::chrono::milliseconds(100), FullBufferPolicy::Send);
+        EXPECT_EQ(config.GetFullBufferPolicy(), FullBufferPolicy::Send);
+    }
+
+    // The names of the policies, as they appear in the log
+    EXPECT_EQ(FullBufferPolicyToString(FullBufferPolicy::Block), "block");
+    EXPECT_EQ(FullBufferPolicyToString(FullBufferPolicy::Drop), "drop");
+    EXPECT_EQ(FullBufferPolicyToString(FullBufferPolicy::Send), "send");
+}
+
+TEST_F(WriterConfigTest, InvalidFlushInterval)
+{
+    EXPECT_THROW({ WriterConfig config(WriterTypes::UDP, 2048, std::chrono::milliseconds(0)); }, std::runtime_error);
+    EXPECT_THROW({ WriterConfig config(WriterTypes::UDP, 2048, std::chrono::milliseconds(-1)); }, std::runtime_error);
+
+    // Without buffering there is nothing to flush, so the interval is not checked
+    EXPECT_NO_THROW({ WriterConfig config(WriterTypes::UDP, 0, std::chrono::milliseconds(0)); });
 }
 
 TEST_F(WriterConfigTest, InvalidWriterType)

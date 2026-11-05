@@ -1,7 +1,10 @@
 #include <gtest/gtest.h>
+#include <chrono>
 #include <cstdint>
 #include <cstdlib>
+#include <thread>
 
+#include <buffered_writer.h>
 #include <registry.h>
 #include <writer_test_helper.h>
 
@@ -69,6 +72,27 @@ TEST(RegistryTest, AgeGaugeWithId)
     g.Set(0);
     EXPECT_EQ("A:age_gauge,extra-tags=foo,my-tags=bar:0.000000\n",
               ParseProtocolLine(memoryWriter->LastLine()).value().to_string());
+}
+
+// With a buffer size in the config, lines are held back until a buffer is full, the flush interval has passed or
+// buffering is turned off. The flush interval comes from the config too: with the default interval, the first line
+// would be sent on its own while this test sleeps.
+TEST(RegistryTest, BufferedWriter)
+{
+    auto config = Config(WriterConfig(WriterTypes::Memory, 4096, std::chrono::hours(1)));
+    auto r = Registry(config);
+    auto c = r.CreateCounter("counter");
+    auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());
+
+    c.Increment();
+    std::this_thread::sleep_for(BufferingDefaults::FlushInterval + std::chrono::milliseconds(300));
+    c.Increment(2);
+    EXPECT_TRUE(memoryWriter->IsEmpty());
+
+    // Turning buffering off sends what is buffered and stops the sender thread, so the memory writer can be read.
+    buffered_writer::Stop();
+    ASSERT_EQ(memoryWriter->GetMessages().size(), 1u);
+    EXPECT_EQ("c:counter:1.000000\nc:counter:2.000000\n", memoryWriter->GetMessages().at(0));
 }
 
 TEST(RegistryTest, Counter)
