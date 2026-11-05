@@ -3,11 +3,19 @@
 #include <singleton.h>
 #include <writer_types.h>
 
+#include <chrono>
 #include <memory>
 #include <string>
 
 namespace spectator {
 
+// Hands the lines that the meters record to the socket writer (UDPWriter, UDSWriter or MemoryWriter).
+//
+// Without buffering (buffer size 0), the calling thread sends each line immediately. This is only safe from one
+// thread.
+//
+// With buffering, each thread appends its lines to its own buffer and one sender thread sends the buffers. Recording
+// a line normally touches only the calling thread's own buffers. See buffered_writer.h and buffered_writer.cpp.
 class Writer final : public Singleton<Writer>
 {
    public:
@@ -29,17 +37,18 @@ class Writer final : public Singleton<Writer>
     friend class Timer;
 
     // Private constructor - enforces singleton pattern
-    Writer() = default;
+    Writer();
 
-    static void Initialize(WriterType type, const std::string& param = "", int port = 0, unsigned int bufferSize = 0);
+    // Not thread-safe: call it while no other thread is recording. It may be called again to replace the writer; a
+    // buffered writer from the earlier call is shut down first, which sends what it still has buffered.
+    static void Initialize(WriterType type, const std::string& param = "", int port = 0, unsigned int bufferSize = 0,
+                           std::chrono::milliseconds flushInterval = BufferingDefaults::FlushInterval,
+                           FullBufferPolicy fullBufferPolicy = BufferingDefaults::FullBuffer);
 
-    static void Write(const std::string& message);
-
-    void BufferedWrite(const std::string& message);
+    // Records one protocol line, given without its trailing newline. Thread-safe when buffering is enabled.
+    static void Write(const std::string& line);
 
     void NonBufferedWrite(const std::string& message);
-
-    void ThreadSend();
 
     void TryToSend(const std::string& message);
 
@@ -49,23 +58,9 @@ class Writer final : public Singleton<Writer>
     static BaseWriter* GetImpl() { return Writer::GetInstance().m_impl.get(); }
     static WriterType GetWriterType() { return GetInstance().m_currentType; }
 
+    // The socket writer. With buffering enabled, the buffered writer does all the sending through it.
     std::unique_ptr<BaseWriter> m_impl;
     WriterType m_currentType = WriterType::Memory;  // Default type
-    bool bufferingEnabled = false;
-    unsigned int bufferSize = 0;
-    std::string buffer{};
-    
-    // Function pointer for write strategy - member function pointer
-    using WriteFunction = void (Writer::*)(const std::string&);
-    WriteFunction writeImpl = &Writer::NonBufferedWrite;  // Default to non-buffered
-
-
-    // multithreading writes
-    std::mutex writeMutex;
-    std::thread sendingThread;
-    std::condition_variable cv_receiver;
-    std::condition_variable cv_sender;
-    std::atomic<bool> shutdown{false};
 };
 
 }  // namespace spectator

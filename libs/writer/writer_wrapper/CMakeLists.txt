@@ -1,4 +1,5 @@
 add_library(spectator-writer-wrapper
+    buffered_writer.cpp
     writer.cpp
 )
 
