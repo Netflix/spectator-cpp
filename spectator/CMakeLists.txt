@@ -9,6 +9,7 @@ add_library(spectator-registry
     ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_types/src/memory_writer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_types/src/udp_writer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_types/src/uds_writer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_wrapper/buffered_writer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../libs/writer/writer_wrapper/writer.cpp
 )
 

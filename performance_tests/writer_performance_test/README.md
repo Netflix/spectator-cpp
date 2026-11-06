@@ -1,8 +1,8 @@
 # Writer performance test
 
 Measures what it costs to record meters through the writers, and how much of what was recorded arrives. It does so
-for a list of configurations: the socket writer, the buffer size, the number of recording threads, the load, and the
-way the meters are used. It needs nothing but this repository, because the test starts its own receiver in place of
+for a list of configurations: the socket writer, the buffer size, the full-buffer policy, the flush interval, the number of
+recording threads, the load, and the way the meters are used. It needs nothing but this repository, because the test starts its own receiver in place of
 spectatord.
 
 ## Run it
@@ -27,8 +27,8 @@ There are three sizes of run:
 
 | Option    | What it measures                                                                         | Time             |
 |-----------|------------------------------------------------------------------------------------------|------------------|
-| (none)    | Both writers with 1, 4 and 8 threads, three buffer sizes, one paced rate, the meter uses  | about 2 minutes  |
-| `--full`  | The same with 1 to 16 threads, every buffer size at every thread count, two paced rates   | about 12 minutes |
+| (none)    | Both writers with 1, 4 and 8 threads, three buffer sizes, the three full-buffer policies, one paced rate with two flush intervals, the meter uses | about 4 minutes  |
+| `--full`  | The same with 1 to 16 threads, every buffer size at every thread count, two paced rates   | about 19 minutes |
 | `--smoke` | Two configurations at a low rate; fails if a recorded line does not arrive                | a few seconds    |
 
 Add `--list` to see the configurations of a run and how long they take, without running them.
@@ -63,6 +63,11 @@ The counter is used in one of four ways: created once per thread, or created for
 `registry.CreateCounter(name, tags).Increment()`, each with two tags or with none. Everything but the comparison of
 these four uses a counter that was created once and has two tags.
 
+The full-buffer policies (`block`, `drop`, `send`) are compared flat out at the usual buffer size, and the flush
+intervals (the default of 3000 ms, and 100 ms) under the paced load. Everything else uses the defaults, block and
+3000 ms, and those rows keep the names they have on a version of the library without these settings, so a run can
+still be compared with one from such a version.
+
 ## Reading the report
 
 The report has one table for each kind of load, and one that compares the ways of using a counter.
@@ -74,7 +79,7 @@ The report has one table for each kind of load, and one that compares the ways o
 | `spread`                                 | How far the slowest and the fastest measurement are apart, as a share of the median. A difference between two configurations that is smaller than this is not a difference. |
 | `call p50`, `p99`, `p99.9`, `longest`    | How long a call that records one line took. Half of the calls took no longer than `p50`, and 99% no longer than `p99`. |
 | `cpu/line`                               | Processor time of the recording process per line, on all its threads, which includes the thread that sends. |
-| `arrived`                                | The share of the recorded lines that the receiver got. `100%` is shown only if every line arrived. |
+| `arrived`                                | The share of the recorded lines that the receiver got. `100%` is shown only if every line arrived. Under the drop policy, the rest includes the lines that the library dropped. |
 | `lines/datagram`                         | How many lines a datagram held on average.                                 |
 | `delay p50`, `delay p99`, `longest delay` | Paced load: the time from recording a line to its arrival at the receiver. |
 | `bytes/line`                             | The length of a line, which the tags change.                               |

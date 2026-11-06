@@ -24,7 +24,7 @@ class PercentileDistributionSummary final : public Meter
         if (amount >= 0)
         {
             auto line = this->ConstructLine(amount);
-            Writer::GetInstance().Write(line);
+            Writer::Write(line);
         }
     }
 };

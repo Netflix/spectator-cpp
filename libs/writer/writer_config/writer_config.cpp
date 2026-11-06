@@ -7,6 +7,7 @@ namespace spectator {
 struct WriterConfigConstants
 {
     static constexpr auto RuntimeErrorMessage = "Invalid writer type: ";
+    static constexpr auto FlushIntervalErrorMessage = "Invalid flush interval, it must be positive and at most ";
 };
 
 std::pair<WriterType, std::string> GetWriterConfigFromString(const std::string& type)
@@ -49,11 +50,24 @@ WriterConfig::WriterConfig(const std::string& type)
     Logger::info("WriterConfig initialized with type: {}, location: {}", WriterTypeToString(m_type), m_location);
 }
 
-WriterConfig::WriterConfig(const std::string& type, const unsigned int bufferSize)
+WriterConfig::WriterConfig(const std::string& type, const unsigned int bufferSize,
+                           const std::chrono::milliseconds flushInterval, const FullBufferPolicy fullBufferPolicy)
     : WriterConfig(type)  // Constructor delegation
 {
+    // The flush interval only matters when buffering is enabled.
+    if (bufferSize > 0 &&
+        (flushInterval <= std::chrono::milliseconds::zero() || flushInterval > BufferingDefaults::MaxFlushInterval))
+    {
+        throw std::runtime_error(WriterConfigConstants::FlushIntervalErrorMessage +
+                                 std::to_string(BufferingDefaults::MaxFlushInterval.count()) + " ms: " +
+                                 std::to_string(flushInterval.count()) + " ms");
+    }
+
     m_bufferSize = bufferSize;
-    Logger::info("WriterConfig buffering enabled with size: {}", m_bufferSize);
+    m_flushInterval = flushInterval;
+    m_fullBufferPolicy = fullBufferPolicy;
+    Logger::info("WriterConfig buffering enabled with size: {}, flush interval: {} ms, full buffer policy: {}",
+                 m_bufferSize, m_flushInterval.count(), FullBufferPolicyToString(m_fullBufferPolicy));
 }
 
 }  // namespace spectator

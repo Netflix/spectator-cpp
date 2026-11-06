@@ -20,7 +20,7 @@ class Timer final : public Meter
         if (seconds >= 0)
         {
             auto line = this->ConstructLine(seconds);
-            Writer::GetInstance().Write(line);
+            Writer::Write(line);
         }
     }
 };

@@ -26,6 +26,39 @@ inline std::string WriterName(WriterKind kind) { return kind == WriterKind::Udp 
 
 inline std::string LoadName(Load load) { return load == Load::FlatOut ? "flat-out" : "paced"; }
 
+// What a recording thread does when it is out of buffer space: the library's FullBufferPolicy.
+enum class Policy
+{
+    Block,
+    Drop,
+    Send
+};
+
+inline std::string PolicyName(Policy policy)
+{
+    return policy == Policy::Block ? "block" : policy == Policy::Drop ? "drop" : "send";
+}
+
+inline Policy PolicyFromName(const std::string& name)
+{
+    if (name == "block")
+    {
+        return Policy::Block;
+    }
+    if (name == "drop")
+    {
+        return Policy::Drop;
+    }
+    if (name == "send")
+    {
+        return Policy::Send;
+    }
+    throw std::invalid_argument("Unknown policy: " + name);
+}
+
+// The library's default flush interval, in milliseconds.
+inline constexpr int kDefaultFlushMillis = 3000;
+
 // One configuration to measure. To measure a new setting of the writer, add it here, to Key(), and to the places
 // that hand a scenario to the recording process (ToArguments and FromArguments below) and to the library
 // (recording_run.cpp).
@@ -38,6 +71,11 @@ struct Scenario
     int linesPerSecond = 0;       // paced load: the rate of each thread
     bool createMeter = false;     // create the counter for every line, instead of once per thread
     bool tags = true;             // whether the counter has tags
+    Policy policy = Policy::Block;              // buffered only
+    int flushMillis = kDefaultFlushMillis;      // buffered only: the flush interval
+
+    // Whether the writer has the library's default policy and flush interval.
+    bool DefaultWriterSettings() const { return policy == Policy::Block && flushMillis == kDefaultFlushMillis; }
 
     // Names the scenario in the CSV file. Two runs are compared scenario by scenario through this.
     std::string Key() const
@@ -50,6 +88,16 @@ struct Scenario
         }
         key += createMeter ? "/create" : "/reuse";
         key += tags ? "/tags" : "/no-tags";
+        // Only settings that differ from the defaults are named, so that the keys of the default settings are the
+        // same as in a run of a library version that does not have these settings.
+        if (policy != Policy::Block)
+        {
+            key += "/policy=" + PolicyName(policy);
+        }
+        if (flushMillis != kDefaultFlushMillis)
+        {
+            key += "/flush=" + std::to_string(flushMillis) + "ms";
+        }
         return key;
     }
 };
@@ -100,6 +148,8 @@ inline std::vector<std::string> ToArguments(const Scenario& scenario)
         "rate=" + std::to_string(scenario.linesPerSecond),
         "create=" + std::to_string(scenario.createMeter ? 1 : 0),
         "tags=" + std::to_string(scenario.tags ? 1 : 0),
+        "policy=" + PolicyName(scenario.policy),
+        "flush=" + std::to_string(scenario.flushMillis),
     };
 }
 
@@ -113,6 +163,8 @@ inline Scenario FromArguments(const Arguments& arguments)
     scenario.linesPerSecond = static_cast<int>(Count(arguments, "rate"));
     scenario.createMeter = Count(arguments, "create") != 0;
     scenario.tags = Count(arguments, "tags") != 0;
+    scenario.policy = PolicyFromName(Text(arguments, "policy"));
+    scenario.flushMillis = static_cast<int>(Count(arguments, "flush"));
     return scenario;
 }
 
