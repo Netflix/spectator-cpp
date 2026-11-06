@@ -16,8 +16,9 @@ class WriterConfig
     // Enables buffering when bufferSize is greater than 0. Each thread that records meters then fills its own buffer
     // of at most bufferSize bytes, and one sender thread sends the buffers.
     //   flushInterval:    how often the sender thread collects and sends what the threads have buffered, so a line
-    //                     never waits longer than this for its thread to fill a buffer. Must be positive when
-    //                     buffering is enabled; std::runtime_error otherwise.
+    //                     never waits longer than this for its thread to fill a buffer. Must be positive and at
+    //                     most BufferingDefaults::MaxFlushInterval (30 seconds) when buffering is enabled;
+    //                     std::runtime_error otherwise.
     //   fullBufferPolicy: what a thread does when it has no buffer space left (see FullBufferPolicy).
     WriterConfig(const std::string& type, unsigned int bufferSize,
                  std::chrono::milliseconds flushInterval = BufferingDefaults::FlushInterval,

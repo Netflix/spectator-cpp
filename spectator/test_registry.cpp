@@ -79,7 +79,8 @@ TEST(RegistryTest, AgeGaugeWithId)
 // would be sent on its own while this test sleeps.
 TEST(RegistryTest, BufferedWriter)
 {
-    auto config = Config(WriterConfig(WriterTypes::Memory, 4096, std::chrono::hours(1)));
+    // The longest interval allowed, so that the timed flush does not interfere with this test
+    auto config = Config(WriterConfig(WriterTypes::Memory, 4096, BufferingDefaults::MaxFlushInterval));
     auto r = Registry(config);
     auto c = r.CreateCounter("counter");
     auto memoryWriter = static_cast<MemoryWriter*>(WriterTestHelper::GetImpl());

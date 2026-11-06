@@ -37,9 +37,13 @@ enum class FullBufferPolicy
 struct BufferingDefaults
 {
     // The sender thread collects and sends what every thread has buffered at least this often, so a line never
-    // waits for its thread to fill a buffer. One second keeps a line from a quiet thread at most about a second
-    // behind, and costs at most one wake-up of the sender and one small datagram per recording thread per second.
-    static constexpr std::chrono::milliseconds FlushInterval{1000};
+    // waits for its thread to fill a buffer. Three seconds keep a line from a quiet thread at most about three
+    // seconds behind, and cost at most one wake-up of the sender and one small datagram per recording thread every
+    // three seconds.
+    static constexpr std::chrono::milliseconds FlushInterval{std::chrono::seconds{3}};
+    // The longest flush interval that a WriterConfig accepts. A longer one would hold the lines of a quiet thread
+    // back for longer than any consumer of the metrics expects.
+    static constexpr std::chrono::milliseconds MaxFlushInterval{std::chrono::seconds{30}};
     static constexpr FullBufferPolicy FullBuffer = FullBufferPolicy::Block;
 };
 

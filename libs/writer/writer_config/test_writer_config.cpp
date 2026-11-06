@@ -114,7 +114,7 @@ TEST_F(WriterConfigTest, BufferingDefaults)
     // With a buffer size only
     {
         const WriterConfig config(WriterTypes::UDP, 2048);
-        EXPECT_EQ(config.GetFlushInterval(), std::chrono::milliseconds(1000));
+        EXPECT_EQ(config.GetFlushInterval(), std::chrono::milliseconds(3000));
         EXPECT_EQ(config.GetFullBufferPolicy(), FullBufferPolicy::Block);
     }
 }
@@ -154,8 +154,17 @@ TEST_F(WriterConfigTest, InvalidFlushInterval)
     EXPECT_THROW({ WriterConfig config(WriterTypes::UDP, 2048, std::chrono::milliseconds(0)); }, std::runtime_error);
     EXPECT_THROW({ WriterConfig config(WriterTypes::UDP, 2048, std::chrono::milliseconds(-1)); }, std::runtime_error);
 
+    // At most 30 seconds
+    EXPECT_THROW({ WriterConfig config(WriterTypes::UDP, 2048, std::chrono::milliseconds(30001)); }, std::runtime_error);
+    EXPECT_THROW({ WriterConfig config(WriterTypes::UDP, 2048, std::chrono::hours(1)); }, std::runtime_error);
+    {
+        const WriterConfig config(WriterTypes::UDP, 2048, std::chrono::seconds(30));
+        EXPECT_EQ(config.GetFlushInterval(), BufferingDefaults::MaxFlushInterval);
+    }
+
     // Without buffering there is nothing to flush, so the interval is not checked
     EXPECT_NO_THROW({ WriterConfig config(WriterTypes::UDP, 0, std::chrono::milliseconds(0)); });
+    EXPECT_NO_THROW({ WriterConfig config(WriterTypes::UDP, 0, std::chrono::hours(1)); });
 }
 
 TEST_F(WriterConfigTest, InvalidWriterType)

@@ -75,6 +75,8 @@ constexpr std::size_t kMaxWaitingBuffers = 8;
 constexpr std::size_t kCacheLineSize = 128;
 
 // The flush interval is kept within these bounds so that the sender's timed wait is well defined for any input.
+// The limit that users see is BufferingDefaults::MaxFlushInterval, which WriterConfig enforces; these bounds are
+// wider on purpose, so that tests that call Start() directly can keep the timed flush out of the way.
 constexpr std::chrono::milliseconds kMinFlushInterval{1};
 constexpr std::chrono::milliseconds kMaxFlushInterval{std::chrono::hours{24}};
 

@@ -83,17 +83,17 @@ With a buffer size greater than 0 in the `WriterConfig`, the wrapper buffers per
 | `WriterConfig` argument | Default                  | Meaning                                                             |
 |-------------------------|--------------------------|---------------------------------------------------------------------|
 | `bufferSize`            | `0` (no buffering)       | Size of each thread's buffer in bytes, and the largest datagram     |
-| `flushInterval`         | `1000 ms`                | How often the sender collects and sends what the threads buffered   |
+| `flushInterval`         | `3000 ms`                | How often the sender collects and sends what the threads buffered   |
 | `fullBufferPolicy`      | `FullBufferPolicy::Block`| What a thread does when it is out of buffer space                   |
 
 ### Flush interval
 
 A thread that records rarely, or that records a burst and then goes idle, would otherwise hold its lines until it
 fills a buffer or exits. Once per flush interval the sender thread therefore also takes the buffers that are still
-being filled, after any full buffers of the same thread, and sends them. The default of 1 second keeps such lines
-about a second behind at most, and costs at most one wake-up of the sender thread and one small datagram per
-recording thread per second. The interval must be positive; the `WriterConfig` constructor throws a
-`std::runtime_error` otherwise.
+being filled, after any full buffers of the same thread, and sends them. The default of 3 seconds keeps such lines
+about three seconds behind at most, and costs at most one wake-up of the sender thread and one small datagram per
+recording thread every three seconds. The interval must be positive and at most 30 seconds
+(`BufferingDefaults::MaxFlushInterval`); the `WriterConfig` constructor throws a `std::runtime_error` otherwise.
 
 ### Full-buffer policy
 

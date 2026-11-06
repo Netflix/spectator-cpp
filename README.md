@@ -13,7 +13,7 @@ For high-volume use cases, and for recording from several threads, turn on buffe
 bytes to the `WriterConfig` constructor:
 
 ```cpp
-// 4096-byte buffers, with the default flush interval (1 second) and full-buffer policy (block)
+// 4096-byte buffers, with the default flush interval (3 seconds) and full-buffer policy (block)
 WriterConfig writerConfig(WriterTypes::Unix, 4096);
 
 // Or: send what is buffered every 250 ms, and drop lines instead of waiting when a thread is out of buffer space
@@ -32,10 +32,10 @@ sends the buffers to the sidecar. Updating a meter normally sends nothing, and t
 * **Order.** The lines of one thread are sent in the order in which that thread recorded them. Lines of different
   threads are sent in no particular order.
 * **Flush interval.** The sender thread collects and sends what every thread has buffered once per flush interval,
-  so a line never waits for its thread to fill a buffer. The default is 1 second: a line from a thread that records
-  rarely, or that records a burst and then goes idle, reaches the sidecar about a second later at most, at the cost
-  of at most one small datagram per recording thread per second. Pass a different interval as the third argument of
-  the `WriterConfig` constructor. It must be positive.
+  so a line never waits for its thread to fill a buffer. The default is 3 seconds: a line from a thread that records
+  rarely, or that records a burst and then goes idle, reaches the sidecar about three seconds later at most, at the
+  cost of at most one small datagram per recording thread every three seconds. Pass a different interval as the third argument of
+  the `WriterConfig` constructor. It must be positive and at most 30 seconds.
 * **Full-buffer policy.** A thread may have up to 8 full buffers waiting for the sender, so a recording thread
   holds at most 9 buffers: those 8 and the one it is filling. What a thread does when it needs more than that is the
   fourth argument of the `WriterConfig` constructor:

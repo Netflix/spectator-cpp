@@ -64,8 +64,8 @@ The counter is used in one of four ways: created once per thread, or created for
 these four uses a counter that was created once and has two tags.
 
 The full-buffer policies (`block`, `drop`, `send`) are compared flat out at the usual buffer size, and the flush
-intervals (the default of 1000 ms, and 100 ms) under the paced load. Everything else uses the defaults, block and
-1000 ms, and those rows keep the names they have on a version of the library without these settings, so a run can
+intervals (the default of 3000 ms, and 100 ms) under the paced load. Everything else uses the defaults, block and
+3000 ms, and those rows keep the names they have on a version of the library without these settings, so a run can
 still be compared with one from such a version.
 
 ## Reading the report

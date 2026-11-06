@@ -57,7 +57,7 @@ inline Policy PolicyFromName(const std::string& name)
 }
 
 // The library's default flush interval, in milliseconds.
-inline constexpr int kDefaultFlushMillis = 1000;
+inline constexpr int kDefaultFlushMillis = 3000;
 
 // One configuration to measure. To measure a new setting of the writer, add it here, to Key(), and to the places
 // that hand a scenario to the recording process (ToArguments and FromArguments below) and to the library

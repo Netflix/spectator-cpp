@@ -7,7 +7,7 @@ namespace spectator {
 struct WriterConfigConstants
 {
     static constexpr auto RuntimeErrorMessage = "Invalid writer type: ";
-    static constexpr auto FlushIntervalErrorMessage = "Invalid flush interval, it must be positive: ";
+    static constexpr auto FlushIntervalErrorMessage = "Invalid flush interval, it must be positive and at most ";
 };
 
 std::pair<WriterType, std::string> GetWriterConfigFromString(const std::string& type)
@@ -55,9 +55,11 @@ WriterConfig::WriterConfig(const std::string& type, const unsigned int bufferSiz
     : WriterConfig(type)  // Constructor delegation
 {
     // The flush interval only matters when buffering is enabled.
-    if (bufferSize > 0 && flushInterval <= std::chrono::milliseconds::zero())
+    if (bufferSize > 0 &&
+        (flushInterval <= std::chrono::milliseconds::zero() || flushInterval > BufferingDefaults::MaxFlushInterval))
     {
         throw std::runtime_error(WriterConfigConstants::FlushIntervalErrorMessage +
+                                 std::to_string(BufferingDefaults::MaxFlushInterval.count()) + " ms: " +
                                  std::to_string(flushInterval.count()) + " ms");
     }
 
