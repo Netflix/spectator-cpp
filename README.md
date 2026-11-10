@@ -5,6 +5,16 @@
 This implements a basic [Spectator](https://github.com/Netflix/spectator) library for instrumenting CPP applications.
 It consists of a thin client designed to send metrics through [spectatord](https://github.com/Netflix-Skunkworks/spectatord).
 
+## One Registry per Process
+
+Create one `Registry` for the whole process, at startup and before other threads update meters, and share that one
+object with the code that creates meters. Do not create a second one.
+
+All registries of a process send through the same writer, and constructing a `Registry` sets that writer up from its
+`Config`. A second `Registry` therefore does not get a writer of its own: it replaces the one that the first is using,
+and from then on the meters of both go to the second one's location, with the second one's buffering. Constructing a
+`Registry` while another thread is updating a meter is not safe either, and can crash the process.
+
 ## High-Volume Publishing
 
 By default, the library sends every meter change to the spectatord sidecar immediately. This involves a blocking
