@@ -53,9 +53,10 @@ namespace spectator {
 //
 // Thread exit: a thread's buffers are attached to it as the value of a pthread key. The destructor of that key runs
 // when the thread exits, after the destructors of the thread's thread_local objects, and closes the buffers: the
-// sender sends what is in them and then releases them. From then on the thread is marked as exited, in the key and
-// in t_threadExited. Should anything still record on it (the destructor of another key), that line goes straight
-// to the sender, see RecordAfterThreadExit: the thread gets no buffers again, as nothing would let go of them.
+// sender sends what is in them and then releases them. From then on the thread is marked as exited: in
+// t_threadExited, and in the key where that flag does not last (see kMarkExitedThreadInKey). Should anything still
+// record on it (the destructor of another key), that line goes straight to the sender, see RecordAfterThreadExit:
+// the thread gets no buffers again, as nothing would let go of them.
 //
 // Process exit: the destructor of the key does not run for threads that are still running when the process exits,
 // and that includes the thread that calls exit(). Their buffers stay attached and usable while thread_local and
@@ -82,19 +83,33 @@ constexpr std::chrono::milliseconds kMaxFlushInterval{std::chrono::hours{24}};
 
 using Clock = std::chrono::steady_clock;
 
-// Once a thread has let go of its buffers at exit, the thread key holds one of the numbers 1 to kMaxExitedRounds
-// instead of a pointer. The number counts the rounds of key destructors since then, see OnThreadExit. Every
-// implementation runs at least this many rounds (_POSIX_THREAD_DESTRUCTOR_ITERATIONS).
+// A thread that has let go of its buffers at exit has to be recognized for as long as code can run on it, which is
+// longest on the thread whose exit ends the process and then runs the static destructors. t_threadExited says so,
+// and so can a mark in the thread key, but neither lasts everywhere:
+//   - macOS releases thread_local storage while key destructors are still running and sets it up afresh when it is
+//     used again, so in the later rounds of key destructors t_threadExited reads as false again. The value of a key
+//     lasts there, also after the last round. So the thread is marked in the key as well.
+//   - Elsewhere thread_local storage lasts until the thread is gone, while glibc clears the keys after the last
+//     round. So t_threadExited alone marks the thread and the key is left empty, which also means that OnThreadExit
+//     runs only once. It must not run in the last round: ThreadSanitizer on Linux lets go of the thread in that
+//     round, in a key destructor that runs before this one, and crashes on instrumented code that runs on the thread
+//     after that.
+#if defined(__APPLE__)
+constexpr bool kMarkExitedThreadInKey = true;
+#else
+constexpr bool kMarkExitedThreadInKey = false;
+#endif
+
+// The mark in the thread key: one of the numbers 1 to kMaxExitedRounds instead of a pointer. The number counts the
+// rounds of key destructors since the thread let go of its buffers, see OnThreadExit. Every implementation runs at
+// least this many rounds (_POSIX_THREAD_DESTRUCTOR_ITERATIONS).
 constexpr std::uintptr_t kMaxExitedRounds = 4;
 
 // Whether the value of the thread key says that the calling thread has no buffers: it is null because the thread
-// has not recorded yet, or it is the mark of a thread that has exited.
+// has not recorded yet or is marked as exited by t_threadExited alone, or it is the mark of a thread that has exited.
 bool HasNoBuffers(const void* value) noexcept { return reinterpret_cast<std::uintptr_t>(value) <= kMaxExitedRounds; }
 
-// Set when the calling thread has let go of its buffers at exit. The mark in the thread key says the same, but
-// neither lasts everywhere for as long as code can run on the thread, which is longest on the thread whose exit
-// ends the process and then runs the static destructors. After the last round of key destructors, glibc has
-// cleared the key but still has this flag, and macOS has released thread_local storage but still has the key.
+// Set when the calling thread has let go of its buffers at exit.
 constinit thread_local bool t_threadExited = false;
 
 class BufferedWriter;
@@ -770,8 +785,9 @@ void BufferedWriter::DrainAll()
     }
 }
 
-// The destructor of the thread key: the calling thread is exiting. It lets go of the thread's buffers, leaves the
-// mark that the thread has exited in their place and sets t_threadExited.
+// The destructor of the thread key: the calling thread is exiting. It lets go of the thread's buffers and sets
+// t_threadExited. Where the thread is also marked in the key (kMarkExitedThreadInKey), it leaves the mark in the
+// place of the buffers; elsewhere the key stays empty and this destructor does not run again.
 //
 // Setting the key again makes this destructor run again in the next round of key destructors, now with the mark as
 // `value`. The mark is renewed each time, so that it is still there for destructors of other keys in later rounds,
@@ -780,6 +796,7 @@ void OnThreadExit(void* value)
 {
     if (HasNoBuffers(value))
     {
+        // A later round, and `value` is the mark.
         const auto rounds = reinterpret_cast<std::uintptr_t>(value);
         if (rounds < kMaxExitedRounds)
         {
@@ -789,7 +806,10 @@ void OnThreadExit(void* value)
     }
 
     BufferedWriter::Detach(static_cast<ThreadBuffers*>(value));
-    pthread_setspecific(g_current.threadKey, reinterpret_cast<void*>(std::uintptr_t{1}));
+    if (kMarkExitedThreadInKey)
+    {
+        pthread_setspecific(g_current.threadKey, reinterpret_cast<void*>(std::uintptr_t{1}));
+    }
     t_threadExited = true;
 }
 

@@ -513,9 +513,27 @@ Arrived Examine(const Datagrams& datagrams, std::size_t bufferSize, int threads,
 // are recorded on a thread that has no buffers any more.
 //   Round 1: one line. Depending on which of the two destructors runs first, the thread still has its buffers.
 //   Round 2: more lines than a thread may have waiting, and may hold at all.
-//   Round 4, the last round that an implementation has to run: a line that does not fill a buffer.
+//   The last round, kLastLateRound: a line that does not fill a buffer.
 constexpr int kLastLateLineOfRound2 = kMaxWaiting + 4;
 constexpr const char* kLineOfLastRound = "end";
+
+// Whether this is a build with ThreadSanitizer: gcc defines the macro, clang answers __has_feature.
+#if defined(__SANITIZE_THREAD__)
+#define SPECTATOR_TEST_THREAD_SANITIZER 1
+#elif defined(__has_feature)
+#if __has_feature(thread_sanitizer)
+#define SPECTATOR_TEST_THREAD_SANITIZER 1
+#endif
+#endif
+
+// The last round in which RecordLate() runs: round 4, the last round that an implementation has to run. Under
+// ThreadSanitizer on Linux it is round 3: the sanitizer lets go of a thread in round 4, in a key destructor that runs
+// before this one, and crashes on instrumented code that runs on the thread after that, as RecordLate() would.
+#if defined(SPECTATOR_TEST_THREAD_SANITIZER) && !defined(__APPLE__)
+constexpr int kLastLateRound = 3;
+#else
+constexpr int kLastLateRound = 4;
+#endif
 
 pthread_key_t LateRecorderKey();
 
@@ -534,11 +552,11 @@ void RecordLate(void* value)
             buffered_writer::Record(Line('z', number));
         }
     }
-    else if (round == 4)
+    else if (round == kLastLateRound)
     {
         buffered_writer::Record(kLineOfLastRound);
     }
-    if (round < 4)
+    if (round < kLastLateRound)
     {
         pthread_setspecific(LateRecorderKey(), value);  // makes this destructor run again in the next round
     }
@@ -913,7 +931,7 @@ TEST_F(BufferedWriterTest, KeepsLinesRecordedDuringThreadExitInOrder)
     // The thread exits, and RecordLate() records more lines on its way out. However many they are, they do not make
     // the thread wait, although nothing can be sent, and the thread does not send them itself.
     ASSERT_TRUE(thread.Exit());
-    EXPECT_EQ(round, 4);
+    EXPECT_EQ(round, kLastLateRound);
     EXPECT_TRUE(m_socket.Sent().empty());
 
     // The late lines follow the lines that the thread recorded before, in the order in which they were recorded.
