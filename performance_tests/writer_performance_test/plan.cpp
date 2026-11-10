@@ -49,6 +49,8 @@ Selection SmokeSelection()
     selection.pacedBuffers = {512};
     selection.rates = {2000};
     selection.meterThreads = {};
+    selection.policies = {};
+    selection.flushMillis = {};
     return selection;
 }
 
@@ -136,6 +138,23 @@ Plan MakePlan(const Selection& selection)
             }
         }
 
+        // The other full-buffer policies.
+        for (const Policy policy : selection.policies)
+        {
+            for (const int threads : selection.threads)
+            {
+                if (usual != 0)
+                {
+                    Scenario scenario;
+                    scenario.writer = writer;
+                    scenario.bufferSize = usual;
+                    scenario.threads = threads;
+                    scenario.policy = policy;
+                    add(scenario);
+                }
+            }
+        }
+
         // Paced.
         for (const unsigned int wanted : selection.pacedBuffers)
         {
@@ -155,6 +174,12 @@ Plan MakePlan(const Selection& selection)
                     scenario.load = Load::Paced;
                     scenario.linesPerSecond = rate;
                     add(scenario);
+                    for (const int flushMillis : selection.flushMillis)
+                    {
+                        scenario.flushMillis = flushMillis;
+                        add(scenario);
+                    }
+                    scenario.flushMillis = kDefaultFlushMillis;
                 }
             }
         }
@@ -209,6 +234,9 @@ std::string Describe(const Scenario& scenario)
                                          : std::string("flat out");
     text += scenario.createMeter ? ", counter created per line" : "";
     text += scenario.tags ? "" : ", no tags";
+    text += scenario.policy == Policy::Block ? "" : ", " + PolicyName(scenario.policy) + " policy";
+    text += scenario.flushMillis == kDefaultFlushMillis ? ""
+                                                        : ", flush every " + std::to_string(scenario.flushMillis) + " ms";
     return text;
 }
 

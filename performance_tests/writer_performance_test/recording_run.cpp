@@ -203,6 +203,19 @@ void Record(const Scenario& scenario, const spectator::Registry& registry, const
     }
 }
 
+spectator::FullBufferPolicy LibraryPolicy(Policy policy)
+{
+    switch (policy)
+    {
+        case Policy::Drop:
+            return spectator::FullBufferPolicy::Drop;
+        case Policy::Send:
+            return spectator::FullBufferPolicy::Send;
+        default:
+            return spectator::FullBufferPolicy::Block;
+    }
+}
+
 // How long reading the clock takes, in nanoseconds: what a timed call is measured too long by. It is the average
 // over many readings, because one reading can be shorter than the steps in which the clock advances.
 double ClockNanos()
@@ -245,7 +258,10 @@ try
     // No tags from the environment, so that the lines are the same on every machine.
     const spectator::WriterConfig writerConfig = scenario.bufferSize == 0
                                                      ? spectator::WriterConfig(location)
-                                                     : spectator::WriterConfig(location, scenario.bufferSize);
+                                                     : spectator::WriterConfig(
+                                                           location, scenario.bufferSize,
+                                                           std::chrono::milliseconds(scenario.flushMillis),
+                                                           LibraryPolicy(scenario.policy));
     const spectator::Config config(writerConfig, {}, false);
     const spectator::Registry registry(config);
 

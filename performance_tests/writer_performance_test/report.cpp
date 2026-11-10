@@ -280,13 +280,13 @@ void PrintReport(const Plan& plan, const Measurements& measurements, const std::
     };
 
     // Flat out.
-    std::vector<std::string> header{"writer", "buffer", "threads", "lines/s", "per thread", "speed-up", "spread",
+    std::vector<std::string> header{"writer", "buffer", "policy", "threads", "lines/s", "per thread", "speed-up", "spread",
                                     "call p50", "p99", "longest", "cpu/line", "arrived", "lines/datagram"};
     if (compare)
     {
         header.push_back("vs baseline");
     }
-    Table flatOut(header, 2);
+    Table flatOut(header, 3);
     for (std::size_t i = 0; i < scenarios.size(); ++i)
     {
         const Scenario& scenario = scenarios[i];
@@ -298,6 +298,7 @@ void PrintReport(const Plan& plan, const Measurements& measurements, const std::
         const double single = withOneThread(scenario);
         std::vector<std::string> row{WriterName(scenario.writer),
                                      Buffer(scenario.bufferSize),
+                                     scenario.bufferSize == 0 ? "-" : PolicyName(scenario.policy),
                                      std::to_string(scenario.threads),
                                      Rate(summary.linesPerSecond),
                                      Rate(summary.linesPerSecond / scenario.threads),
@@ -323,9 +324,9 @@ void PrintReport(const Plan& plan, const Measurements& measurements, const std::
     }
 
     // Paced.
-    Table paced({"writer", "buffer", "threads", "lines/s per thread", "call p50", "p99", "p99.9", "longest",
+    Table paced({"writer", "buffer", "flush", "threads", "lines/s per thread", "call p50", "p99", "p99.9", "longest",
                  "delay p50", "delay p99", "longest delay", "arrived"},
-                2);
+                3);
     for (std::size_t i = 0; i < scenarios.size(); ++i)
     {
         const Scenario& scenario = scenarios[i];
@@ -334,7 +335,8 @@ void PrintReport(const Plan& plan, const Measurements& measurements, const std::
         {
             continue;
         }
-        paced.Add({WriterName(scenario.writer), Buffer(scenario.bufferSize), std::to_string(scenario.threads),
+        paced.Add({WriterName(scenario.writer), Buffer(scenario.bufferSize),
+                   std::to_string(scenario.flushMillis) + " ms", std::to_string(scenario.threads),
                    std::to_string(scenario.linesPerSecond), Time(summary.callP50), Time(summary.callP99),
                    Time(summary.callP999), Time(summary.callMax), Time(summary.delayP50 * 1e3),
                    Time(summary.delayP99 * 1e3), Time(summary.delayMax * 1e3), Arrived(summary)});
@@ -351,7 +353,7 @@ void PrintReport(const Plan& plan, const Measurements& measurements, const std::
     std::set<std::tuple<WriterKind, unsigned int, int>> compared;
     for (const Scenario& scenario : scenarios)
     {
-        if (scenario.load == Load::FlatOut && !UsualMeter(scenario))
+        if (scenario.load == Load::FlatOut && !UsualMeter(scenario) && scenario.DefaultWriterSettings())
         {
             compared.insert({scenario.writer, scenario.bufferSize, scenario.threads});
         }
@@ -377,7 +379,7 @@ void PrintReport(const Plan& plan, const Measurements& measurements, const std::
     {
         const Scenario& scenario = scenarios[i];
         const Summary& summary = summaries[i];
-        if (scenario.load != Load::FlatOut || summary.measurements == 0 ||
+        if (scenario.load != Load::FlatOut || summary.measurements == 0 || !scenario.DefaultWriterSettings() ||
             compared.count({scenario.writer, scenario.bufferSize, scenario.threads}) == 0)
         {
             continue;
@@ -414,7 +416,8 @@ void PrintReport(const Plan& plan, const Measurements& measurements, const std::
                 "\n",
                 clockNanos);
     std::printf("  - cpu/line is the processor time of the whole recording process, on all its threads, per line.\n");
-    std::printf("  - arrived is the share of the recorded lines that this test received.\n");
+    std::printf("  - arrived is the share of the recorded lines that this test received. Under the drop policy, the"
+                "\n    rest includes the lines that the library dropped.\n");
     if (!paced.Empty())
     {
         std::printf("  - A paced thread records the lines that are due once every millisecond, a few at a time.\n");
@@ -445,7 +448,7 @@ void WriteCsv(const std::string& path, const std::string& label, const Plan& pla
     }
     file << "label,key,writer,buffer,threads,load,rate_per_thread,meter,tags,repeat,ok,lines_per_second,"
             "call_p50_ns,call_p99_ns,call_p999_ns,call_max_ns,clock_ns,cpu_ns_per_line,recorded_lines,"
-            "received_lines,datagrams,bytes,delay_p50_us,delay_p99_us,delay_max_us\n";
+            "received_lines,datagrams,bytes,delay_p50_us,delay_p99_us,delay_max_us,policy,flush_ms\n";
     for (std::size_t i = 0; i < plan.scenarios.size(); ++i)
     {
         const Scenario& scenario = plan.scenarios[i];
@@ -462,7 +465,8 @@ void WriteCsv(const std::string& path, const std::string& label, const Plan& pla
                  << Format("%.1f", measurement.cpuNanosPerLine) << ',' << measurement.recorded << ','
                  << measurement.received << ',' << measurement.datagrams << ',' << measurement.bytes << ','
                  << Format("%.0f", measurement.delayP50) << ',' << Format("%.0f", measurement.delayP99) << ','
-                 << Format("%.0f", measurement.delayMax) << '\n';
+                 << Format("%.0f", measurement.delayMax) << ',' << PolicyName(scenario.policy) << ','
+                 << scenario.flushMillis << '\n';
         }
     }
 }

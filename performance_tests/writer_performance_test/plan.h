@@ -34,6 +34,13 @@ struct Selection
     std::vector<unsigned int> pacedBuffers{kUsualBuffer};
     std::vector<int> rates{20000};  // lines per second and thread
 
+    // The full-buffer policies other than the default, measured flat out at the usual buffer size with every
+    // number of threads.
+    std::vector<Policy> policies{Policy::Drop, Policy::Send};
+
+    // Flush intervals other than the default, in milliseconds, measured under the paced load.
+    std::vector<int> flushMillis{100};
+
     // The ways to use a meter, compared flat out at the usual buffer size.
     std::vector<int> meterThreads{1, 4};
     std::vector<WriterKind> meterWriters{WriterKind::Unix};

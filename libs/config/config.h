@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <string>
 #include <unordered_map>
 
@@ -28,6 +29,8 @@ class Config
     const std::string& GetWriterLocation() const noexcept { return m_writerConfig.GetLocation(); }
     const WriterType& GetWriterType() const noexcept { return m_writerConfig.GetType(); }
     const unsigned int GetWriterBufferSize() const noexcept { return m_writerConfig.GetBufferSize(); }
+    std::chrono::milliseconds GetWriterFlushInterval() const noexcept { return m_writerConfig.GetFlushInterval(); }
+    FullBufferPolicy GetWriterFullBufferPolicy() const noexcept { return m_writerConfig.GetFullBufferPolicy(); }
 
 
    private:

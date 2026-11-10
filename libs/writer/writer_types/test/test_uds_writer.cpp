@@ -2,11 +2,26 @@
 
 #include <gtest/gtest.h>
 #include "../test_utils/uds_server/uds_server.h"
+#include <boost/asio.hpp>
+#include <boost/asio/local/datagram_protocol.hpp>
+#include <array>
+#include <filesystem>
+#include <future>
+#include <string>
 #include <thread>
 #include <chrono>
 #include <algorithm>
+#include <vector>
 
 using namespace spectator;
+
+#if defined(__linux__)
+// Linux makes a sender wait in the kernel for as long as the queue of the receiver's socket is full.
+constexpr bool kSendToFullQueueFails = false;
+#else
+// Elsewhere, as on macOS, such a send fails with "no buffer space".
+constexpr bool kSendToFullQueueFails = true;
+#endif
 
 // Test fixture for UDS Writer tests
 class UDSWriterTest : public testing::Test
@@ -192,4 +207,132 @@ TEST_F(UDSWriterTest, ClientReconnectsWhenServerStartsLater)
     messages = get_uds_messages();
     EXPECT_TRUE(messages.size() == 1);
     EXPECT_TRUE(messages.at(0) == test_message_after);
+}
+
+// A burst of messages can fill the queue of the receiver's socket before the server gets to read: the server looks
+// for messages every 10 ms, and the queue may hold as few as ten of them (32 on macOS by default). With a
+// receiverFullWait, the burst still arrives in full. Linux makes the sender wait while the queue is full. Where the
+// send fails instead, as on macOS, the writer tries again for up to receiverFullWait.
+TEST_F(UDSWriterTest, DeliversABurstToAReceiverThatIsSlowToRead)
+{
+    UDSWriter writer("/tmp/test_uds_socket", std::chrono::seconds(10));
+
+    constexpr size_t burst = 64;
+    for (size_t i = 0; i < burst; i++)
+    {
+        writer.Write("Burst message " + std::to_string(i));
+    }
+
+    // Give the server time to read them all
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(10);
+    while (get_uds_messages().size() < burst && std::chrono::steady_clock::now() < deadline)
+    {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+
+    const auto messages = get_uds_messages();
+    ASSERT_EQ(messages.size(), burst);
+    for (size_t i = 0; i < burst; i++)
+    {
+        EXPECT_EQ(messages.at(i), "Burst message " + std::to_string(i));
+    }
+}
+
+// The writer waits for a receiver whose queue is full, but only for receiverFullWait per message. Then it gives the
+// message up, so that a receiver that has stopped reading does not stop the sender for good.
+TEST(UDSWriterReceiverFullTest, GivesUpOnAReceiverThatDoesNotRead)
+{
+    if (!kSendToFullQueueFails)
+    {
+        GTEST_SKIP() << "On this platform a send to a full queue waits in the kernel instead of failing";
+    }
+
+    // A receiver that does not read
+    using DatagramProtocol = boost::asio::local::datagram_protocol;
+    const std::string socketPath = "/tmp/test_uds_full_socket";
+    std::filesystem::remove(socketPath);
+    boost::asio::io_context ioContext;
+    DatagramProtocol::socket receiver(ioContext, DatagramProtocol::endpoint(socketPath));
+    receiver.non_blocking(true);
+
+    std::vector<std::string> received;
+    const auto readQueue = [&receiver, &received]
+    {
+        std::array<char, 2048> buffer{};
+        for (;;)
+        {
+            boost::system::error_code ec;
+            const auto bytesRead = receiver.receive(boost::asio::buffer(buffer), 0, ec);
+            if (ec)
+            {
+                return;
+            }
+            received.emplace_back(buffer.data(), bytesRead);
+        }
+    };
+
+    // Write until three messages have each taken as long as the writer waits for a full queue. This runs on a thread
+    // of its own, so that a writer that does not give up fails the test instead of hanging it.
+    struct Written
+    {
+        size_t messages = 0;
+        std::chrono::milliseconds elapsed{0};
+    };
+    const auto receiverFullWait = std::chrono::milliseconds(50);
+    std::future<Written> writing = std::async(
+        std::launch::async,
+        [&socketPath, receiverFullWait]
+        {
+            constexpr size_t mostMessages = 10000;
+            UDSWriter writer(socketPath, receiverFullWait);
+            Written written;
+            int slowWrites = 0;
+            const auto start = std::chrono::steady_clock::now();
+            while (written.messages < mostMessages && slowWrites < 3)
+            {
+                const auto before = std::chrono::steady_clock::now();
+                writer.Write("Message " + std::to_string(written.messages));
+                written.messages++;
+                if (std::chrono::steady_clock::now() - before >= receiverFullWait)
+                {
+                    slowWrites++;
+                }
+            }
+            written.elapsed =
+                std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start);
+            return written;
+        });
+
+    const bool gaveUp = writing.wait_for(std::chrono::seconds(30)) == std::future_status::ready;
+    EXPECT_TRUE(gaveUp) << "The writer is still waiting for the receiver";
+    while (writing.wait_for(std::chrono::milliseconds(10)) != std::future_status::ready)
+    {
+        // The writer did not give up. Reading makes room in the queue, so that it gets to the end.
+        readQueue();
+    }
+    const Written written = writing.get();
+    if (gaveUp)
+    {
+        readQueue();
+    }
+    std::filesystem::remove(socketPath);
+
+    if (!gaveUp)
+    {
+        return;
+    }
+    if (received.size() == written.messages)
+    {
+        GTEST_SKIP() << "The queue of the receiver did not fill up with " << written.messages << " messages";
+    }
+
+    // The queue holds the messages from before it was full, in order. The writer gave the others up, each after it
+    // had waited for receiverFullWait.
+    ASSERT_LT(received.size(), written.messages);
+    for (size_t i = 0; i < received.size(); i++)
+    {
+        EXPECT_EQ(received.at(i), "Message " + std::to_string(i));
+    }
+    const auto givenUp = static_cast<long long>(written.messages - received.size());
+    EXPECT_GE(written.elapsed.count(), givenUp * receiverFullWait.count());
 }

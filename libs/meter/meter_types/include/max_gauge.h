@@ -18,7 +18,7 @@ class MaxGauge final : public Meter
     void Set(const double& value) const
     {
         auto line = this->ConstructLine(value);
-        Writer::GetInstance().Write(line);
+        Writer::Write(line);
     }
 };
 

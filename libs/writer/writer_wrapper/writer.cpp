@@ -1,47 +1,41 @@
 #include <writer.h>
 
+#include <buffered_writer.h>
 #include <writer_types.h>
 #include <logger.h>
+
+#include <chrono>
+#include <memory>
 #include <stdexcept>
 
 namespace spectator {
 
 static constexpr auto NEW_LINE = '\n';
 
+// How long a buffered send to a Unix socket waits for a receiver whose queue is full (see UDSWriter). Buffered
+// sends come in bursts, and where the kernel does not make the sender wait, a burst that outruns the receiver
+// would otherwise be dropped at the socket. Bounded, so that a receiver that has stopped reading costs the sender
+// this much per buffer rather than stopping it for good.
+static constexpr std::chrono::milliseconds RECEIVER_FULL_WAIT{250};
+
+Writer::Writer()
+{
+    // The buffered writer logs from its sender thread and during shutdown, until the end of ~Writer. Constructing
+    // the Logger before this constructor returns makes sure that it is destroyed after the Writer.
+    Logger::GetLogger();
+}
+
 Writer::~Writer()
 {
-    auto& instance = GetInstance();
-
-    if (instance.bufferingEnabled)
-    {
-        {
-            // Set under the mutex so ThreadSend cannot miss the wakeup between checking its wait predicate and blocking.
-            std::lock_guard<std::mutex> lock(instance.writeMutex);
-            instance.shutdown.store(true);
-        }
-        instance.cv_receiver.notify_all();
-        instance.cv_sender.notify_all();
-        if (instance.sendingThread.joinable()) {
-            instance.sendingThread.join();
-        }
-
-        // ThreadSend sends only full buffers; send the rest so it is not lost at exit. Take it out under the lock and
-        // send after releasing it, so threads still calling Write do not wait on the mutex during the send.
-        std::string remaining;
-        {
-            std::lock_guard<std::mutex> lock(instance.writeMutex);
-            remaining = std::move(instance.buffer);
-            instance.buffer.clear();
-        }
-        if (!remaining.empty())
-        {
-            instance.TryToSend(remaining);
-        }
-    }
+    // With buffering: stops the sender thread and sends what any thread still has buffered, including threads that
+    // are still running. After it, nothing uses the socket writer any more, and lines that such threads record are
+    // dropped.
+    buffered_writer::ShutdownAtExit();
     this->Close();
 }
 
-void Writer::Initialize(WriterType type, const std::string& param, int port, unsigned int bufferSize)
+void Writer::Initialize(WriterType type, const std::string& param, int port, unsigned int bufferSize,
+                        std::chrono::milliseconds flushInterval, FullBufferPolicy fullBufferPolicy)
 {
     // Get the singleton instance directly
     auto& instance = GetInstance();
@@ -49,39 +43,40 @@ void Writer::Initialize(WriterType type, const std::string& param, int port, uns
     // Create the new writer based on type
     try
     {
+        std::unique_ptr<BaseWriter> impl;
         switch (type)
         {
             case WriterType::Memory:
-                instance.m_impl = std::make_unique<MemoryWriter>();
+                impl = std::make_unique<MemoryWriter>();
                 Logger::info("WriterWrapper initialized as MemoryWriter");
                 break;
             case WriterType::UDP:
-                instance.m_impl = std::make_unique<UDPWriter>(param, port);
+                impl = std::make_unique<UDPWriter>(param, port);
                 Logger::info("WriterWrapper initialized as UDPWriter with host: {} and port: {}", param, port);
                 break;
             case WriterType::Unix:
-                instance.m_impl = std::make_unique<UDSWriter>(param);
+                // Only the buffered writer waits for a receiver whose queue is full. Without buffering the calling
+                // thread sends, and a send fails at once as before.
+                impl = std::make_unique<UDSWriter>(
+                    param, bufferSize > 0 ? RECEIVER_FULL_WAIT : std::chrono::milliseconds::zero());
                 Logger::info("WriterWrapper initialized as UnixWriter with socket path: {}", param);
                 break;
             default:
                 throw std::runtime_error("Unsupported writer type");
         }
 
+        // An earlier initialization may have turned buffering on. Turn it off, which sends what is still buffered
+        // through the old socket writer, before that one is replaced.
+        buffered_writer::Stop();
+
+        instance.m_impl = std::move(impl);
         instance.m_currentType = type;
-        
+
         if (bufferSize > 0)
         {
-            instance.bufferingEnabled = true;
-            instance.bufferSize = bufferSize;
-            instance.buffer.reserve(bufferSize);
-            instance.writeImpl = &Writer::BufferedWrite;
-            // Create a thread with proper binding to the instance method
-            instance.sendingThread = std::thread(&Writer::ThreadSend, &instance);
-        }
-        else
-        {
-            // Explicitly set to non-buffered if buffer size is 0
-            instance.writeImpl = &Writer::NonBufferedWrite;
+            buffered_writer::Start(instance.m_impl.get(), bufferSize, flushInterval, fullBufferPolicy);
+            Logger::info("WriterWrapper buffering enabled with size: {}, flush interval: {} ms, full buffer policy: {}",
+                         bufferSize, flushInterval.count(), FullBufferPolicyToString(fullBufferPolicy));
         }
     }
     catch (const std::exception& e)
@@ -97,48 +92,6 @@ void Writer::TryToSend(const std::string& message)
     instance.m_impl->Write(message);
 }
 
-void Writer::ThreadSend()
-{
-    auto& instance = GetInstance();
-    std::string message{};
-    while (instance.shutdown.load() == false)
-    {
-        {
-            std::unique_lock<std::mutex> lock(instance.writeMutex);
-            instance.cv_sender.wait(
-                lock, [&instance] { return instance.buffer.size() >= instance.bufferSize || instance.shutdown.load(); });
-            if (instance.shutdown.load() == true)
-            {
-                return;
-            }
-            message = std::move(instance.buffer);
-            instance.buffer = std::string();
-            instance.buffer.reserve(instance.bufferSize);
-        }
-        instance.cv_receiver.notify_one();
-        instance.TryToSend(message);
-    }
-}
-
-void Writer::BufferedWrite(const std::string& message)
-{
-    auto& instance = GetInstance();
-    {
-        std::unique_lock<std::mutex> lock(instance.writeMutex);
-        // TODO: Optimize memory alloc to not exceed allocated size
-        instance.cv_receiver.wait(
-            lock, [&instance] { return instance.buffer.size() < instance.bufferSize || instance.shutdown.load(); });
-        if (instance.shutdown.load())
-        {
-            Logger::info("Write operation aborted due to shutdown signal");
-            return;
-        }
-        instance.buffer.append(message);
-        instance.buffer.push_back(NEW_LINE);
-    }
-    instance.buffer.size() >= instance.bufferSize ? instance.cv_sender.notify_one() : instance.cv_receiver.notify_one();
-}
-
 void Writer::NonBufferedWrite(const std::string& message)
 {
     // Since this is a non-static method, we're already operating on an instance
@@ -146,8 +99,15 @@ void Writer::NonBufferedWrite(const std::string& message)
     this->TryToSend(message + NEW_LINE);
 }
 
-void Writer::Write(const std::string& message)
+void Writer::Write(const std::string& line)
 {
+    // With buffering, the line goes into the calling thread's own buffer and the sender thread sends it.
+    if (buffered_writer::Record(line))
+    {
+        return;
+    }
+
+    // Without buffering, the calling thread sends the line now.
     auto& instance = GetInstance();
 
     if (!instance.m_impl)
@@ -156,8 +116,7 @@ void Writer::Write(const std::string& message)
         return;
     }
 
-    // Call the member function using the pointer-to-member syntax
-    (instance.*instance.writeImpl)(message);
+    instance.NonBufferedWrite(line);
 }
 
 void Writer::Close()

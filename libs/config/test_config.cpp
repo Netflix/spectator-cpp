@@ -2,6 +2,7 @@
 #include <gmock/gmock.h>
 
 #include <config.h>
+#include <chrono>
 #include <optional>
 
 using namespace spectator;
@@ -88,6 +89,30 @@ TEST_F(ConfigTest, WriterConfigInitialization)
 
         EXPECT_EQ(config.GetWriterType(), WriterType::UDP);
         EXPECT_EQ(config.GetWriterLocation(), udpUrl);
+    }
+}
+
+// Test that the buffering settings of the writer config are passed on
+TEST_F(ConfigTest, WriterBufferingSettings)
+{
+    // Defaults
+    {
+        WriterConfig writerConfig(WriterTypes::Memory);
+        Config config(writerConfig);
+
+        EXPECT_EQ(config.GetWriterBufferSize(), 0u);
+        EXPECT_EQ(config.GetWriterFlushInterval(), BufferingDefaults::FlushInterval);
+        EXPECT_EQ(config.GetWriterFullBufferPolicy(), BufferingDefaults::FullBuffer);
+    }
+
+    // Buffer size, flush interval and full-buffer policy given
+    {
+        WriterConfig writerConfig(WriterTypes::Memory, 4096, std::chrono::milliseconds(250), FullBufferPolicy::Send);
+        Config config(writerConfig);
+
+        EXPECT_EQ(config.GetWriterBufferSize(), 4096u);
+        EXPECT_EQ(config.GetWriterFlushInterval(), std::chrono::milliseconds(250));
+        EXPECT_EQ(config.GetWriterFullBufferPolicy(), FullBufferPolicy::Send);
     }
 }
 

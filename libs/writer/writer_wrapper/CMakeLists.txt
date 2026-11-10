@@ -1,4 +1,5 @@
 add_library(spectator-writer-wrapper
+    buffered_writer.cpp
     writer.cpp
 )
 
@@ -27,3 +28,15 @@ target_link_libraries(writer_test
     uds_server_lib
 )
 add_test(NAME writer_test COMMAND writer_test)
+
+add_executable(buffered_writer_test
+    test_buffered_writer.cpp
+)
+
+target_link_libraries(buffered_writer_test
+    PRIVATE
+    GTest::GTest
+    GTest::Main
+    spectator-writer-wrapper
+)
+add_test(NAME buffered_writer_test COMMAND buffered_writer_test)
